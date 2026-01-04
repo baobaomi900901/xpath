@@ -22,6 +22,9 @@
     <div vvn="30">vvn30</div>
     <div ddg="false">ddg-false</div>
     <div class="bbm" id="bbm">bbm</div>
+    <ul>
+      <li><span>123</span></li>
+    </ul>
     <script src="../tools/VerifyXpath.js"></script>
     <script>
       const examples = [
@@ -29,6 +32,15 @@
         '//*',
         // 所有 div 元素
         '//div',
+        // 绝对位置
+        '/html/body/div',
+        // 跨层级相对位置
+        '/html//li/span',
+        '//ul//span',
+        // index of type
+        '/html/body/div[3]',
+        // index
+        '/html/body/*[3]',
         // text, 等于
         "//div[text()='vvn']",
         // text, 去掉前后空格后等于
