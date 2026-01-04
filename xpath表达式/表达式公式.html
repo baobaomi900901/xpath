@@ -9,10 +9,18 @@
     <div>bbm&vvn</div>
     <div>bbm</div>
     <div>vvn</div>
+    <div> vvn </div>
     <div>ddg</div>
     <div>ddg</div>
     <div>vivian<span>vvn</span>123</div>
     <div class="bbm">bbm</div>
+    <div bbm>bbm</div>
+    <div bbm="">bbm</div>
+    <div bbm="false">bbm</div>
+    <div vvn="10">vvn10</div>
+    <div vvn="20">vvn20</div>
+    <div vvn="30">vvn30</div>
+    <div ddg="false">ddg-false</div>
     <div class="bbm" id="bbm">bbm</div>
     <script src="../tools/VerifyXpath.js"></script>
     <script>
@@ -23,6 +31,8 @@
         '//div',
         // text, 等于
         "//div[text()='vvn']",
+        // text, 去掉前后空格后等于
+        "//div[normalize-space(text())='vvn']",
         // text, 不等于
         "//div[text() !='vvn']",
         // text, 包含
@@ -33,6 +43,17 @@
         "//div[starts-with(text(),'vivian')]",
         // text, 以 123 结尾; 通过 '123' 推算 string-length(string(.)) - 2)
         "//div[substring(string(.), string-length(string(.)) - 2) = '123']",
+        //-----------
+        // 属性选择器, @class, @id...
+        "//div[@class='bbm']",
+        // 自定义属性
+        '//div[@bbm]',
+        // 自定义属性为真
+        "//div[@bbm and not(@bbm!='')]",
+        // 自定义属性为假
+        '//div[@ddg = "false"]',
+        // bbm 大于 10 小于等于 30, 影刀没有
+        '//div[number(@vvn) > 10 and number(@vvn) <= 30]',
         // and 情况, 自定义表达式
         "//div[text()='bbm' and @class='bbm' and @id='bbm']",
         // or 情况, 自定义表达式, 不用考虑
