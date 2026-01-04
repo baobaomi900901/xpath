@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <!-- 复现, 元素串, 缺陷 -->
+    <div id="tab-00254" style="display: flex; gap: 1rem">
+      <div></div>
+      <div>
+        <a href="www.baidu.com" class="tab-item" data-bbm="bbm" vvn ddg>
+          <span id="vvn">笔记</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- <span id="vvn">笔记</span> -->
+
+    <!-- 复现, xpath, 缺陷 -->
+    <!-- <div>xpath, 缺陷</div> -->
+
+    <div id="app" class="app">
+      <div class="head">
+        <div id="tab-00254" style="display: flex; gap: 1rem">
+          <div>
+            <a href="www.baidu.com" class="tab-item">
+              <span>资讯</span>
+            </a>
+          </div>
+          <div>
+            <a href="www.baidu.com" class="tab-item" data-bbm="bbm" vvn ddg>
+              <span id="vvn">笔记</span>
+              <!-- <span id="vvn"> 笔 记 <bbm>123</bbm>abc </span> -->
+            </a>
+          </div>
+        </div>
+      </div>
+      <div>------</div>
+      <div class="body" style="display: flex; gap: 1rem">
+        <div>
+          <a href="www.baidu.com" class="tab-item">
+            <span>资讯</span>
+          </a>
+        </div>
+        <div>
+          <a href="www.baidu.com" class="tab-item">
+            <span>笔记</span>
+          </a>
+        </div>
+      </div>
+      <div>------</div>
+      <div class="footer">
+        <div class="menu" style="display: flex; gap: 1rem">
+          <div>
+            <a href="www.baidu.com" class="tab-item">
+              <span>资讯</span>
+            </a>
+          </div>
+          <div>
+            <a href="www.baidu.com" class="tab-item">
+              <span>笔记</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="./tools/tools.js"></script>
+    <script>
+      // 等待页面加载完成
+      window.addEventListener('load', function () {
+        // console.log('🔄 页面加载完成，开始调试...');
+
+        // // 测试示例：获取带data-bbm属性的a标签中的span
+        const xpath1 = '/html/body/div/div[1]/div/div[2]/a/span';
+        // // console.log('测试XPath:', xpath1);
+
+        // 获取元素信息
+        const info1 = window.ElementInfoTools.debugElementInfo(xpath1);
+        console.log('调试信息:', JSON.stringify(info1.path));
+
+        // 直接生成唯一XPath
+        const elementXPath = window.ElementInfoReturnElementXPath(info1.path);
+        console.log('生成的唯一XPath:', elementXPath);
+      });
+    </script>
+  </body>
+</html>

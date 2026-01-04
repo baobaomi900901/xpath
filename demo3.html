@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="hooks/tools.js"></script>
+  </head>
+  <body>
+    <div class="app" style="display: flex; flex-direction: column">
+      <span id="a123" class="mantou">馒 头</span>
+      <span>包子</span>
+      <span>馒头</span>
+      <span> 包 子 abc</span>
+      <span id="span"> 包 子 <span style="display: none">123</span><bbm>BBM</bbm><br />abc</span>
+      <span> 包 子</span>
+      <label>包子</label>
+      <label>包 子</label>
+
+      <!-- <ul>
+        <li>包子</li>
+        <li>包 子</li>
+        <li>&nbsp; 包 子<span> 123 </span>abc</li>
+        <li>馒头</li>
+      </ul> -->
+    </div>
+  </body>
+  <script>
+    // console.log(document.querySelector('#span').textContent);
+    // console.log(document.querySelector('#span').innerText);
+    // console.log(document.querySelector('#span').innerHTML);
+    // const getDirectText = (el) =>
+    //   [...el.childNodes]
+    //     .filter((n) => n.nodeType === 3)
+    //     .map((n) => n.textContent)
+    //     .join('');
+    // const text = getDirectText(document.getElementById('span'));
+    // console.log(text); // " 包 子 abc"
+    // console.log('--------------------------------------'); // " 包 子 abc"
+    // const allElements = container.querySelectorAll('*');
+    // const element = findElementByExactText(' 包 子 abc');
+    const element = new ElementFinder('.app').withText('包子 abc').withTag('span').withParent('.wrapper').findFirst();
+  </script>
+</html>

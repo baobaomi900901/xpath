@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div total="300">date:20231231;</div>
+    <div total="400">date:20241231;</div>
+    <div total="500">date:20251231;</div>
+    <div total="600">date:20261231;</div>
+
+    <div total="1400">Test400 <span>abc</span>abc<span>123</span> 123</div>
+    <div total="1200">Test200</div>
+    <script src="./tools/VerifyXpath.js"></script>
+    <script>
+      const examples = [
+        "//div[number(substring-before(substring-after(., 'date:'), ';')) > 20231231 and number(substring-before(substring-after(., 'date:'), ';')) <= 20260101 and @total > 300 and @total < 500]",
+        "//div[contains(text(), 'Test') and number(@total) > 1100 and number(@total) < 1300]",
+        '//div[text()[1][normalize-space()="Test400"] and span and text()[2][normalize-space()="123"]]',
+        '//div[normalize-space(concat(text()[1], text()[2]))="Test400 123"]',
+        '//div[text()[1][contains(., "Test400")] and text()[2][contains(., "abc")] and text()[3][contains(., "123")]]'
+      ];
+
+      examples.forEach((xpath, index) => {
+        console.log(`\n示例 ${index + 1}: ${xpath}`);
+        const elements = VerifyXpath(xpath);
+        console.log(`找到 ${elements.length} 个元素:`);
+        console.log(elements);
+        elements.forEach((el) => {
+          // console.log(`  - ${el.outerHTML.substring(0, 100)}...`);
+        });
+        console.log('------');
+      });
+
+      const div = document.querySelector('div[total="1400"]');
+      let ownText = '';
+
+      // 遍历div的直接子节点
+      for (let node of div.childNodes) {
+        // 只选择文本节点（nodeType为3）
+        if (node.nodeType === 3) {
+          ownText += node.textContent;
+        }
+      }
+
+      console.log('@', ownText, div.innerText); // 输出: "Test400 123"
+    </script>
+  </body>
+</html>

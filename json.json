@@ -1,0 +1,102 @@
+[
+  {
+    "tag": "html",
+    "id": null,
+    "class": null,
+    "text": "",
+    "index": 0,
+    "indexOfType": 0,
+    "parentTag": null,
+    "nodeName": "HTML",
+    "nodeType": 1,
+    "lang": "en"
+  },
+  {
+    "tag": "body",
+    "id": null,
+    "class": null,
+    "text": "",
+    "index": 2,
+    "indexOfType": 1,
+    "parentTag": "html",
+    "nodeName": "BODY",
+    "nodeType": 1
+  },
+  {
+    "tag": "div",
+    "id": "app",
+    "class": "app",
+    "text": "",
+    "index": 2,
+    "indexOfType": 1,
+    "parentTag": "body",
+    "nodeName": "DIV",
+    "nodeType": 1,
+    "attr_id": "app",
+    "attr_class": "app"
+  },
+  {
+    "tag": "div",
+    "id": null,
+    "class": "head",
+    "text": "",
+    "index": 1,
+    "indexOfType": 1,
+    "parentTag": "div",
+    "nodeName": "DIV",
+    "nodeType": 1,
+    "attr_class": "head"
+  },
+  {
+    "tag": "div",
+    "id": "tab-00254",
+    "class": null,
+    "text": "",
+    "index": 1,
+    "indexOfType": 1,
+    "parentTag": "div",
+    "nodeName": "DIV",
+    "nodeType": 1,
+    "attr_id": "tab-00254",
+    "style": "display: flex; gap: 1rem"
+  },
+  {
+    "tag": "div",
+    "id": null,
+    "class": null,
+    "text": "",
+    "index": 2,
+    "indexOfType": 2,
+    "parentTag": "div",
+    "nodeName": "DIV",
+    "nodeType": 1
+  },
+  {
+    "tag": "a",
+    "id": null,
+    "class": "tab-item",
+    "text": "",
+    "index": 1,
+    "indexOfType": 1,
+    "parentTag": "div",
+    "nodeName": "A",
+    "nodeType": 1,
+    "href": "www.baidu.com",
+    "attr_class": "tab-item",
+    "data-bbm": "bbm",
+    "vvn": true,
+    "ddg": true
+  },
+  {
+    "tag": "span",
+    "id": "vvn",
+    "class": null,
+    "text": "笔记",
+    "index": 1,
+    "indexOfType": 1,
+    "parentTag": "a",
+    "nodeName": "SPAN",
+    "nodeType": 1,
+    "attr_id": "vvn"
+  }
+]
