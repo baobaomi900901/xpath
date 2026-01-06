@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <div id="container">
+      <div class="item">Item 1</div>
+      <div class="item">Item 2</div>
+      <div class="item" id="target">Item 3</div>
+    </div>
+
+    <script>
+      function generateAbsXpath(element) {
+        if (element.tagName.toLowerCase() === 'html') return '/html[1]';
+        if (element.tagName.toLowerCase() === 'body') return '/html[1]/body[1]';
+
+        var ix = 0;
+        var siblings = element.parentNode.childNodes;
+        for (var i = 0; i < siblings.length; i++) {
+          var sibling = siblings[i];
+          if (sibling === element) {
+            if (element.tagName.toLowerCase().includes('svg')) {
+              return "this node is the child of svg & svg child don't support xpath so xpath can't be generated for this element.";
+            } else {
+              var absXpath =
+                generateAbsXpath(element.parentNode) + '/' + element.tagName.toLowerCase() + '[' + (ix + 1) + ']';
+              return absXpath;
+            }
+          }
+          if (sibling.nodeType === 1 && sibling.tagName.toLowerCase() === element.tagName.toLowerCase()) {
+            ix++;
+          }
+        }
+      }
+
+      // 获取目标元素并生成XPath
+      const targetElement = document.getElementById('target');
+      const xpath = generateAbsXpath(targetElement);
+      console.log(xpath);
+      // 输出：/html[1]/body[1]/div[1]/div[3]
+
+      // 可以使用document.evaluate验证XPath
+      const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+      console.log(result.singleNodeValue === targetElement); // 输出：true
+    </script>
+  </body>
+</html>

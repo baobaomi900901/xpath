@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="bbm">
+      <div class="vvn">
+        <div id="el-33501-1" class="el-checkbox is-checked k-checkbox k-checkbox--base"> 123 </div>
+        <div id="some-element" class="vivian2"> 123 </div>
+      </div>
+    </div>
+    <script>
+      const el = document.getElementById('el-33501-1');
+      console.log(getBestClassForLocator(el));
+      console.log(getBestAttributeForLocator(el));
+      console.log(generateOptimizedXPath(el));
+      /**
+       * 判断 class 和 id 是否可能为动态生成属性不适合定位
+       * @param {HTMLElement} element - 要检查的元素
+       * @param {string} attributeName - 属性名 ('class' 或 'id')
+       * @returns {boolean} - 返回 true 表示可能为动态生成，不适合定位
+       */
+      function isDynamicAttribute(element, attributeName) {
+        const value = element.getAttribute(attributeName);
+        if (!value || value.trim() === '') {
+          return true; // 空值不适合定位
+        }
+
+        // 如果是class属性，需要检查每个class部分
+        if (attributeName === 'class') {
+          const classes = value
+            .trim()
+            .split(/\s+/)
+            .filter((cls) => cls.length > 0);
+
+          // 如果所有class部分都可能是动态的，则返回true
+          const allDynamic = classes.every((cls) => isDynamicValue(cls));
+          return allDynamic;
+        }
+
+        // 如果是id属性，直接检查整个值
+        if (attributeName === 'id') {
+          return isDynamicValue(value);
+        }
+
+        return false;
+      }
+
+      /**
+       * 检查单个值是否可能是动态生成的
+       * @param {string} value - 要检查的值
+       * @returns {boolean} - 返回 true 表示可能是动态生成的
+       */
+      function isDynamicValue(value) {
+        // 1. 检查是否包含随机字符
+        if (containsRandomCharacters(value)) {
+          return true;
+        }
+
+        // 2. 检查是否包含框架生成的标识
+        if (containsFrameworkIdentifier(value)) {
+          return true;
+        }
+
+        // 3. 检查是否包含时间戳或序列号
+        if (containsTimestampOrSequence(value)) {
+          return true;
+        }
+
+        // 4. 检查是否没有语义含义（包括状态名词）
+        if (lacksSemanticMeaning(value)) {
+          return true;
+        }
+
+        // 5. 检查是否在多次页面加载中可能变化
+        if (likelyChangesBetweenLoads(value)) {
+          return true;
+        }
+
+        return false;
+      }
+
+      /**
+       * 1. 检查是否包含随机字符
+       */
+      function containsRandomCharacters(value) {
+        const randomPatterns = [
+          // 连续数字（可能为随机ID）
+          /\d{6,}/,
+
+          // 类似哈希值（十六进制字符）
+          /[a-f0-9]{8,}/i,
+          /^[a-f0-9]{8,}$/i,
+
+          // 包含下划线或横线的随机字符串
+          /[_-][a-f0-9]{6,}/i,
+
+          // 数字和字母交替的随机模式
+          /\d+[a-z]+\d+/i,
+          /[a-z]+\d+[a-z]+/i,
+
+          // 重复字符模式（如aaa123bbb）
+          /([a-z])\1{2,}\d+/i,
+          /\d+([a-z])\1{2,}/i,
+
+          // 没有元音的较长字符串（可能为随机）
+          /^[bcdfghjklmnpqrstvwxyz]{8,}$/i,
+
+          // 全部是大写字母和数字的组合
+          /^[A-Z0-9]{10,}$/,
+
+          // 包含UUID格式
+          /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i
+        ];
+
+        // 检查长度，过长可能为随机
+        if (value.length > 30) {
+          return true;
+        }
+
+        return randomPatterns.some((pattern) => pattern.test(value));
+      }
+
+      /**
+       * 2. 检查是否包含框架生成的标识
+       */
+      function containsFrameworkIdentifier(value) {
+        const frameworkPatterns = [
+          // 前端框架
+          /^ng-/,
+          /^react-/,
+          /^vue-/,
+          /^svelte-/,
+          /^ember/,
+          /^next-/,
+          /^nuxt-/,
+
+          // UI框架和组件库
+          /^ant-/,
+          /^el-/,
+          /^mdc-/,
+          /^mui-/,
+          /^chakra-/,
+          /^bootstrap-/,
+          /^v-/,
+          /^q-/,
+          /^ve-/,
+          /^van-/,
+
+          // 常见前缀
+          /^data-/,
+          /^js-/,
+          /^x-/,
+          /^rc-/,
+          /^sf-/,
+          /^st-/,
+          /^sa-/,
+
+          // 测试相关
+          /^test-/,
+          /^qa-/,
+          /^e2e-/,
+          /^cy-/,
+          /^automation-/,
+
+          // 状态管理
+          /^redux-/,
+          /^mobx-/,
+          /^store-/,
+          /^context-/,
+
+          // 特定库的标识
+          /^jquery-/,
+          /^lodash-/,
+          /^underscore-/,
+
+          // 构建工具生成的
+          /^__webpack/,
+          /^module-/,
+          /^chunk-/
+        ];
+
+        return frameworkPatterns.some((pattern) => pattern.test(value));
+      }
+
+      /**
+       * 3. 检查是否包含时间戳或序列号
+       */
+      function containsTimestampOrSequence(value) {
+        const timestampPatterns = [
+          // JavaScript时间戳（13位）
+          /\d{13}/,
+
+          // Unix时间戳（10位）
+          /\d{10}/,
+
+          // 日期时间格式
+          /\d{8}/, // YYYYMMDD
+          /\d{14}/, // YYYYMMDDHHMMSS
+          /\d{4}-\d{2}-\d{2}/, // YYYY-MM-DD
+
+          // 序列号模式
+          /_\d+$/, // 以下划线结尾的数字
+          /-\d+$/, // 以短横线结尾的数字
+          /[a-z]+\d+$/i, // 以数字结尾的字符串
+
+          // 递增计数器
+          /counter-\d+/i,
+          /index-\d+/i,
+          /item-\d+/i,
+          /row-\d+/i,
+          /col-\d+/i,
+          /idx-\d+/i,
+          /no-\d+/i,
+          /num-\d+/i,
+
+          // 包含增量标识
+          /increment/i,
+          /sequence/i,
+          /serial/i,
+          /order/i,
+          /position/i
+        ];
+
+        return timestampPatterns.some((pattern) => pattern.test(value));
+      }
+
+      /**
+       * 4. 检查是否没有语义含义（扩展了状态名词）
+       */
+      function lacksSemanticMeaning(value) {
+        // 常见的有语义的单词（包括状态名词）
+        const semanticWords = [
+          // 布局和结构
+          'header',
+          'footer',
+          'nav',
+          'menu',
+          'sidebar',
+          'main',
+          'content',
+          'container',
+          'wrapper',
+          'section',
+          'article',
+          'aside',
+          'div',
+
+          // 表单元素
+          'button',
+          'input',
+          'textarea',
+          'select',
+          'option',
+          'label',
+          'form',
+          'field',
+          'checkbox',
+          'radio',
+          'submit',
+          'reset',
+
+          // 表格
+          'table',
+          'thead',
+          'tbody',
+          'tfoot',
+          'tr',
+          'th',
+          'td',
+          'row',
+          'cell',
+
+          // 列表
+          'list',
+          'ul',
+          'ol',
+          'li',
+          'item',
+
+          // 媒体
+          'image',
+          'img',
+          'video',
+          'audio',
+          'picture',
+          'figure',
+          'caption',
+
+          // 链接
+          'link',
+          'a',
+          'anchor',
+          'href',
+
+          // 文本
+          'title',
+          'heading',
+          'h1',
+          'h2',
+          'h3',
+          'h4',
+          'h5',
+          'h6',
+          'paragraph',
+          'p',
+          'span',
+          'strong',
+          'em',
+          'bold',
+          'italic',
+
+          // 图标
+          'icon',
+          'svg',
+          'fa',
+          'glyph',
+          'symbol',
+
+          // 卡片和容器
+          'card',
+          'panel',
+          'modal',
+          'dialog',
+          'popup',
+          'tooltip',
+          'box',
+          'block',
+          'group',
+          'set',
+          'collection',
+          'batch',
+
+          // 导航
+          'breadcrumb',
+          'pagination',
+          'tabs',
+          'tab',
+          'step',
+          'progress',
+
+          // 状态名词
+          'active',
+          'inactive',
+          'enabled',
+          'disabled',
+          'selected',
+          'unselected',
+          'checked',
+          'unchecked',
+          'open',
+          'close',
+          'closed',
+          'expanded',
+          'collapsed',
+          'visible',
+          'hidden',
+          'show',
+          'hide',
+          'loading',
+          'loaded',
+          'success',
+          'error',
+          'warning',
+          'info',
+          'valid',
+          'invalid',
+          'required',
+          'optional',
+          'hover',
+          'focus',
+          'visited',
+          'current',
+          'previous',
+          'next',
+          'first',
+          'last',
+          'odd',
+          'even',
+          'primary',
+          'secondary',
+          'tertiary',
+
+          // 功能描述
+          'search',
+          'filter',
+          'sort',
+          'add',
+          'edit',
+          'delete',
+          'remove',
+          'save',
+          'cancel',
+          'confirm',
+          'submit',
+          'upload',
+          'download',
+          'print',
+          'share',
+          'like',
+          'favorite',
+          'bookmark',
+          'rate',
+
+          // 商业术语
+          'product',
+          'cart',
+          'checkout',
+          'payment',
+          'order',
+          'invoice',
+          'account',
+          'profile',
+          'settings',
+          'preferences',
+          'notification',
+
+          // 通用描述
+          'small',
+          'medium',
+          'large',
+          'tiny',
+          'huge',
+          'short',
+          'long',
+          'light',
+          'dark',
+          'bright',
+          'dim',
+          'color',
+          'size',
+          'weight',
+          'left',
+          'right',
+          'top',
+          'bottom',
+          'center',
+          'middle'
+        ];
+
+        // 检查是否包含有语义的单词
+        const hasSemanticWord = semanticWords.some((word) => value.toLowerCase().includes(word.toLowerCase()));
+
+        // 如果值中不含任何语义单词，且长度适中（>3），则可能没有语义含义
+        // 但一些简写如 'btn', 'txt' 可能有语义，所以我们额外检查一些常见简写
+        const commonAbbreviations = [
+          'btn',
+          'txt',
+          'lbl',
+          'fld',
+          'tbl',
+          'lnk',
+          'ico',
+          'img',
+          'vid',
+          'aud',
+          'doc',
+          'pdf',
+          'ppt',
+          'xls',
+          'zip',
+          'rar',
+          'pkg',
+          'src',
+          'dest',
+          'src',
+          'dst',
+          'min',
+          'max',
+          'avg',
+          'sum'
+        ];
+
+        const hasAbbreviation = commonAbbreviations.some((abbr) => value.toLowerCase() === abbr.toLowerCase());
+
+        // 如果是单个字母或数字，可能有语义（如'a', 'b', 'item1'等）
+        if (value.length <= 2 && /^[a-z0-9]$/i.test(value)) {
+          return false; // 短字符可能有意境
+        }
+
+        // 如果长度超过3且没有任何语义单词或缩写，则认为没有语义含义
+        if (value.length > 3 && !hasSemanticWord && !hasAbbreviation) {
+          return true;
+        }
+
+        return false;
+      }
+
+      /**
+       * 5. 检查是否在多次页面加载中可能变化
+       */
+      function likelyChangesBetweenLoads(value) {
+        const changePatterns = [
+          // 包含会话或临时标识
+          /session/i,
+          /temp/i,
+          /tmp/i,
+          /cache/i,
+          /token/i,
+
+          // 包含随机标识
+          /random/i,
+          /uuid/i,
+          /guid/i,
+          /hash/i,
+
+          // 包含组件实例标识
+          /instance/i,
+          /component/i,
+          /widget/i,
+          /element/i,
+
+          // 包含构建或编译标识
+          /build/i,
+          /compile/i,
+          /dist/i,
+          /prod/i,
+          /dev/i,
+
+          // 包含版本号
+          /v\d+\.\d+/i,
+          /version/i,
+          /ver\./i,
+
+          // 包含用户相关标识（可能不同用户不同）
+          /user/i,
+          /member/i,
+          /account/i,
+          /customer/i,
+
+          // 包含浏览器相关标识
+          /browser/i,
+          /chrome/i,
+          /firefox/i,
+          /safari/i,
+          /edge/i,
+
+          // 包含设备相关标识
+          /mobile/i,
+          /desktop/i,
+          /tablet/i,
+          /ios/i,
+          /android/i,
+
+          // 包含网络相关标识
+          /ip/i,
+          /network/i,
+          /connection/i,
+
+          // 包含时间相关（可能每次加载不同）
+          /time/i,
+          /date/i,
+          /today/i,
+          /now/i,
+          /current/i,
+
+          // 包含动态数据源标识
+          /api/i,
+          /ajax/i,
+          /fetch/i,
+          /async/i,
+
+          // 包含状态管理相关（可能变化）
+          /state/i,
+          /store/i,
+          /redux/i,
+          /context/i,
+
+          // 包含国际化相关
+          /locale/i,
+          /lang/i,
+          /i18n/i
+        ];
+
+        return changePatterns.some((pattern) => pattern.test(value));
+      }
+
+      /**
+       * 获取最适合用于定位的 class
+       * @param {HTMLElement} element - 要检查的元素
+       * @returns {string|null} - 返回最适合的class，如果没有则返回null
+       */
+      function getBestClassForLocator(element) {
+        const classValue = element.getAttribute('class');
+        if (!classValue || classValue.trim() === '') {
+          return null;
+        }
+
+        const classes = classValue
+          .trim()
+          .split(/\s+/)
+          .filter((cls) => cls.length > 0);
+
+        // 按优先级排序：先排除动态的，再选择长度适中的
+        const suitableClasses = classes.filter((cls) => !isDynamicValue(cls));
+
+        if (suitableClasses.length === 0) {
+          return null;
+        }
+
+        // 优先选择不包含状态词的class（更稳定）
+        const stateWords = [
+          'active',
+          'inactive',
+          'enabled',
+          'disabled',
+          'selected',
+          'checked',
+          'open',
+          'close',
+          'expanded',
+          'collapsed',
+          'visible',
+          'hidden',
+          'loading',
+          'hover',
+          'focus'
+        ];
+
+        const nonStateClasses = suitableClasses.filter(
+          (cls) => !stateWords.some((state) => cls.toLowerCase().includes(state))
+        );
+
+        // 如果有非状态class，优先使用
+        if (nonStateClasses.length > 0) {
+          // 选择长度适中（3-20字符）的class
+          const optimalClass = nonStateClasses.find((cls) => cls.length >= 3 && cls.length <= 20) || nonStateClasses[0];
+
+          return optimalClass;
+        }
+
+        // 否则使用第一个合适的class
+        return suitableClasses[0];
+      }
+
+      /**
+       * 获取最适合用于定位的属性
+       * @param {HTMLElement} element - 要检查的元素
+       * @returns {Object|null} - 返回 {type: 'id'|'class'|'other', value: string} 或 null
+       */
+      function getBestAttributeForLocator(element) {
+        // 1. 优先检查id
+        const id = element.getAttribute('id');
+        if (id && id.trim() !== '' && !isDynamicValue(id)) {
+          return { type: 'id', value: id };
+        }
+
+        // 2. 检查class
+        const bestClass = getBestClassForLocator(element);
+        if (bestClass) {
+          return { type: 'class', value: bestClass };
+        }
+
+        // 3. 检查其他稳定属性
+        const stableAttributes = [
+          'name',
+          'type',
+          'role',
+          'aria-label',
+          'data-testid',
+          'data-cy',
+          'data-test',
+          'data-qa',
+          'data-id',
+          'placeholder',
+          'alt',
+          'title',
+          'href',
+          'src',
+          'for'
+        ];
+
+        for (const attr of stableAttributes) {
+          const value = element.getAttribute(attr);
+          if (value && value.trim() !== '') {
+            return { type: 'other', value: value, attribute: attr };
+          }
+        }
+
+        return null;
+      }
+
+      /**
+       * 生成优化的XPath
+       * @param {HTMLElement} element - 要生成XPath的元素
+       * @returns {string} - 生成的XPath
+       */
+      function generateOptimizedXPath(element) {
+        const bestAttr = getBestAttributeForLocator(element);
+
+        if (!bestAttr) {
+          // 如果没有合适属性，使用原来的相对XPath生成
+          return generateRelXpath(element);
+        }
+
+        const tagName = element.tagName.toLowerCase();
+
+        switch (bestAttr.type) {
+          case 'id':
+            return `//${tagName}[@id="${bestAttr.value}"]`;
+
+          case 'class':
+            return `//${tagName}[contains(@class, "${bestAttr.value}")]`;
+
+          case 'other':
+            return `//${tagName}[@${bestAttr.attribute}="${bestAttr.value}"]`;
+
+          default:
+            return generateRelXpath(element);
+        }
+      }
+
+      // 使用示例
+      document.addEventListener('click', function (e) {
+        const element = e.target;
+
+        console.log('元素标签:', element.tagName);
+
+        // 检查id是否适合定位
+        const idDynamic = isDynamicAttribute(element, 'id');
+        console.log('ID是否动态:', idDynamic, 'ID值:', element.getAttribute('id'));
+
+        // 检查class是否适合定位
+        const classDynamic = isDynamicAttribute(element, 'class');
+        console.log('Class是否动态:', classDynamic, 'Class值:', element.getAttribute('class'));
+
+        // 获取最适合定位的属性
+        const bestAttr = getBestAttributeForLocator(element);
+        console.log('最适合定位的属性:', bestAttr);
+
+        // 生成优化的XPath
+        const optimizedXPath = generateOptimizedXPath(element);
+        console.log('优化的XPath:', optimizedXPath);
+
+        // 如果所有属性都不适合，给出警告
+        if (idDynamic && classDynamic && !bestAttr) {
+          console.warn('警告：此元素没有适合定位的稳定属性，建议使用相对定位或其他策略');
+        }
+      });
+    </script>
+  </body>
+</html>
