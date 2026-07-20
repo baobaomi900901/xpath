@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>iframe 第 4 层</title>
+    <link rel="stylesheet" href="./iframe-nested.css" />
+  </head>
+  <body>
+    <div class="layer-panel innermost" id="layer-4-panel">
+      <div class="layer-badge">Layer 4</div>
+      <h1 id="layer-4-title">iframe 第 4 层（最内层）</h1>
+      <p class="layer-desc">锚点标识：<strong id="layer-4-marker">level-4-marker</strong></p>
+      <div class="field">
+        <label for="layer-4-input">最内层输入框</label>
+        <input id="layer-4-input" type="text" placeholder="在最内层输入" />
+      </div>
+      <button id="layer-4-btn" type="button">最内层提交按钮</button>
+      <p id="layer-4-result" class="result">等待操作…</p>
+    </div>
+
+    <script>
+      document.getElementById('layer-4-btn').addEventListener('click', function () {
+        var value = document.getElementById('layer-4-input').value;
+        document.getElementById('layer-4-result').textContent = value
+          ? '已输入：' + value
+          : '请先在最内层输入框中填写内容';
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="main.qml">../qml/main.qml</file>
+        <file>images/avatar.svg</file>
+    </qresource>
+</RCC>

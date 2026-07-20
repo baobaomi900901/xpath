@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>页面加载中…</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+        background: #f5f7fb;
+        color: #1f2937;
+      }
+
+      .panel {
+        max-width: 760px;
+        margin: 48px auto;
+        padding: 32px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      }
+
+      .loading {
+        text-align: center;
+        padding: 32px 24px;
+      }
+
+      .spinner {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto 16px;
+        border: 4px solid #e2e8f0;
+        border-top-color: #2563eb;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .elapsed {
+        font-size: 40px;
+        font-weight: 700;
+        color: #dc2626;
+        margin: 8px 0;
+      }
+
+      .title {
+        margin: 0 0 8px;
+        font-size: 20px;
+        font-weight: 600;
+      }
+
+      .hint {
+        color: #64748b;
+        font-size: 14px;
+        line-height: 1.7;
+        text-align: left;
+        margin: 24px 0 0;
+        padding: 16px;
+        background: #f8fafc;
+        border-radius: 8px;
+      }
+
+      .hint h2 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        color: #334155;
+      }
+
+      .hint ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      code {
+        background: #e2e8f0;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <div id="loading" class="loading" data-state="loading">
+        <div class="spinner" aria-hidden="true"></div>
+        <p class="title">页面加载中，请稍候…</p>
+        <div id="elapsed" class="elapsed">0</div>
+        <p>已等待 <strong id="elapsed-text">0</strong> 秒，页面仍无法完成加载</p>
+
+        <div class="hint">
+          <h2>测试场景说明</h2>
+          <ul>
+            <li><code>load_timeout</code>：等待加载超时时间，默认 <strong>20s</strong></li>
+            <li>本页面<strong>不会</strong>在 20s 内加载完毕，应抛出 <code>UIAError</code></li>
+            <li><code>stop_if_timeout=False</code>（默认）：超时后<strong>不停止</strong>加载，浏览器继续等待</li>
+            <li><code>stop_if_timeout=True</code>：超时后<strong>停止</strong>加载网页</li>
+          </ul>
+          <p style="margin: 12px 0 0">
+            可通过 URL 参数 <code>?delay=30000</code> 调整最小阻塞时长（毫秒，默认 30000）
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script src="hang.js"></script>
+  </body>
+</html>

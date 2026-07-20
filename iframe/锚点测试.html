@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RPA Challenge 双属性随机版</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        .info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .status {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .form-item {
+            margin: 12px 0;
+        }
+        label {
+            display: inline-block;
+            width: 140px;
+        }
+        input {
+            padding: 6px 8px;
+            width: 260px;
+            font-size: 14px;
+        }
+        button {
+            padding: 8px 20px;
+            cursor: pointer;
+            font-size: 15px;
+            margin-right: 10px;
+        }
+        .tip {
+            color: #c0392b;
+            margin-top:15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h3>RPA Challenge 全随机属性版</h3>
+        <p>1. 每一轮：表单顺序打乱</p>
+        <p>2. 每个input：name、ng-reflect-name 全部随机刷新，无固定值</p>
+        <p>3. 仅label文字是业务唯一标识</p>
+    </div>
+
+    <div class="status">
+        轮次：<span id="round">0</span>/10 | 计时：<span id="timer">--</span>
+    </div>
+
+    <div id="formContainer"></div>
+
+    <div style="margin-top:20px;">
+        <button id="btnStart">Start 开始</button>
+        <button id="btnSubmit" disabled>Submit 提交</button>
+    </div>
+    <div class="tip">F12打开Elements查看，每轮name与ng-reflect-name全部换新随机字符串</div>
+
+<script>
+// 业务标签文字固定不变
+const labelTexts = [
+    "First Name",
+    "Last Name",
+    "Company Name",
+    "Role in Company",
+    "Address",
+    "Email",
+    "Phone Number"
+];
+const MAX_ROUND = 10;
+let currentRound = 0;
+let timer = null;
+let isStarted = false;
+
+// 生成随机字符串（用于name和ng-reflect-name）
+function randomStr(len = 12) {
+    const pool = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let res = '';
+    for(let i=0;i<len;i++){
+        res += pool[Math.floor(Math.random()*pool.length)];
+    }
+    return res;
+}
+
+// 洗牌打乱数组顺序
+function shuffle(arr) {
+    const copy = [...arr];
+    for(let i=copy.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+}
+
+// 渲染表单：顺序打乱 + 每个input双属性全新随机
+function renderForm() {
+    const container = document.getElementById('formContainer');
+    container.innerHTML = '';
+    const shuffledLabels = shuffle(labelTexts);
+
+    shuffledLabels.forEach(text => {
+        const wrap = document.createElement('div');
+        wrap.className = 'form-item';
+
+        const lab = document.createElement('label');
+        lab.textContent = text + ':';
+
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        // 两个属性全部随机，无固定值
+        const randName = randomStr();
+        const randNgName = randomStr();
+        inp.setAttribute('name', randName);
+        inp.setAttribute('ng-reflect-name', randNgName);
+
+        wrap.appendChild(lab);
+        wrap.appendChild(inp);
+        container.appendChild(wrap);
+    });
+}
+
+// 初始渲染
+renderForm();
+
+// 开始挑战
+document.getElementById('btnStart').onclick = function(){
+    if(isStarted) return;
+    isStarted = true;
+    currentRound = 0;
+    document.getElementById('btnSubmit').disabled = false;
+    let sec = 999;
+    document.getElementById('timer').textContent = sec;
+    timer = setInterval(()=>{
+        sec--;
+        document.getElementById('timer').textContent = sec;
+    },1000);
+    nextRound();
+};
+
+// 切换下一轮
+function nextRound(){
+    currentRound++;
+    document.getElementById('round').textContent = currentRound;
+    if(currentRound > MAX_ROUND){
+        clearInterval(timer);
+        alert('全部10轮完成！');
+        document.getElementById('btnSubmit').disabled = true;
+        return;
+    }
+    renderForm();
+}
+
+// 提交按钮
+document.getElementById('btnSubmit').onclick = function(){
+    if(!isStarted) return;
+    nextRound();
+};
+</script>
+</body>
+</html>

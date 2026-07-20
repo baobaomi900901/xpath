@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>同级 Shadow DOM 示例</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI';
+        background: #f1f5f9;
+        padding: 20px;
+      }
+      h1 {
+        font-size: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>同级 Shadow DOM（Multiple Shadow Roots / Multiple Hosts）示例</h1>
+
+    <outer-app></outer-app>
+
+    <script>
+      /* ============================
+   公共组件 layer-one ~ layer-four
+   ============================ */
+
+      class LayerFour extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'closed' });
+          this.shadowRoot.innerHTML = `
+      <style>
+        .controls{display:flex;gap:8px;margin-top:8px}
+        button,input{padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1}
+      </style>
+      <div class="controls">
+        <button id="highlight">随机高亮</button>
+        <button id="clear">清除</button>
+        <input id="filter" placeholder="过滤名字" />
+      </div>
+    `;
+        }
+        connectedCallback() {
+          const sr = this.shadowRoot;
+          sr.getElementById('highlight').onclick = () => {
+            const id = Math.ceil(Math.random() * 20);
+            this.dispatchEvent(new CustomEvent('highlight-id', { detail: id, bubbles: true }));
+          };
+          sr.getElementById('clear').onclick = () => {
+            this.dispatchEvent(new CustomEvent('clear-highlight', { bubbles: true }));
+          };
+          sr.getElementById('filter').oninput = (e) => {
+            this.dispatchEvent(new CustomEvent('filter', { detail: e.target.value, bubbles: true }));
+          };
+        }
+      }
+      customElements.define('layer-four', LayerFour);
+
+      class LayerThree extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+          this.shadowRoot.innerHTML = `
+      <style>
+        table{width:100%;border-collapse:collapse;font-size:12px}
+        th,td{border:1px solid #e5e7eb;padding:4px}
+        .highlight{background:#fde68a}
+      </style>
+      <div>
+        <h4>表格（Shadow）</h4>
+        <table>
+          <thead><tr><th>ID</th><th>姓名</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <slot name="controls"></slot>
+      </div>
+    `;
+          this.tbody = this.shadowRoot.querySelector('tbody');
+        }
+        connectedCallback() {
+          const names = ['李雷', '韩梅梅', '王强', '张三', '李四'];
+          for (let i = 1; i <= 20; i++) {
+            const tr = document.createElement('tr');
+            tr.dataset.id = i;
+            tr.innerHTML = `<td>${i}</td><td>${names[i % 5]}</td>`;
+            this.tbody.appendChild(tr);
+          }
+
+          this.addEventListener('highlight-id', (e) => this.highlight(e.detail));
+          this.addEventListener('clear-highlight', () => this.clear());
+          this.addEventListener('filter', (e) => this.filter(e.detail));
+        }
+        highlight(id) {
+          this.clear();
+          const tr = this.tbody.querySelector(`tr[data-id="${id}"]`);
+          if (tr) tr.classList.add('highlight');
+        }
+        clear() {
+          this.tbody.querySelectorAll('.highlight').forEach((el) => el.classList.remove('highlight'));
+        }
+        filter(text) {
+          text = (text || '').toLowerCase();
+          [...this.tbody.children].forEach((tr) => {
+            tr.style.display = tr.children[1].textContent.toLowerCase().includes(text) ? '' : 'none';
+          });
+        }
+      }
+      customElements.define('layer-three', LayerThree);
+
+      class LayerTwo extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+          this.shadowRoot.innerHTML = `
+      <slot></slot>
+    `;
+        }
+      }
+      customElements.define('layer-two', LayerTwo);
+
+      class LayerOne extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+          this.shadowRoot.innerHTML = `
+      <style>
+        .box{border:1px solid #e5e7eb;border-radius:8px;padding:8px}
+      </style>
+      <div class="box">
+        <h3>Layer One</h3>
+        <slot></slot>
+      </div>
+    `;
+        }
+      }
+      customElements.define('layer-one', LayerOne);
+
+      /* ============================
+   同级 Shadow Hosts
+   ============================ */
+
+      class ShadowHostA extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+          this.shadowRoot.innerHTML = `
+      <style>.card{border:2px solid #3b82f6;border-radius:10px;padding:10px}</style>
+      <div class="card">
+        <h3>Shadow Root A</h3>
+        <layer-one></layer-one>
+      </div>
+    `;
+        }
+        connectedCallback() {
+          const l1 = this.shadowRoot.querySelector('layer-one');
+          const l2 = document.createElement('layer-two');
+          const l3 = document.createElement('layer-three');
+          const l4 = document.createElement('layer-four');
+
+          l4.slot = 'controls';
+          l3.appendChild(l4);
+          l2.appendChild(l3);
+          l1.appendChild(l2);
+        }
+      }
+      customElements.define('shadow-host-a', ShadowHostA);
+
+      class ShadowHostB extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+          this.shadowRoot.innerHTML = `
+      <style>.card{border:2px dashed #10b981;border-radius:10px;padding:10px}</style>
+      <div class="card">
+        <h3>Shadow Root B</h3>
+        <p>这是第二个同级 Shadow DOM</p>
+      </div>
+    `;
+        }
+      }
+      customElements.define('shadow-host-b', ShadowHostB);
+
+      /* ============================
+   Outer App（容器）
+   ============================ */
+
+      class OuterApp extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+          this.shadowRoot.innerHTML = `
+      <style>
+        .wrap{display:flex;gap:16px}
+      </style>
+      <div class="wrap">
+        <shadow-host-a></shadow-host-a>
+        <shadow-host-b></shadow-host-b>
+      </div>
+    `;
+        }
+      }
+      customElements.define('outer-app', OuterApp);
+    </script>
+  </body>
+</html>

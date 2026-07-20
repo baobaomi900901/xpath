@@ -1,0 +1,202 @@
+{
+  "pull": {
+    "ok": true,
+    "tab": {
+      "tabId": 1275501605,
+      "id": 1275501605,
+      "windowId": 1275501594,
+      "index": 1,
+      "active": true,
+      "pinned": false,
+      "highlighted": true,
+      "url": "https://www.baidu.com/",
+      "title": "百度一下，你就知道",
+      "hostname": "www.baidu.com",
+      "origin": "https://www.baidu.com"
+    },
+    "commands": [
+      {
+        "type": "engine_init",
+        "engineId": "uipilot-web-runtime",
+        "engineVersion": "0.1.0",
+        "format": "metadata",
+        "sha256": "4f84d684beed866befd27eec706a87b415ac0cde8a61d9f97b42ec341f45c864",
+        "capabilities": ["engine.ping", "web.locate.probe", "web.locate.closed_shadow_cdp.probe"],
+        "execution": "native_only",
+        "extensionContextExecutable": false,
+        "runtimeMirrorRequired": false,
+        "strictShell": {
+          "enabled": true,
+          "runtimeMirrorRequired": false,
+          "reloadRequiredForPayloadChange": false
+        },
+        "rev": 1
+      },
+      {
+        "type": "page_engine_init",
+        "engineId": "uipilot-page-runtime",
+        "engineVersion": "0.1.0",
+        "contentVersion": "0.1.0",
+        "format": "plain-js",
+        "sha256": "3da6d376683bec1e5e81ffba4e7e42903505850d365285c0b9fbe09fa40faec2",
+        "capabilities": [
+          "page.engine.ping",
+          "page.locate.xpath.probe",
+          "page.locate.iframe_xpath.probe",
+          "page.locate.open_shadow.probe",
+          "page.pick.enrich",
+          "web.dom"
+        ],
+        "payload": "...",
+        "path": "uipilot_runtime/web/engine_packages/page_engine_runtime.js",
+        "execution": "page_debugger_runtime",
+        "extensionContextExecutable": false,
+        "strictShell": {
+          "enabled": true,
+          "runtimeMirrorRequired": false,
+          "reloadRequiredForPayloadChange": false
+        },
+        "rev": 1
+      },
+      {
+        "type": "main_world_runtime_init",
+        "packageId": "locate_main_world",
+        "version": "0.1.0",
+        "format": "plain-js",
+        "sha256": "99ff53a09de3591044988129ea8b87e330a7d879ae4c6f57abb2361b34a4b0fa",
+        "capabilities": ["locate.main_world.fallback"],
+        "payload": "...",
+        "path": "uipilot_runtime/web/engine_packages/locate_main_world_runtime.js",
+        "execution": "page_debugger_runtime",
+        "extensionContextExecutable": false,
+        "strictShell": {
+          "enabled": true,
+          "runtimeMirrorRequired": false,
+          "reloadRequiredForPayloadChange": false
+        },
+        "rev": 1
+      },
+      {
+        "type": "plugin_package_init",
+        "cmd": "plugin_package_init",
+        "packageId": "dom_xpath_core",
+        "version": "0.1.0",
+        "format": "metadata",
+        "sha256": "f3d98d07810483d8cc82dde779624b60d5efde72db1087b0a324d5807c6986ca",
+        "capabilities": ["dom.xpath.core", "dom.locate.legacy"],
+        "target": "content_script",
+        "execution": "native_only",
+        "extensionContextExecutable": false,
+        "runtimeMirrorRequired": false,
+        "path": "uipilot_runtime/web/plugin_packages/dom_xpath_core_package.js",
+        "rev": 1
+      },
+      {
+        "type": "plugin_package_init",
+        "cmd": "plugin_package_init",
+        "packageId": "dom_xpath_refine",
+        "version": "0.1.0",
+        "format": "metadata",
+        "sha256": "2397978db04b5aede8ed135f3d24a9abc0d203254c31cea331fb0ef6f2a1627f",
+        "capabilities": ["dom.xpath.refine"],
+        "target": "content_script",
+        "execution": "native_only",
+        "extensionContextExecutable": false,
+        "runtimeMirrorRequired": false,
+        "path": "uipilot_runtime/web/plugin_packages/dom_xpath_refine_package.js",
+        "rev": 1
+      },
+      {
+        "type": "plugin_package_init",
+        "cmd": "plugin_package_init",
+        "packageId": "content_dom",
+        "version": "0.1.0",
+        "format": "metadata",
+        "sha256": "558de22c090e6cb97b649affd12c4267045f54fbcc5e479761a120da305373c1",
+        "capabilities": ["content.dom.bridge", "content.pick_hover"],
+        "target": "content_script",
+        "execution": "native_only",
+        "extensionContextExecutable": false,
+        "runtimeMirrorRequired": false,
+        "path": "uipilot_runtime/web/plugin_packages/content_dom_package.js",
+        "rev": 1
+      },
+      {
+        "type": "plugin_package_init",
+        "cmd": "plugin_package_init",
+        "packageId": "closed_shadow",
+        "version": "0.1.0",
+        "format": "metadata",
+        "sha256": "3f12509ac50cfee28948b09bb7c3b9afbc9e2ac7f514b7d8b29e2b8439e1652f",
+        "capabilities": ["web.locate.closed_shadow_cdp.probe", "closed_shadow.cdp"],
+        "target": "service_worker",
+        "execution": "native_only",
+        "extensionContextExecutable": false,
+        "runtimeMirrorRequired": false,
+        "path": "uipilot_runtime/web/plugin_packages/closed_shadow_package.js",
+        "rev": 1
+      },
+      {
+        "type": "plugin_package_init",
+        "cmd": "plugin_package_init",
+        "packageId": "interaction",
+        "version": "0.1.0",
+        "format": "metadata",
+        "sha256": "8e7b4f3309c5b09349fa87f050b5a2df8e23e1a11e522b5cd0256499a1f7f1ae",
+        "capabilities": ["pick.config", "hover.config", "interaction.bridge"],
+        "target": "service_worker",
+        "execution": "native_only",
+        "extensionContextExecutable": false,
+        "runtimeMirrorRequired": false,
+        "path": "uipilot_runtime/web/plugin_packages/interaction_package.js",
+        "rev": 1
+      },
+      {
+        "type": "plugin_package_init",
+        "cmd": "plugin_package_init",
+        "packageId": "command_legacy",
+        "version": "0.1.0",
+        "format": "metadata",
+        "sha256": "e629ac3da31bc55cb433b818323ba77d3be451eb338051da7fbac1e8c17f22dd",
+        "capabilities": ["command.legacy", "web_dom", "open_tab"],
+        "target": "service_worker",
+        "execution": "native_only",
+        "extensionContextExecutable": false,
+        "runtimeMirrorRequired": false,
+        "path": "uipilot_runtime/web/plugin_packages/command_legacy_package.js",
+        "rev": 1
+      },
+      {
+        "type": "plugin_package_init",
+        "cmd": "plugin_package_init",
+        "packageId": "locate_main_world",
+        "version": "0.1.0",
+        "format": "metadata",
+        "sha256": "159061a071df2762c6a42ed67634d0aef69be51b6d100bc146745170989e9cbf",
+        "capabilities": ["locate.main_world.fallback"],
+        "target": "main_world",
+        "execution": "page_debugger_runtime",
+        "extensionContextExecutable": false,
+        "runtimeMirrorRequired": false,
+        "path": "uipilot_runtime/web/engine_packages/locate_main_world_runtime.js",
+        "rev": 1
+      },
+      {
+        "type": "hover_config",
+        "enabled": false,
+        "rev": 0
+      },
+      {
+        "type": "pick_config",
+        "enabled": false,
+        "rev": 0
+      }
+    ]
+  },
+  "browser_resp": {
+    "error": 5,
+    "ok": false,
+    "trace_info": "web_browser_command_timeout",
+    "requestId": "d492acac031d4b6d"
+  }
+}

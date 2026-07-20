@@ -1,0 +1,26 @@
+body {
+  margin: 0;
+  background: #f5f7fb;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.home-menu-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1200px) {
+  .home-menu-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1920px) {
+  .home-menu-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

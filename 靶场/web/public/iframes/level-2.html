@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>iframe 第 2 层</title>
+    <link rel="stylesheet" href="./iframe-nested.css" />
+  </head>
+  <body>
+    <div class="layer-panel" id="layer-2-panel">
+      <div class="layer-badge">Layer 2</div>
+      <h1 id="layer-2-title">iframe 第 2 层</h1>
+      <p class="layer-desc">锚点标识：<strong id="layer-2-marker">level-2-marker</strong></p>
+      <div class="field">
+        <label for="layer-2-input">第 2 层输入框</label>
+        <input id="layer-2-input" type="text" placeholder="在第 2 层输入" />
+      </div>
+      <button id="layer-2-btn" type="button">第 2 层按钮</button>
+    </div>
+
+    <iframe
+      id="iframe-layer-3"
+      title="iframe 第 3 层"
+      src="./level-3.html"
+      class="nested-frame"
+    ></iframe>
+  </body>
+</html>
