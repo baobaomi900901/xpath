@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+﻿import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import AnchorTestPage from './pages/AnchorTestPage';
 import FormControlsPage from './pages/FormControlsPage';
@@ -10,6 +10,7 @@ import TableDivTestPage from './pages/TableDivTestPage';
 import IframeNestedTestPage from './pages/IframeNestedTestPage';
 import ShadowNestedTestPage from './pages/ShadowNestedTestPage';
 import KeysClickTestPage from './pages/KeysClickTestPage';
+import CookieTestPage from './pages/CookieTestPage';
 
 export default function App() {
   return (
@@ -26,6 +27,8 @@ export default function App() {
         <Route path="/iframe-nested-test" element={<IframeNestedTestPage />} />
         <Route path="/shadow-nested-test" element={<ShadowNestedTestPage />} />
         <Route path="/keys-click-test" element={<KeysClickTestPage />} />
+        <Route path="/cookie-test" element={<CookieTestPage />} />
+        <Route path="/sdk-web/cookies" element={<CookieTestPage />} />
       </Routes>
     </BrowserRouter>
   );

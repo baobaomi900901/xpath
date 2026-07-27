@@ -115,10 +115,13 @@ export default function KeysClickTestPage() {
     entry: Omit<InteractionLog, 'key' | 'time'>,
     resultMessage: string,
   ) => {
-    setLogs((prev) => [
-      { ...entry, key: `${entry.buttonId}-${entry.eventType}-${Date.now()}`, time: formatTime(new Date()) },
-      ...prev,
-    ].slice(0, 20));
+    const record = {
+      ...entry,
+      key: `${entry.buttonId}-${entry.eventType}-${Date.now()}`,
+      time: formatTime(new Date()),
+    };
+    console.log('[元素点击测试]', resultMessage, record);
+    setLogs((prev) => [record, ...prev].slice(0, 20));
     setLastResult(resultMessage);
   }, []);
 

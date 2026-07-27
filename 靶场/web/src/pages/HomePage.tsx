@@ -1,4 +1,4 @@
-import { RightOutlined, SearchOutlined } from '@ant-design/icons';
+﻿import { RightOutlined, SearchOutlined } from '@ant-design/icons';
 import { Card, Empty, Input, Typography } from 'antd';
 import { useMemo, useState } from 'react';
 import PageLayout from '../components/PageLayout';
@@ -67,6 +67,12 @@ const menuItems = [
     description: '左侧 Open Shadow 4 层嵌套，右侧 Closed Shadow 4 层嵌套',
   },
   {
+    id: 'menu-cookie-test',
+    href: '/cookie-test',
+    title: 'SDK Web Cookie 测试',
+    description: '动态 HTTP/HTTPS Cookie 实际观测，供 set_cookie 参数级 E2E 使用',
+  },
+  {
     id: 'menu-keys-click-test',
     href: '/keys-click-test',
     title: '元素点击测试',
@@ -125,3 +131,4 @@ export default function HomePage() {
     </PageLayout>
   );
 }
+
