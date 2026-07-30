@@ -107,7 +107,6 @@ function formatTime(date: Date) {
 
 export default function KeysClickTestPage() {
   const [logs, setLogs] = useState<InteractionLog[]>([]);
-  const [lastResult, setLastResult] = useState('等待交互...');
   const [hoverActive, setHoverActive] = useState(false);
   const [focusActive, setFocusActive] = useState(false);
 
@@ -122,7 +121,6 @@ export default function KeysClickTestPage() {
     };
     console.log('[元素点击测试]', resultMessage, record);
     setLogs((prev) => [record, ...prev].slice(0, 20));
-    setLastResult(resultMessage);
   }, []);
 
   const handleInteraction = useCallback((
@@ -293,7 +291,6 @@ export default function KeysClickTestPage() {
               disabled={logs.length === 0}
               onClick={() => {
                 setLogs([]);
-                setLastResult('等待交互...');
               }}
             >
               清除记录
@@ -336,7 +333,7 @@ export default function KeysClickTestPage() {
               <Button
                 id="btn-dblclick-target"
                 size="large"
-                onClick={() => setLastResult('双击按钮: 单击未触发, 请双击')}
+                onClick={() => console.log('[元素点击测试]', '双击按钮: 单击未触发, 请双击')}
                 onDoubleClick={(event) =>
                   handleInteraction('btn-dblclick-target', '双击触发按钮', ANY_EXPECTED, event, 'dblclick')
                 }
@@ -346,7 +343,7 @@ export default function KeysClickTestPage() {
               <Button
                 id="btn-rightclick-target"
                 size="large"
-                onClick={() => setLastResult('右键按钮: 左键未触发, 请右键')}
+                onClick={() => console.log('[元素点击测试]', '右键按钮: 左键未触发, 请右键')}
                 onContextMenu={(event) => {
                   event.preventDefault();
                   handleInteraction('btn-rightclick-target', '右键触发按钮', ANY_EXPECTED, event, 'contextmenu');
@@ -400,22 +397,6 @@ export default function KeysClickTestPage() {
                 </div>
               ))}
             </div>
-            <Typography.Paragraph
-              id="keys-click-result"
-              style={{
-                marginTop: 12,
-                marginBottom: 0,
-                padding: 12,
-                background: '#f8fafc',
-                borderRadius: 8,
-                whiteSpace: 'pre-wrap',
-                lineHeight: 1.5715,
-                minHeight: 'calc(1.5715em * 2 + 24px)',
-                boxSizing: 'border-box',
-              }}
-            >
-              {lastResult}
-            </Typography.Paragraph>
           </div>
 
           <div>
