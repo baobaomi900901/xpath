@@ -1,4 +1,4 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -196,6 +196,29 @@ function targetPlugin(settings: TargetSettings): Plugin {
   };
 }
 
+function samplesAttachmentPlugin(): Plugin {
+  return {
+    name: 'samples-attachment',
+    configureServer(server) {
+      server.middlewares.use((request, response, next) => {
+        const pathname = (request.url ?? '').split('?')[0];
+        if (!pathname.startsWith('/samples/')) {
+          next();
+          return;
+        }
+        const originalWriteHead = response.writeHead.bind(response);
+        response.writeHead = ((...args: Parameters<typeof response.writeHead>) => {
+          const filename = path.basename(pathname);
+          response.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+          response.setHeader('Content-Type', 'application/octet-stream');
+          return originalWriteHead(...args);
+        }) as typeof response.writeHead;
+        next();
+      });
+    },
+  };
+}
+
 function isSdkWebTargetMode() {
   return Boolean(process.env.UIPILOT_SDK_WEB_TARGET_SCHEME?.trim());
 }
@@ -206,7 +229,7 @@ export default defineConfig(({ command }) => {
   // 普通靶场模式: pnpm dev 直接可用, 无需 SDK 环境变量
   if (!isSdkWebTargetMode()) {
     return {
-      plugins: [react()],
+      plugins: [react(), samplesAttachmentPlugin()],
       server: {
         host: true,
         port: DEFAULT_RANGE_PORT,
@@ -218,7 +241,7 @@ export default defineConfig(({ command }) => {
   // SDK Cookie 靶场模式: 设置 UIPILOT_SDK_WEB_* 环境变量后启用
   const settings = loadSettings();
   return {
-    plugins: [react(), targetPlugin(settings)],
+    plugins: [react(), targetPlugin(settings), samplesAttachmentPlugin()],
     server: {
       host: '127.0.0.1',
       port: settings.port,

@@ -78,6 +78,12 @@ const menuItems = [
     title: '元素点击测试',
     description: '测试 click, hover, focus 的 keys, position 等参数',
   },
+  {
+    id: 'menu-drag-to-test',
+    href: '/drag-to-test',
+    title: '元素拖拽测试',
+    description: '测试 drag_to(left, top) 相对像素偏移与 isTrusted',
+  },
 ];
 
 export default function HomePage() {

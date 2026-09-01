@@ -1,4 +1,12 @@
-import { useMemo, useState, type CSSProperties, type FocusEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FocusEvent,
+  type ReactNode,
+} from 'react';
 import {
   Alert,
   Button,
@@ -13,16 +21,17 @@ import {
   Space,
   TimePicker,
   Typography,
+  message,
 } from 'antd';
 import type { FormInstance, Rule } from 'antd/es/form';
 import PageLayout from '../components/PageLayout';
 import { randomId } from '../utils/random';
 
 const HOBBY_OPTIONS = [
-  { value: 'read', label: '阅读' },
-  { value: 'sport', label: '运动' },
-  { value: 'music', label: '音乐' },
-  { value: 'travel', label: '旅行' },
+  { value: '阅读', label: '阅读' },
+  { value: '运动', label: '运动' },
+  { value: '音乐', label: '音乐' },
+  { value: '旅行', label: '旅行' },
 ];
 
 const HOBBY_VALUES = HOBBY_OPTIONS.map((item) => item.value);
@@ -145,10 +154,10 @@ function HobbyCheckboxGroup({ value = [], onChange, ids }: HobbyCheckboxGroupPro
   const indeterminate = selected.length > 0 && selected.length < HOBBY_VALUES.length;
 
   const hobbyIdMap: Record<string, string> = {
-    read: ids.hobbyRead,
-    sport: ids.hobbySport,
-    music: ids.hobbyMusic,
-    travel: ids.hobbyTravel,
+    阅读: ids.hobbyRead,
+    运动: ids.hobbySport,
+    音乐: ids.hobbyMusic,
+    旅行: ids.hobbyTravel,
   };
 
   return (
@@ -184,10 +193,10 @@ function NativeHobbyCheckboxGroup({ value = [], onChange, ids }: HobbyCheckboxGr
   const indeterminate = selected.length > 0 && selected.length < HOBBY_VALUES.length;
 
   const hobbyIdMap: Record<string, string> = {
-    read: ids.hobbyRead,
-    sport: ids.hobbySport,
-    music: ids.hobbyMusic,
-    travel: ids.hobbyTravel,
+    阅读: ids.hobbyRead,
+    运动: ids.hobbySport,
+    音乐: ids.hobbyMusic,
+    旅行: ids.hobbyTravel,
   };
 
   const toggle = (optionValue: string, checked: boolean) => {
@@ -244,7 +253,219 @@ type NativeGenderRadioGroupProps = {
   };
 };
 
-function NativeGenderRadioGroup({ value = 'male', onChange, ids }: NativeGenderRadioGroupProps) {
+type NativeMultiSelectProps = {
+  id: string;
+  value?: string[];
+  onChange?: (value: string[]) => void;
+  options: Array<{ value: string; label: string }>;
+  placeholder?: string;
+};
+
+const NATIVE_MULTI_SHELL_STYLE: CSSProperties = {
+  ...NATIVE_INPUT_STYLE,
+  position: 'relative',
+  height: 'auto',
+  minHeight: 32,
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  gap: 4,
+  padding: '3px 7px',
+  cursor: 'text',
+};
+
+const NATIVE_MULTI_TAG_STYLE: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 4,
+  height: 24,
+  padding: '0 7px',
+  fontSize: 12,
+  lineHeight: '22px',
+  borderRadius: 4,
+  background: 'rgba(0, 0, 0, 0.06)',
+  color: 'rgba(0, 0, 0, 0.88)',
+};
+
+const NATIVE_MULTI_INPUT_STYLE: CSSProperties = {
+  flex: 1,
+  minWidth: 80,
+  height: 24,
+  margin: 0,
+  padding: 0,
+  border: 'none',
+  outline: 'none',
+  background: 'transparent',
+  fontSize: 14,
+  lineHeight: '24px',
+  color: 'rgba(0, 0, 0, 0.88)',
+};
+
+const NATIVE_MULTI_DROPDOWN_STYLE: CSSProperties = {
+  position: 'absolute',
+  top: 'calc(100% + 4px)',
+  left: 0,
+  right: 0,
+  zIndex: 20,
+  maxHeight: 180,
+  overflowY: 'auto',
+  margin: 0,
+  padding: '4px 0',
+  listStyle: 'none',
+  background: '#fff',
+  border: '1px solid #d9d9d9',
+  borderRadius: 6,
+  boxShadow: '0 6px 16px rgba(0, 0, 0, 0.08)',
+};
+
+function NativeMultiSelect({
+  id,
+  value = [],
+  onChange,
+  options,
+  placeholder = '请选择城市（可多选）',
+}: NativeMultiSelectProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [keyword, setKeyword] = useState('');
+  const [focused, setFocused] = useState(false);
+
+  const selectedSet = useMemo(() => new Set(value), [value]);
+  const labelMap = useMemo(
+    () => new Map(options.map((item) => [item.value, item.label])),
+    [options],
+  );
+  const filtered = useMemo(() => {
+    const key = keyword.trim().toLowerCase();
+    if (!key) return options;
+    return options.filter((item) => item.label.toLowerCase().includes(key) || item.value.toLowerCase().includes(key));
+  }, [keyword, options]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+        setKeyword('');
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [open]);
+
+  const toggle = (optionValue: string) => {
+    if (selectedSet.has(optionValue)) {
+      onChange?.(value.filter((item) => item !== optionValue));
+    } else {
+      onChange?.([...value, optionValue]);
+    }
+    setKeyword('');
+  };
+
+  const shellStyle: CSSProperties = {
+    ...NATIVE_MULTI_SHELL_STYLE,
+    ...(focused
+      ? {
+          borderColor: '#4096ff',
+          boxShadow: '0 0 0 2px rgba(5, 145, 255, 0.1)',
+        }
+      : null),
+  };
+
+  return (
+    <div
+      ref={rootRef}
+      style={shellStyle}
+      onMouseDown={(event) => {
+        if ((event.target as HTMLElement).closest('button')) return;
+        setOpen(true);
+      }}
+    >
+      {value.map((item) => (
+        <span key={item} style={NATIVE_MULTI_TAG_STYLE}>
+          {labelMap.get(item) ?? item}
+          <button
+            type="button"
+            aria-label={`移除 ${labelMap.get(item) ?? item}`}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              padding: 0,
+              margin: 0,
+              cursor: 'pointer',
+              lineHeight: 1,
+              color: 'rgba(0, 0, 0, 0.45)',
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              onChange?.(value.filter((current) => current !== item));
+            }}
+          >
+            ×
+          </button>
+        </span>
+      ))}
+      <input
+        id={id}
+        type="text"
+        value={keyword}
+        placeholder={value.length === 0 ? placeholder : ''}
+        style={NATIVE_MULTI_INPUT_STYLE}
+        autoComplete="off"
+        onFocus={() => {
+          setFocused(true);
+          setOpen(true);
+        }}
+        onBlur={() => setFocused(false)}
+        onChange={(event) => {
+          setKeyword(event.target.value);
+          setOpen(true);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Backspace' && !keyword && value.length > 0) {
+            onChange?.(value.slice(0, -1));
+          }
+          if (event.key === 'Escape') {
+            setOpen(false);
+            setKeyword('');
+          }
+        }}
+      />
+      {open && (
+        <ul style={NATIVE_MULTI_DROPDOWN_STYLE} role="listbox" aria-multiselectable>
+          {filtered.length === 0 ? (
+            <li style={{ padding: '5px 12px', color: 'rgba(0, 0, 0, 0.25)' }}>无匹配选项</li>
+          ) : (
+            filtered.map((item) => {
+              const selected = selectedSet.has(item.value);
+              return (
+                <li
+                  key={item.value}
+                  role="option"
+                  aria-selected={selected}
+                  style={{
+                    padding: '5px 12px',
+                    cursor: 'pointer',
+                    background: selected ? '#e6f4ff' : 'transparent',
+                    color: 'rgba(0, 0, 0, 0.88)',
+                  }}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    toggle(item.value);
+                  }}
+                >
+                  {item.label}
+                </li>
+              );
+            })
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function NativeGenderRadioGroup({ value, onChange, ids }: NativeGenderRadioGroupProps) {
   const options = [
     { value: 'male', label: '男', id: ids.male },
     { value: 'female', label: '女', id: ids.female },
@@ -274,60 +495,93 @@ type AntFormValues = {
   text?: string;
   password?: string;
   email?: string;
-  number?: number;
+  number?: number | null;
   date?: unknown;
   time?: unknown;
   search?: string;
   city?: string;
+  cities?: string[];
   gender?: string;
   hobbies?: string[];
   remark?: string;
-  range?: number;
+  range?: number | null;
+  disabled?: string;
+  readonly?: string;
 };
 
 type NativeFormValues = {
   text?: string;
   password?: string;
   email?: string;
-  number?: number;
+  number?: number | null;
   date?: string;
   time?: string;
   search?: string;
   city?: string;
+  cities?: string[];
   gender?: string;
   hobbies?: string[];
   remark?: string;
-  range?: number;
+  range?: number | null;
+  disabled?: string;
+  readonly?: string;
 };
+
+const DISABLED_FIELD_VALUE = '不可编辑';
+const READONLY_FIELD_VALUE = '只读内容';
+
+const FORM_SNAPSHOT_KEYS = [
+  'text',
+  'password',
+  'email',
+  'number',
+  'date',
+  'time',
+  'search',
+  'disabled',
+  'city',
+  'cities',
+  'gender',
+  'hobbies',
+  'remark',
+  'range',
+  'readonly',
+] as const;
 
 const ANT_INITIAL_VALUES: AntFormValues = {
   text: '',
   password: '',
   email: '',
-  number: 10,
+  number: null,
   date: undefined,
   time: undefined,
   search: '',
   city: undefined,
-  gender: 'male',
-  hobbies: ['sport'],
+  cities: [],
+  gender: undefined,
+  hobbies: [],
   remark: '',
-  range: 50,
+  range: 0,
+  disabled: DISABLED_FIELD_VALUE,
+  readonly: READONLY_FIELD_VALUE,
 };
 
 const NATIVE_INITIAL_VALUES: NativeFormValues = {
   text: '',
   password: '',
   email: '',
-  number: 10,
+  number: null,
   date: '',
   time: '',
   search: '',
   city: '',
-  gender: 'male',
-  hobbies: ['sport'],
+  cities: [],
+  gender: undefined,
+  hobbies: [],
   remark: '',
-  range: 50,
+  range: 0,
+  disabled: DISABLED_FIELD_VALUE,
+  readonly: READONLY_FIELD_VALUE,
 };
 
 const RESULT_PLACEHOLDER = '填写表单后点击「提交」查看取值结果';
@@ -337,6 +591,48 @@ const FORM_LAYOUT = 'vertical' as const;
 const FORM_ITEM_STYLE: CSSProperties = {
   marginBottom: 16,
 };
+
+function buildFormSnapshot(
+  form: FormInstance,
+  initialValues: Record<string, unknown>,
+): Record<string, unknown> {
+  const raw = form.getFieldsValue(true) as Record<string, unknown>;
+  const merged: Record<string, unknown> = {
+    ...initialValues,
+    ...raw,
+    disabled: DISABLED_FIELD_VALUE,
+    readonly: READONLY_FIELD_VALUE,
+  };
+  const ordered: Record<string, unknown> = {};
+  for (const key of FORM_SNAPSHOT_KEYS) {
+    ordered[key] = merged[key] ?? null;
+  }
+  return ordered;
+}
+
+function serializeFormValues(values: Record<string, unknown>) {
+  return JSON.stringify(
+    values,
+    (_key, value) => {
+      if (value && typeof value === 'object' && typeof (value as { format?: unknown }).format === 'function') {
+        return (value as { format: (pattern: string) => string }).format('YYYY-MM-DD HH:mm:ss');
+      }
+      return value ?? null;
+    },
+    2,
+  );
+}
+
+async function copyFormJson(values: Record<string, unknown>, label: string) {
+  const text = serializeFormValues(values);
+  try {
+    await navigator.clipboard.writeText(text);
+    message.success(`${label} 表单 JSON 已复制到剪贴板`);
+  } catch {
+    message.error('复制失败, 请检查浏览器剪贴板权限');
+  }
+  return text;
+}
 
 function FormSectionTitle({ title }: { title: string }) {
   return (
@@ -392,6 +688,7 @@ export default function FormControlsPage() {
       time: randomId(),
       search: randomId(),
       city: randomId(),
+      cities: randomId(),
       genderMale: randomId(),
       genderFemale: randomId(),
       genderOther: randomId(),
@@ -419,7 +716,8 @@ export default function FormControlsPage() {
       date: randomId(),
       time: randomId(),
       search: randomId(),
-      city: randomId(),
+      city: 'form-controls-native-city',
+      cities: 'form-controls-native-cities',
       genderMale: randomId(),
       genderFemale: randomId(),
       genderOther: randomId(),
@@ -432,28 +730,32 @@ export default function FormControlsPage() {
       range: randomId(),
       disabled: randomId(),
       readonly: randomId(),
-      submit: randomId('btn_native_'),
-      reset: randomId('btn_native_'),
+      submit: 'form-controls-native-submit',
+      reset: 'form-controls-native-reset',
     }),
     [],
   );
 
   const handleAntSubmit = async () => {
     try {
-      const values = await antForm.validateFields();
-      setAntResult(JSON.stringify(values, null, 2));
+      await antForm.validateFields();
     } catch {
-      // 校验失败时 Form.Item 会展示错误信息
+      // 校验失败仍导出完整快照；错误信息由 Form.Item 展示
     }
+    const values = buildFormSnapshot(antForm, ANT_INITIAL_VALUES as Record<string, unknown>);
+    const text = await copyFormJson(values, 'Ant Design');
+    setAntResult(text);
   };
 
   const handleNativeSubmit = async () => {
     try {
-      const values = await nativeForm.validateFields();
-      setNativeResult(JSON.stringify(values, null, 2));
+      await nativeForm.validateFields();
     } catch {
-      // 校验失败时 Form.Item 会展示错误信息
+      // 校验失败仍导出完整快照；错误信息由 Form.Item 展示
     }
+    const values = buildFormSnapshot(nativeForm, NATIVE_INITIAL_VALUES as Record<string, unknown>);
+    const text = await copyFormJson(values, '原生 HTML');
+    setNativeResult(text);
   };
 
   const emailRules: Rule[] = [
@@ -498,7 +800,12 @@ export default function FormControlsPage() {
     name: keyof AntFormValues & keyof NativeFormValues,
     antControl: ReactNode,
     nativeControl: ReactNode,
-    options?: { antRules?: Rule[]; nativeRules?: Rule[] },
+    options?: {
+      antRules?: Rule[];
+      nativeRules?: Rule[];
+      nativeLabel?: string;
+      nativeGetValueFromEvent?: (event: { target: { value: string } }) => unknown;
+    },
   ) => (
     <AlignedFormRow
       key={String(name)}
@@ -510,7 +817,13 @@ export default function FormControlsPage() {
         </Form.Item>
       )}
       native={(
-        <Form.Item label={label} name={name} rules={options?.nativeRules} style={FORM_ITEM_STYLE}>
+        <Form.Item
+          label={options?.nativeLabel ?? label}
+          name={name}
+          rules={options?.nativeRules}
+          getValueFromEvent={options?.nativeGetValueFromEvent}
+          style={FORM_ITEM_STYLE}
+        >
           {nativeControl}
         </Form.Item>
       )}
@@ -559,7 +872,12 @@ export default function FormControlsPage() {
         {renderItem('数字输入框', 'number',
           <InputNumber id={antIds.number} min={0} max={100} style={{ width: '100%' }} />,
           <input id={nativeIds.number} type="number" min={0} max={100} style={NATIVE_INPUT_STYLE} {...nativeInputProps()} />,
-          )}
+          {
+            nativeGetValueFromEvent: (event: { target: { value: string } }) => {
+              const next = event.target.value;
+              return next === '' ? null : Number(next);
+            },
+          })}
         {renderItem('日期选择', 'date',
           <DatePicker id={antIds.date} style={{ width: '100%' }} />,
           <input id={nativeIds.date} type="date" style={NATIVE_INPUT_STYLE} {...nativeInputProps()} />,
@@ -572,6 +890,20 @@ export default function FormControlsPage() {
           <Input.Search id={antIds.search} placeholder="搜索关键词" />,
           <input id={nativeIds.search} type="search" placeholder="搜索关键词" style={NATIVE_INPUT_STYLE} {...nativeInputProps()} />,
           )}
+        <AlignedFormRow
+          antForm={antForm}
+          nativeForm={nativeForm}
+          ant={(
+            <Form.Item label="禁用输入框" name="disabled" style={FORM_ITEM_STYLE}>
+              <Input id={antIds.disabled} disabled />
+            </Form.Item>
+          )}
+          native={(
+            <Form.Item label="禁用输入框" name="disabled" style={FORM_ITEM_STYLE}>
+              <input id={nativeIds.disabled} type="text" disabled style={NATIVE_DISABLED_STYLE} />
+            </Form.Item>
+          )}
+        />
 
         <FormSectionTitle title="下拉选择" />
         {renderItem('城市', 'city',
@@ -584,7 +916,17 @@ export default function FormControlsPage() {
               ))}
             </select>
           ),
-          )}
+          { nativeLabel: '城市(暂时id不会变动)' })}
+        {renderItem('城市多选', 'cities',
+          <Select
+            id={antIds.cities}
+            mode="multiple"
+            allowClear
+            placeholder="请选择城市（可多选）"
+            options={CITY_OPTIONS}
+          />,
+          <NativeMultiSelect id={nativeIds.cities} options={CITY_OPTIONS} />,
+          { nativeLabel: '城市多选(暂时id不会变动)' })}
 
         <FormSectionTitle title="单选框" />
         <AlignedFormRow
@@ -638,32 +980,20 @@ export default function FormControlsPage() {
         {renderItem('滑块', 'range',
           <Slider id={antIds.range} />,
           <input id={nativeIds.range} type="range" min={0} max={100} style={{ width: '100%', marginTop: 12 }} />,
-          )}
+          {
+            nativeGetValueFromEvent: (event: { target: { value: string } }) => Number(event.target.value),
+          })}
         <AlignedFormRow
           antForm={antForm}
           nativeForm={nativeForm}
           ant={(
-            <Form.Item label="禁用输入框" style={FORM_ITEM_STYLE}>
-              <Input id={antIds.disabled} value="不可编辑" disabled />
+            <Form.Item label="只读输入框" name="readonly" style={FORM_ITEM_STYLE}>
+              <Input id={antIds.readonly} readOnly />
             </Form.Item>
           )}
           native={(
-            <Form.Item label="禁用输入框" style={FORM_ITEM_STYLE}>
-              <input id={nativeIds.disabled} type="text" value="不可编辑" disabled style={NATIVE_DISABLED_STYLE} />
-            </Form.Item>
-          )}
-        />
-        <AlignedFormRow
-          antForm={antForm}
-          nativeForm={nativeForm}
-          ant={(
-            <Form.Item label="只读输入框" style={FORM_ITEM_STYLE}>
-              <Input id={antIds.readonly} value="只读内容" readOnly />
-            </Form.Item>
-          )}
-          native={(
-            <Form.Item label="只读输入框" style={FORM_ITEM_STYLE}>
-              <input id={nativeIds.readonly} type="text" value="只读内容" readOnly style={NATIVE_READONLY_STYLE} />
+            <Form.Item label="只读输入框" name="readonly" style={FORM_ITEM_STYLE}>
+              <input id={nativeIds.readonly} type="text" readOnly style={NATIVE_READONLY_STYLE} />
             </Form.Item>
           )}
         />

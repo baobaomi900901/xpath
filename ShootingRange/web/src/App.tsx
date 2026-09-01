@@ -10,6 +10,7 @@ import TableDivTestPage from './pages/TableDivTestPage';
 import IframeNestedTestPage from './pages/IframeNestedTestPage';
 import ShadowNestedTestPage from './pages/ShadowNestedTestPage';
 import KeysClickTestPage from './pages/KeysClickTestPage';
+import DragToTestPage from './pages/DragToTestPage';
 import CookieTestPage from './pages/CookieTestPage';
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/iframe-nested-test" element={<IframeNestedTestPage />} />
         <Route path="/shadow-nested-test" element={<ShadowNestedTestPage />} />
         <Route path="/keys-click-test" element={<KeysClickTestPage />} />
+        <Route path="/drag-to-test" element={<DragToTestPage />} />
         <Route path="/cookie-test" element={<CookieTestPage />} />
         <Route path="/sdk-web/cookies" element={<CookieTestPage />} />
       </Routes>

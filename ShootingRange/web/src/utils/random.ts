@@ -25,8 +25,8 @@ export function shuffle<T>(items: T[]) {
   return copy;
 }
 
-export function downloadBlob(filename: string, content: string, mimeType: string) {
-  const blob = new Blob([content], { type: mimeType });
+export function downloadBlob(filename: string, content: string | Blob, mimeType = 'application/octet-stream') {
+  const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -34,5 +34,18 @@ export function downloadBlob(filename: string, content: string, mimeType: string
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  // Delay revoke so the browser can start the download pipeline
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/** Fetch a static URL and force a file download (triggers Save As when browser asks for location). */
+export async function downloadUrl(url: string, filename: string) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+  }
+  const data = await response.blob();
+  // Use octet-stream so the browser treats it as a download, not inline preview
+  downloadBlob(filename, new Blob([data], { type: 'application/octet-stream' }));
+}
+

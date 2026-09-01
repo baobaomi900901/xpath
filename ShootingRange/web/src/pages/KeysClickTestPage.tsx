@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Button, Space, Table, Tag, Typography } from 'antd';
+import { Button, Space, Table, Tag, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import PageLayout from '../components/PageLayout';
 
@@ -285,16 +285,47 @@ export default function KeysClickTestPage() {
                 (仅保留最近 20 条)
               </Typography.Text>
             </div>
-            <Button
-              id="btn-clear-keys-log"
-              size="small"
-              disabled={logs.length === 0}
-              onClick={() => {
-                setLogs([]);
-              }}
-            >
-              清除记录
-            </Button>
+            <Space size={8}>
+              <Button
+                id="btn-copy-latest-keys-log"
+                size="small"
+                disabled={logs.length === 0}
+                onClick={async () => {
+                  const latest = logs[0];
+                  const payload = {
+                    buttonId: latest.buttonId,
+                    buttonLabel: latest.buttonLabel,
+                    eventType: latest.eventType,
+                    detectedKeys: latest.detectedKeys,
+                    clickSource: latest.clickSource,
+                    clickPosition: latest.clickPosition ?? null,
+                    offsetX: latest.offsetX ?? null,
+                    offsetY: latest.offsetY ?? null,
+                    isTrusted: latest.isTrusted,
+                    time: latest.time,
+                  };
+                  const text = JSON.stringify(payload, null, 2);
+                  try {
+                    await navigator.clipboard.writeText(text);
+                    message.success('已复制最近一条记录');
+                  } catch {
+                    message.error('复制失败, 请检查浏览器剪贴板权限');
+                  }
+                }}
+              >
+                复制最近的一条记录
+              </Button>
+              <Button
+                id="btn-clear-keys-log"
+                size="small"
+                disabled={logs.length === 0}
+                onClick={() => {
+                  setLogs([]);
+                }}
+              >
+                清除记录
+              </Button>
+            </Space>
           </div>
           <Table
             id="keys-click-log"
