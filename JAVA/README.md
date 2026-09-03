@@ -28,23 +28,20 @@ Java Swing 桌面靶场，用于 UI 自动化测试练习。
 ## 一键构建 + 运行
 
 ```powershell
-cd D:\code\xpath\ShootingRange\java
-.\start.ps1
+cd D:\code\xpath
+uv run .\tools\start_java.py
 ```
 
-启动后使用方向键移动焦点，按 `Enter` 或空格勾选多个 JDK；在“已完成选择”上按 `Enter` 后，脚本会依次构建并同时启动所选版本。
+Python 启动器使用根目录 `.tools/java-launcher` 中的 uv 环境，不依赖 PowerShell 脚本。启动后使用方向键移动焦点，按 `Enter` 或空格勾选多个 JDK；在“已完成选择”上按 `Enter` 后，脚本会依次构建并同时启动所选版本。
 
 非交互命令：
 
 ```powershell
-# 构建全部版本
-.\build.ps1 -Versions 8,11,17,21,25
+# 构建并验证全部版本，不启动窗口
+uv run .\tools\start_java.py --versions 8 11 17 21 25 --no-launch
 
-# 同时运行 JDK 8 和 25
-.\run.ps1 -Versions 8,25
-
-# 跳过构建直接运行
-.\run.ps1 -Versions 8,25 -SkipBuild
+# 跳过构建，同时运行 JDK 8 和 25
+uv run .\tools\start_java.py --versions 8 25 --skip-build
 ```
 
 各版本产物位于 `target/jdk-<版本>/shooting-range-<版本>.jar`。
