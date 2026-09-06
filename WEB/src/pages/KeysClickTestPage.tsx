@@ -215,6 +215,12 @@ export default function KeysClickTestPage() {
     event: React.MouseEvent<HTMLElement>,
   ) => handleInteraction(buttonId, buttonLabel, expected, event, 'click'), [handleInteraction]);
 
+  const handleTrustedClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    if (event.nativeEvent.isTrusted) {
+      message.success('点击成功');
+    }
+  }, []);
+
   const columns: ColumnsType<InteractionLog> = [
     { title: '时间', dataIndex: 'time', width: 90 },
     {
@@ -381,6 +387,9 @@ export default function KeysClickTestPage() {
                 }}
               >
                 右键触发
+              </Button>
+              <Button id="btn-trusted-click-target" size="large" onClick={handleTrustedClick}>
+                点击调试
               </Button>
             </Space>
           </div>

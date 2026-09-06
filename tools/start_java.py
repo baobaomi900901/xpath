@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import locale
 import os
-import shutil
 import subprocess
 import sys
 import urllib.request
@@ -20,7 +19,6 @@ JAVA_TOOLS = JAVA_ROOT / ".tools"
 JDKS_ROOT = JAVA_TOOLS / "jdks" / "corretto"
 MAVEN_HOME = JAVA_TOOLS / f"apache-maven-{MAVEN_VERSION}"
 MAVEN_CMD = MAVEN_HOME / "bin" / "mvn.cmd"
-LOCAL_ENV = REPO_ROOT / ".tools" / "java-launcher"
 COLOR_ENABLED = False
 
 
@@ -49,27 +47,6 @@ def green(text: str) -> str:
     if not COLOR_ENABLED:
         return text
     return f"\x1b[92m{text}\x1b[0m"
-
-
-def ensure_local_environment() -> None:
-    local_python = LOCAL_ENV / "Scripts" / "python.exe"
-    if not local_python.exists():
-        uv = shutil.which("uv")
-        if uv is None:
-            raise RuntimeError("uv 未安装或不在 PATH 中。")
-        print(f"正在创建 Python 环境: {LOCAL_ENV}")
-        subprocess.run(
-            [uv, "venv", str(LOCAL_ENV), "--python", "3.13"],
-            cwd=REPO_ROOT,
-            check=True,
-        )
-
-    if Path(sys.prefix).resolve() != LOCAL_ENV.resolve():
-        completed = subprocess.run(
-            [str(local_python), str(Path(__file__).resolve()), *sys.argv[1:]],
-            cwd=REPO_ROOT,
-        )
-        raise SystemExit(completed.returncode)
 
 
 def parse_args() -> argparse.Namespace:
@@ -285,7 +262,6 @@ def launch_versions(versions: list[str], jars: dict[str, Path]) -> None:
 
 def main() -> int:
     configure_output()
-    ensure_local_environment()
     args = parse_args()
 
     versions = normalize_versions(args.versions) if args.versions else select_versions()
