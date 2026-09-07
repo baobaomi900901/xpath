@@ -18,8 +18,11 @@ if (-not $VsVersion) {
 }
 
 $Generator = switch ($VsVersion.Trim()) {
+    "18" { "Visual Studio 18 2026" }
     "2026" { "Visual Studio 18 2026" }
+    "17" { "Visual Studio 17 2022" }
     "2022" { "Visual Studio 17 2022" }
+    "16" { "Visual Studio 16 2019" }
     "2019" { "Visual Studio 16 2019" }
     default { Write-Error "Unsupported Visual Studio product line: $VsVersion"; exit 1 }
 }
