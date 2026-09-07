@@ -60,6 +60,7 @@ enum ElementKey : int {
     HeaderFirst = 3200,
     PageInfoLabel = 3300,
     StatusLabel = 3400,
+    CityOptionFirst = 3500,
     DragHeading = 4000,
     DragInstructions,
     DragPositionLabel,
@@ -83,6 +84,7 @@ enum class ElementKind {
     CheckBox,
     RadioButton,
     Button,
+    ComboOption,
     Arena,
     DragTarget,
     Table,
@@ -122,6 +124,9 @@ struct AppState {
     std::array<bool, 5> cityChecks{};
     std::array<bool, 4> hobbyChecks{};
     bool agreed{};
+    bool cityComboExpanded{};
+    int hoveredCityOption{-1};
+    bool trackingMouseLeave{};
     bool dragPositionInitialized{};
     bool dragging{};
     int dragLeft{};
@@ -189,7 +194,7 @@ void AddElement(
     if (kind == ElementKind::Password) {
         state |= STATE_SYSTEM_PROTECTED;
     }
-    if (kind == ElementKind::Cell || kind == ElementKind::Tab) {
+    if (kind == ElementKind::Cell || kind == ElementKind::Tab || kind == ElementKind::ComboOption) {
         state |= STATE_SYSTEM_SELECTABLE;
     }
     elements.push_back(Element{
@@ -421,7 +426,10 @@ std::vector<Element> BuildElements(HWND window) {
         AddElement(elements, AgeSpin, MakeRect(fieldX, rowY[3], fieldX + 140, rowY[3] + 30), L"年龄", std::to_wstring(g_app.age),
                    ROLE_SYSTEM_SPINBUTTON, ElementKind::Spinner, true, false, false, false, L"增加");
         AddElement(elements, CityCombo, MakeRect(fieldX, rowY[4], fieldX + 250, rowY[4] + 30), L"城市（单选）", kCities[g_app.city],
-                   ROLE_SYSTEM_COMBOBOX, ElementKind::ComboBox, true, false, false, false, L"切换选项");
+                   ROLE_SYSTEM_COMBOBOX, ElementKind::ComboBox, true, false, false, false,
+                   g_app.cityComboExpanded ? L"折叠" : L"展开");
+        elements.back().state |= STATE_SYSTEM_HASPOPUP;
+        elements.back().state |= g_app.cityComboExpanded ? STATE_SYSTEM_EXPANDED : STATE_SYSTEM_COLLAPSED;
 
         for (int index = 0; index < static_cast<int>(kCities.size()); ++index) {
             AddElement(elements, CityMultiFirst + index, MakeRect(fieldX + index * 78, rowY[5], fieldX + index * 78 + 74, rowY[5] + 30),
@@ -452,6 +460,31 @@ std::vector<Element> BuildElements(HWND window) {
         if (!g_app.status.empty()) {
             AddElement(elements, StatusLabel, MakeRect(width / 2 + 125, actionY, width - 20, actionY + 32), g_app.status, L"",
                        ROLE_SYSTEM_STATICTEXT, ElementKind::StaticText);
+        }
+        if (g_app.cityComboExpanded) {
+            constexpr int optionHeight = 30;
+            const int optionTop = rowY[4] + 30;
+            for (int index = 0; index < static_cast<int>(kCities.size()); ++index) {
+                AddElement(
+                    elements,
+                    CityOptionFirst + index,
+                    MakeRect(
+                        fieldX,
+                        optionTop + index * optionHeight,
+                        fieldX + 250,
+                        optionTop + (index + 1) * optionHeight
+                    ),
+                    kCities[index],
+                    L"",
+                    ROLE_SYSTEM_LISTITEM,
+                    ElementKind::ComboOption,
+                    true,
+                    false,
+                    g_app.city == index,
+                    false,
+                    L"选择"
+                );
+            }
         }
     } else if (g_app.selectedTab == 1) {
         const int tableLeft = 18;
@@ -618,6 +651,17 @@ void SetFocusedKey(int key) {
     InvalidateRect(g_app.window, nullptr, FALSE);
 }
 
+void SetCityComboExpanded(bool expanded) {
+    if (g_app.cityComboExpanded == expanded) {
+        return;
+    }
+    g_app.cityComboExpanded = expanded;
+    g_app.hoveredCityOption = -1;
+    NotifyElement(EVENT_OBJECT_STATECHANGE, CityCombo);
+    NotifyRoot(EVENT_OBJECT_REORDER);
+    InvalidateRect(g_app.window, nullptr, FALSE);
+}
+
 void ResetForm() {
     g_app.name.clear();
     g_app.password.clear();
@@ -630,6 +674,8 @@ void ResetForm() {
     g_app.cityChecks.fill(false);
     g_app.hobbyChecks.fill(false);
     g_app.agreed = false;
+    g_app.cityComboExpanded = false;
+    g_app.hoveredCityOption = -1;
     g_app.focusedKey = NameEdit;
     NotifyRoot(EVENT_OBJECT_REORDER);
     InvalidateRect(g_app.window, nullptr, FALSE);
@@ -650,6 +696,8 @@ void ActivateElement(int key) {
     if (key == TabForm || key == TabTable || key == TabDrag) {
         const int newTab = key == TabForm ? 0 : (key == TabTable ? 1 : 2);
         if (newTab != g_app.selectedTab) {
+            g_app.cityComboExpanded = false;
+            g_app.hoveredCityOption = -1;
             g_app.selectedTab = newTab;
             g_app.focusedKey = key;
             NotifyRoot(EVENT_OBJECT_REORDER);
@@ -675,8 +723,15 @@ void ActivateElement(int key) {
         g_app.age = std::min(80, g_app.age + 1);
         NotifyElement(EVENT_OBJECT_VALUECHANGE, key);
     } else if (key == CityCombo) {
-        g_app.city = (g_app.city + 1) % static_cast<int>(kCities.size());
-        NotifyElement(EVENT_OBJECT_VALUECHANGE, key);
+        SetCityComboExpanded(!g_app.cityComboExpanded);
+        return;
+    } else if (key >= CityOptionFirst && key < CityOptionFirst + static_cast<int>(kCities.size())) {
+        g_app.city = key - CityOptionFirst;
+        SetCityComboExpanded(false);
+        SetFocusedKey(CityCombo);
+        NotifyElement(EVENT_OBJECT_VALUECHANGE, CityCombo);
+        InvalidateRect(g_app.window, nullptr, FALSE);
+        return;
     } else if (key == SaveButton) {
         g_app.status = L"提交成功！";
         NotifyRoot(EVENT_OBJECT_NAMECHANGE);
@@ -793,6 +848,7 @@ bool PutElementValue(int key, const std::wstring& value) {
             return false;
         }
         g_app.city = static_cast<int>(std::distance(kCities.begin(), city));
+        SetCityComboExpanded(false);
     } else {
         return false;
     }
@@ -1230,6 +1286,55 @@ void DrawElement(HDC context, const Element& element) {
                            unavailable ? GetSysColor(COLOR_GRAYTEXT) : GetSysColor(COLOR_BTNTEXT));
             break;
         }
+        case ElementKind::ComboOption: {
+            constexpr int optionHeight = 30;
+            RECT panelBounds = MakeRect(
+                bounds.left,
+                bounds.top - (element.key - CityOptionFirst) * optionHeight,
+                bounds.right,
+                bounds.top - (element.key - CityOptionFirst) * optionHeight
+                    + static_cast<int>(kCities.size()) * optionHeight
+            );
+            if (element.key == CityOptionFirst) {
+                RECT outerShadow = panelBounds;
+                OffsetRect(&outerShadow, 6, 6);
+                HBRUSH outerShadowBrush = CreateSolidBrush(RGB(235, 235, 235));
+                FillRect(context, &outerShadow, outerShadowBrush);
+                DeleteObject(outerShadowBrush);
+
+                RECT middleShadow = panelBounds;
+                OffsetRect(&middleShadow, 4, 4);
+                HBRUSH middleShadowBrush = CreateSolidBrush(RGB(220, 220, 220));
+                FillRect(context, &middleShadow, middleShadowBrush);
+                DeleteObject(middleShadowBrush);
+
+                RECT innerShadow = panelBounds;
+                OffsetRect(&innerShadow, 2, 2);
+                HBRUSH innerShadowBrush = CreateSolidBrush(RGB(205, 205, 205));
+                FillRect(context, &innerShadow, innerShadowBrush);
+                DeleteObject(innerShadowBrush);
+                FillRect(context, &panelBounds, GetSysColorBrush(COLOR_WINDOW));
+            }
+
+            const bool hovered = element.key == CityOptionFirst + g_app.hoveredCityOption;
+            if (selected || hovered) {
+                const COLORREF backgroundColor = selected ? GetSysColor(COLOR_HIGHLIGHT) : RGB(225, 240, 255);
+                HBRUSH background = CreateSolidBrush(backgroundColor);
+                FillRect(context, &bounds, background);
+                DeleteObject(background);
+            }
+            DrawTextInRect(
+                context,
+                element.name,
+                bounds,
+                DT_LEFT | DT_VCENTER | DT_SINGLELINE,
+                selected ? GetSysColor(COLOR_HIGHLIGHTTEXT) : GetSysColor(COLOR_WINDOWTEXT)
+            );
+            if (element.key == CityOptionFirst + static_cast<int>(kCities.size()) - 1) {
+                FrameRect(context, &panelBounds, GetSysColorBrush(COLOR_3DSHADOW));
+            }
+            break;
+        }
         case ElementKind::Arena: {
             HBRUSH background = CreateSolidBrush(RGB(250, 250, 250));
             FillRect(context, &bounds, background);
@@ -1317,9 +1422,44 @@ const Element* FindElementByKey(const std::vector<Element>& elements, int key) {
     return found == elements.end() ? nullptr : &*found;
 }
 
+void UpdateCityComboHover(HWND window, int x, int y) {
+    int hoveredOption = -1;
+    if (g_app.cityComboExpanded) {
+        const POINT point{x, y};
+        const auto elements = BuildElements(window);
+        const auto hovered = std::find_if(elements.begin(), elements.end(), [&point](const Element& element) {
+            return element.key >= CityOptionFirst
+                && element.key < CityOptionFirst + static_cast<int>(kCities.size())
+                && PtInRect(&element.bounds, point);
+        });
+        if (hovered != elements.end()) {
+            hoveredOption = hovered->key - CityOptionFirst;
+        }
+    }
+    if (g_app.hoveredCityOption != hoveredOption) {
+        g_app.hoveredCityOption = hoveredOption;
+        InvalidateRect(window, nullptr, FALSE);
+    }
+    if (!g_app.trackingMouseLeave) {
+        TRACKMOUSEEVENT tracking{sizeof(tracking), TME_LEAVE, window, 0};
+        g_app.trackingMouseLeave = TrackMouseEvent(&tracking) != FALSE;
+    }
+}
+
 void HandleClick(HWND window, int x, int y) {
     POINT point{x, y};
     const auto elements = BuildElements(window);
+    if (g_app.cityComboExpanded) {
+        const bool insideComboOrOptions = std::any_of(elements.begin(), elements.end(), [&point](const Element& element) {
+            const bool isComboOrOption = element.key == CityCombo
+                || (element.key >= CityOptionFirst
+                    && element.key < CityOptionFirst + static_cast<int>(kCities.size()));
+            return isComboOrOption && PtInRect(&element.bounds, point);
+        });
+        if (!insideComboOrOptions) {
+            SetCityComboExpanded(false);
+        }
+    }
     for (auto element = elements.rbegin(); element != elements.rend(); ++element) {
         if (!PtInRect(&element->bounds, point)) {
             continue;
@@ -1347,6 +1487,9 @@ void HandleClick(HWND window, int x, int y) {
 }
 
 void MoveFocus(bool backwards) {
+    if (g_app.cityComboExpanded) {
+        SetCityComboExpanded(false);
+    }
     const auto elements = BuildElements(g_app.window);
     std::vector<int> focusable;
     for (const Element& element : elements) {
@@ -1419,7 +1562,18 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
                 MoveDragTarget(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
                 return 0;
             }
+            if (g_app.cityComboExpanded) {
+                UpdateCityComboHover(window, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                return 0;
+            }
             break;
+        case WM_MOUSELEAVE:
+            g_app.trackingMouseLeave = false;
+            if (g_app.hoveredCityOption != -1) {
+                g_app.hoveredCityOption = -1;
+                InvalidateRect(window, nullptr, FALSE);
+            }
+            return 0;
         case WM_LBUTTONUP:
             if (g_app.dragging) {
                 MoveDragTarget(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
@@ -1434,6 +1588,11 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
             HandleCharacter(static_cast<wchar_t>(wParam));
             return 0;
         case WM_KEYDOWN: {
+            if (wParam == VK_ESCAPE && g_app.cityComboExpanded) {
+                SetCityComboExpanded(false);
+                SetFocusedKey(CityCombo);
+                return 0;
+            }
             if (wParam == VK_TAB) {
                 MoveFocus((GetKeyState(VK_SHIFT) & 0x8000) != 0);
                 return 0;
@@ -1461,6 +1620,11 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
             }
             break;
         }
+        case WM_KILLFOCUS:
+            if (g_app.cityComboExpanded) {
+                SetCityComboExpanded(false);
+            }
+            return 0;
         case WM_SIZE:
             if (g_app.dragPositionInitialized) {
                 EnsureDragPosition(window);
