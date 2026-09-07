@@ -5,6 +5,7 @@ const { Title, Paragraph } = Typography;
 
 type PageLayoutProps = {
   title: string;
+  titleExtra?: ReactNode;
   subtitle?: string;
   children: ReactNode;
   extra?: ReactNode;
@@ -15,6 +16,7 @@ type PageLayoutProps = {
 
 export default function PageLayout({
   title,
+  titleExtra,
   subtitle,
   children,
   extra,
@@ -38,6 +40,7 @@ export default function PageLayout({
         <Card>
           <Title level={3} style={{ marginTop: 0 }}>
             {title}
+            {titleExtra ? <span style={{ display: 'inline-flex', marginLeft: 16, verticalAlign: 'middle' }}>{titleExtra}</span> : null}
           </Title>
           {subtitle ? (
             <Paragraph type="secondary" style={{ marginBottom: extra ? 12 : 24 }}>

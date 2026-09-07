@@ -19,6 +19,7 @@ import {
   Select,
   Slider,
   Space,
+  Switch,
   TimePicker,
   Typography,
   message,
@@ -672,69 +673,66 @@ function nativeInputProps(onFocus = nativeFocusStyle, onBlur = nativeBlurStyle) 
   return { onFocus, onBlur };
 }
 
+const DYNAMIC_IDS_STORAGE_KEY = 'form-controls-dynamic-ids';
+
+function readDynamicIdsPreference() {
+  try {
+    return localStorage.getItem(DYNAMIC_IDS_STORAGE_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+function createControlIds(group: 'ant' | 'native', dynamic: boolean) {
+  const id = (field: string) => {
+    const fixedId = `form-controls-${group}-${field}`;
+    return dynamic ? randomId(`${fixedId}_`) : fixedId;
+  };
+  return {
+    text: id('text'),
+    password: id('password'),
+    email: id('email'),
+    number: id('number'),
+    date: id('date'),
+    time: id('time'),
+    search: id('search'),
+    city: id('city'),
+    cities: id('cities'),
+    genderMale: id('genderMale'),
+    genderFemale: id('genderFemale'),
+    genderOther: id('genderOther'),
+    hobbyAll: id('hobbyAll'),
+    hobbyRead: id('hobbyRead'),
+    hobbySport: id('hobbySport'),
+    hobbyMusic: id('hobbyMusic'),
+    hobbyTravel: id('hobbyTravel'),
+    remark: id('remark'),
+    range: id('range'),
+    disabled: id('disabled'),
+    readonly: id('readonly'),
+    submit: id('submit'),
+    reset: id('reset'),
+  };
+}
+
 export default function FormControlsPage() {
   const [antForm] = Form.useForm<AntFormValues>();
   const [nativeForm] = Form.useForm<NativeFormValues>();
   const [antResult, setAntResult] = useState(RESULT_PLACEHOLDER);
   const [nativeResult, setNativeResult] = useState(RESULT_PLACEHOLDER);
 
-  const antIds = useMemo(
-    () => ({
-      text: randomId(),
-      password: randomId(),
-      email: randomId(),
-      number: randomId(),
-      date: randomId(),
-      time: randomId(),
-      search: randomId(),
-      city: randomId(),
-      cities: randomId(),
-      genderMale: randomId(),
-      genderFemale: randomId(),
-      genderOther: randomId(),
-      hobbyAll: randomId(),
-      hobbyRead: randomId(),
-      hobbySport: randomId(),
-      hobbyMusic: randomId(),
-      hobbyTravel: randomId(),
-      remark: randomId(),
-      range: randomId(),
-      disabled: randomId(),
-      readonly: randomId(),
-      submit: randomId('btn_ant_'),
-      reset: randomId('btn_ant_'),
-    }),
-    [],
-  );
+  const [dynamicIds, setDynamicIds] = useState(readDynamicIdsPreference);
+  const antIds = useMemo(() => createControlIds('ant', dynamicIds), [dynamicIds]);
+  const nativeIds = useMemo(() => createControlIds('native', dynamicIds), [dynamicIds]);
 
-  const nativeIds = useMemo(
-    () => ({
-      text: randomId(),
-      password: randomId(),
-      email: randomId(),
-      number: randomId(),
-      date: randomId(),
-      time: randomId(),
-      search: randomId(),
-      city: 'form-controls-native-city',
-      cities: 'form-controls-native-cities',
-      genderMale: randomId(),
-      genderFemale: randomId(),
-      genderOther: randomId(),
-      hobbyAll: randomId(),
-      hobbyRead: randomId(),
-      hobbySport: randomId(),
-      hobbyMusic: randomId(),
-      hobbyTravel: randomId(),
-      remark: randomId(),
-      range: randomId(),
-      disabled: randomId(),
-      readonly: randomId(),
-      submit: 'form-controls-native-submit',
-      reset: 'form-controls-native-reset',
-    }),
-    [],
-  );
+  const handleDynamicIdsChange = (checked: boolean) => {
+    setDynamicIds(checked);
+    try {
+      localStorage.setItem(DYNAMIC_IDS_STORAGE_KEY, String(checked));
+    } catch {
+      message.warning('浏览器无法保存设置，本次切换仍然有效');
+    }
+  };
 
   const handleAntSubmit = async () => {
     try {
@@ -833,15 +831,28 @@ export default function FormControlsPage() {
   return (
     <PageLayout
       title="表单控件测试"
+      titleExtra={(
+        <Space size={8}>
+          <Typography.Text id="form-controls-dynamic-ids-label">动态 ID</Typography.Text>
+          <Switch
+            id="form-controls-dynamic-ids-toggle"
+            aria-labelledby="form-controls-dynamic-ids-label"
+            checked={dynamicIds}
+            onChange={handleDynamicIdsChange}
+          />
+        </Space>
+      )}
       subtitle="左侧 Ant Design 表单, 右侧原生 HTML 表单, 控件一一对齐"
       fullWidth
       inset={24}
     >
       <Alert
-        type="warning"
+        type={dynamicIds ? 'warning' : 'info'}
         showIcon
         style={{ marginBottom: 20 }}
-        message="每次刷新页面, 所有控件的 id 都会随机变化; label 文字固定, 可作为锚点定位"
+        message={dynamicIds
+          ? '动态 ID 已开启：每次刷新页面，表单控件的 ID 都会变化；label 文字固定，可作为锚点定位'
+          : '动态 ID 已关闭：表单控件使用固定 ID，刷新页面后保持不变'}
       />
 
       <Form form={antForm} component={false} layout={FORM_LAYOUT} initialValues={ANT_INITIAL_VALUES} />
@@ -916,7 +927,7 @@ export default function FormControlsPage() {
               ))}
             </select>
           ),
-          { nativeLabel: '城市(暂时id不会变动)' })}
+          { nativeLabel: '城市' })}
         {renderItem('城市多选', 'cities',
           <Select
             id={antIds.cities}
@@ -926,7 +937,7 @@ export default function FormControlsPage() {
             options={CITY_OPTIONS}
           />,
           <NativeMultiSelect id={nativeIds.cities} options={CITY_OPTIONS} />,
-          { nativeLabel: '城市多选(暂时id不会变动)' })}
+          { nativeLabel: '城市多选' })}
 
         <FormSectionTitle title="单选框" />
         <AlignedFormRow
