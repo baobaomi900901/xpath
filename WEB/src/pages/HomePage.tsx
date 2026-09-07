@@ -117,7 +117,12 @@ export default function HomePage() {
               hoverable
               style={{ width: '100%' }}
               styles={{ body: { padding: 16 } }}
-              onClick={() => window.open(item.href, '_blank', 'noopener,noreferrer')}
+              onClick={() => {
+                const routePrefix = import.meta.env.VITE_GITHUB_PAGES === 'true' && !item.href.endsWith('.html')
+                  ? '#/' : '';
+                const href = `${import.meta.env.BASE_URL}${routePrefix}${item.href.slice(1)}`;
+                window.open(href, '_blank', 'noopener,noreferrer');
+              }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
                 <div>
@@ -137,4 +142,3 @@ export default function HomePage() {
     </PageLayout>
   );
 }
-

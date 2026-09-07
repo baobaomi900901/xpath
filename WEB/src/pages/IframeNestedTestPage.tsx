@@ -35,7 +35,7 @@ export default function IframeNestedTestPage() {
       <iframe
         id="iframe-layer-1"
         title="iframe 第 1 层"
-        src="/iframes/level-1.html"
+        src={`${import.meta.env.BASE_URL}iframes/level-1.html`}
         style={{
           width: '100%',
           height: 720,

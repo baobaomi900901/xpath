@@ -17,7 +17,7 @@ export default function DownloadDialogTestPage() {
 
   const handleStaticDownload = async (url: string, name: string) => {
     try {
-      await downloadUrl(url, name);
+      await downloadUrl(`${import.meta.env.BASE_URL}${url.slice(1)}`, name);
       markDownload(name);
     } catch (error) {
       markFailed(name, error);
@@ -40,7 +40,7 @@ export default function DownloadDialogTestPage() {
               Chrome / Edge 需开启：设置 → 下载内容 → <strong>下载前询问每个文件的保存位置</strong>
             </li>
             <li>
-              静态文件通过 fetch + Blob 强制下载（并带 Content-Disposition: attachment），避免被浏览器当成页面打开
+              静态文件通过 fetch + Blob 下载，避免被浏览器当成页面打开
             </li>
             <li>先调用 web.handle_save_dialog(file_folder, file_name=...)</li>
             <li>再点击下方的下载按钮，触发保存对话框</li>

@@ -1,5 +1,6 @@
 ﻿import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import HomePage from './pages/HomePage';
+import { HashRouter } from 'react-router-dom';
 import AnchorTestPage from './pages/AnchorTestPage';
 import FormControlsPage from './pages/FormControlsPage';
 import DownloadDialogTestPage from './pages/DownloadDialogTestPage';
@@ -14,8 +15,9 @@ import DragToTestPage from './pages/DragToTestPage';
 import CookieTestPage from './pages/CookieTestPage';
 
 export default function App() {
+  const Router = import.meta.env.VITE_GITHUB_PAGES === 'true' ? HashRouter : BrowserRouter;
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/anchor-test" element={<AnchorTestPage />} />
@@ -32,6 +34,6 @@ export default function App() {
         <Route path="/cookie-test" element={<CookieTestPage />} />
         <Route path="/sdk-web/cookies" element={<CookieTestPage />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
