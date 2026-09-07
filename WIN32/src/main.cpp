@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <windowsx.h>
 #include <commctrl.h>
 
 #include <algorithm>
@@ -13,6 +14,8 @@ namespace {
 constexpr wchar_t kMainWindowClass[] = L"XPathWin32ShootingRange";
 constexpr wchar_t kPanelWindowClass[] = L"XPathWin32Panel";
 constexpr int kPageSize = 20;
+constexpr int kDragTargetWidth = 120;
+constexpr int kDragTargetHeight = 80;
 
 enum ControlId : int {
     Tab = 100,
@@ -36,7 +39,11 @@ enum ControlId : int {
     PreviousPage,
     PageButtonFirst = 220,
     NextPage = 230,
-    LastPage
+    LastPage,
+    DragReset = 300,
+    DragCopy,
+    DragArena,
+    DragTarget
 };
 
 struct Employee {
@@ -55,6 +62,7 @@ struct AppState {
     HWND tab{};
     HWND formPanel{};
     HWND tablePanel{};
+    HWND dragPanel{};
     HFONT font{};
 
     HWND nameEdit{};
@@ -80,6 +88,32 @@ struct AppState {
     HWND nextButton{};
     HWND lastButton{};
     HWND pageInfoLabel{};
+
+    HWND dragHeading{};
+    HWND dragInstructions{};
+    HWND dragPositionLabel{};
+    HWND dragAnchorLabel{};
+    HWND dragResultLabel{};
+    HWND dragStatusLabel{};
+    HWND dragResetButton{};
+    HWND dragCopyButton{};
+    HWND dragArena{};
+    HWND dragTarget{};
+    bool dragPositionInitialized{};
+    bool dragging{};
+    int dragLeft{};
+    int dragTop{};
+    int dragInitialLeft{};
+    int dragInitialTop{};
+    int dragStartLeft{};
+    int dragStartTop{};
+    int dragAnchorX{};
+    int dragAnchorY{};
+    int dragMoveCount{};
+    unsigned long long dragStartedAt{};
+    unsigned long long dragDuration{};
+    std::wstring dragAnchorRegion{L"-"};
+    std::wstring dragClipboardStatus;
 
     std::vector<Employee> employees;
     int currentPage{1};
@@ -121,6 +155,229 @@ void MoveControl(HWND control, int x, int y, int width, int height) {
 
 HWND CreateLabel(HWND parent, const wchar_t* text, int id = 0) {
     return CreateControl(0, WC_STATICW, text, SS_LEFT | SS_CENTERIMAGE, parent, id);
+}
+
+std::wstring DragAnchorRegion(int x, int y) {
+    const int column = std::clamp(x * 3 / kDragTargetWidth, 0, 2);
+    const int row = std::clamp(y * 3 / kDragTargetHeight, 0, 2);
+    constexpr std::array<const wchar_t*, 9> regions = {
+        L"topLeft", L"topCenter", L"topRight",
+        L"middleLeft", L"middleCenter", L"middleRight",
+        L"bottomLeft", L"bottomCenter", L"bottomRight"
+    };
+    return regions[row * 3 + column];
+}
+
+std::wstring DragStateJson() {
+    return L"{\"left\":" + std::to_wstring(g_app.dragLeft)
+        + L",\"top\":" + std::to_wstring(g_app.dragTop)
+        + L",\"initialLeft\":" + std::to_wstring(g_app.dragInitialLeft)
+        + L",\"initialTop\":" + std::to_wstring(g_app.dragInitialTop)
+        + L",\"deltaLeft\":" + std::to_wstring(g_app.dragLeft - g_app.dragInitialLeft)
+        + L",\"deltaTop\":" + std::to_wstring(g_app.dragTop - g_app.dragInitialTop)
+        + L",\"startLeft\":" + std::to_wstring(g_app.dragStartLeft)
+        + L",\"startTop\":" + std::to_wstring(g_app.dragStartTop)
+        + L",\"sessionDeltaLeft\":" + std::to_wstring(g_app.dragLeft - g_app.dragStartLeft)
+        + L",\"sessionDeltaTop\":" + std::to_wstring(g_app.dragTop - g_app.dragStartTop)
+        + L",\"anchor\":{\"x\":" + std::to_wstring(g_app.dragAnchorX)
+        + L",\"y\":" + std::to_wstring(g_app.dragAnchorY)
+        + L",\"sudokuPart\":\"" + g_app.dragAnchorRegion
+        + L"\"},\"moveCount\":" + std::to_wstring(g_app.dragMoveCount)
+        + L",\"durationMs\":" + std::to_wstring(g_app.dragDuration)
+        + L",\"dragging\":" + (g_app.dragging ? L"true" : L"false") + L"}";
+}
+
+bool CopyUnicodeText(HWND owner, const std::wstring& text) {
+    if (!OpenClipboard(owner)) {
+        return false;
+    }
+    if (!EmptyClipboard()) {
+        CloseClipboard();
+        return false;
+    }
+
+    const SIZE_T bytes = (text.size() + 1) * sizeof(wchar_t);
+    HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, bytes);
+    if (!memory) {
+        CloseClipboard();
+        return false;
+    }
+    void* destination = GlobalLock(memory);
+    if (!destination) {
+        GlobalFree(memory);
+        CloseClipboard();
+        return false;
+    }
+    CopyMemory(destination, text.c_str(), bytes);
+    GlobalUnlock(memory);
+    if (!SetClipboardData(CF_UNICODETEXT, memory)) {
+        GlobalFree(memory);
+        CloseClipboard();
+        return false;
+    }
+    CloseClipboard();
+    return true;
+}
+
+void UpdateDragLabels();
+
+void CopyDragState() {
+    const bool copied = CopyUnicodeText(g_app.mainWindow, DragStateJson());
+    g_app.dragClipboardStatus = copied ? L"已复制当前结果" : L"复制失败（剪贴板可能正被占用）";
+    UpdateDragLabels();
+}
+
+void UpdateDragLabels() {
+    if (!g_app.dragPositionLabel) {
+        return;
+    }
+
+    const int deltaLeft = g_app.dragLeft - g_app.dragInitialLeft;
+    const int deltaTop = g_app.dragTop - g_app.dragInitialTop;
+    const int sessionDeltaLeft = g_app.dragLeft - g_app.dragStartLeft;
+    const int sessionDeltaTop = g_app.dragTop - g_app.dragStartTop;
+    const std::wstring position = L"当前位置: left=" + std::to_wstring(g_app.dragLeft)
+        + L", top=" + std::to_wstring(g_app.dragTop)
+        + L"    相对初始: Δleft=" + std::to_wstring(deltaLeft)
+        + L", Δtop=" + std::to_wstring(deltaTop);
+    const std::wstring anchor = L"按下锚点: x=" + std::to_wstring(g_app.dragAnchorX)
+        + L", y=" + std::to_wstring(g_app.dragAnchorY)
+        + L", sudoku_part=" + g_app.dragAnchorRegion;
+    const std::wstring result = L"本次拖拽: Δleft=" + std::to_wstring(sessionDeltaLeft)
+        + L", Δtop=" + std::to_wstring(sessionDeltaTop)
+        + L", move=" + std::to_wstring(g_app.dragMoveCount)
+        + L", duration=" + std::to_wstring(g_app.dragDuration) + L"ms";
+
+    SetWindowTextW(g_app.dragPositionLabel, position.c_str());
+    SetWindowTextW(g_app.dragAnchorLabel, anchor.c_str());
+    SetWindowTextW(g_app.dragResultLabel, result.c_str());
+    const std::wstring status = g_app.dragging
+        ? L"状态: 拖拽中"
+        : (g_app.dragClipboardStatus.empty() ? L"状态: 空闲" : L"状态: " + g_app.dragClipboardStatus);
+    SetWindowTextW(g_app.dragStatusLabel, status.c_str());
+}
+
+void PositionDragTarget(bool resetToCenter) {
+    if (!g_app.dragArena || !g_app.dragTarget) {
+        return;
+    }
+
+    RECT arena{};
+    GetClientRect(g_app.dragArena, &arena);
+    const int maxLeft = std::max(0, static_cast<int>(arena.right) - kDragTargetWidth);
+    const int maxTop = std::max(0, static_cast<int>(arena.bottom) - kDragTargetHeight);
+    if (resetToCenter || !g_app.dragPositionInitialized) {
+        g_app.dragLeft = maxLeft / 2;
+        g_app.dragTop = maxTop / 2;
+        g_app.dragInitialLeft = g_app.dragLeft;
+        g_app.dragInitialTop = g_app.dragTop;
+        g_app.dragStartLeft = g_app.dragLeft;
+        g_app.dragStartTop = g_app.dragTop;
+        g_app.dragAnchorX = kDragTargetWidth / 2;
+        g_app.dragAnchorY = kDragTargetHeight / 2;
+        g_app.dragAnchorRegion = L"middleCenter";
+        g_app.dragMoveCount = 0;
+        g_app.dragDuration = 0;
+        g_app.dragClipboardStatus.clear();
+        g_app.dragPositionInitialized = true;
+    } else {
+        g_app.dragLeft = std::clamp(g_app.dragLeft, 0, maxLeft);
+        g_app.dragTop = std::clamp(g_app.dragTop, 0, maxTop);
+    }
+    MoveControl(g_app.dragTarget, g_app.dragLeft, g_app.dragTop, kDragTargetWidth, kDragTargetHeight);
+    UpdateDragLabels();
+}
+
+void BeginDragTarget(HWND target, int anchorX, int anchorY) {
+    g_app.dragging = true;
+    g_app.dragStartLeft = g_app.dragLeft;
+    g_app.dragStartTop = g_app.dragTop;
+    g_app.dragAnchorX = std::clamp(anchorX, 0, kDragTargetWidth - 1);
+    g_app.dragAnchorY = std::clamp(anchorY, 0, kDragTargetHeight - 1);
+    g_app.dragAnchorRegion = DragAnchorRegion(g_app.dragAnchorX, g_app.dragAnchorY);
+    g_app.dragMoveCount = 0;
+    g_app.dragDuration = 0;
+    g_app.dragClipboardStatus.clear();
+    g_app.dragStartedAt = GetTickCount64();
+    SetFocus(target);
+    SetCapture(target);
+    UpdateDragLabels();
+}
+
+void MoveDragTarget(HWND target, int x, int y) {
+    if (!g_app.dragging || GetCapture() != g_app.dragTarget) {
+        return;
+    }
+
+    POINT cursor{x, y};
+    ClientToScreen(target, &cursor);
+    ScreenToClient(g_app.dragArena, &cursor);
+    RECT arena{};
+    GetClientRect(g_app.dragArena, &arena);
+    const int nextLeft = std::clamp(
+        static_cast<int>(cursor.x) - g_app.dragAnchorX,
+        0,
+        std::max(0, static_cast<int>(arena.right) - kDragTargetWidth)
+    );
+    const int nextTop = std::clamp(
+        static_cast<int>(cursor.y) - g_app.dragAnchorY,
+        0,
+        std::max(0, static_cast<int>(arena.bottom) - kDragTargetHeight)
+    );
+    if (nextLeft == g_app.dragLeft && nextTop == g_app.dragTop) {
+        return;
+    }
+    g_app.dragLeft = nextLeft;
+    g_app.dragTop = nextTop;
+    ++g_app.dragMoveCount;
+    MoveControl(g_app.dragTarget, g_app.dragLeft, g_app.dragTop, kDragTargetWidth, kDragTargetHeight);
+    UpdateDragLabels();
+}
+
+void EndDragTarget() {
+    if (!g_app.dragging) {
+        return;
+    }
+    g_app.dragging = false;
+    g_app.dragDuration = GetTickCount64() - g_app.dragStartedAt;
+    if (GetCapture() == g_app.dragTarget) {
+        ReleaseCapture();
+    }
+    UpdateDragLabels();
+}
+
+LRESULT CALLBACK DragTargetSubclass(
+    HWND window,
+    UINT message,
+    WPARAM wParam,
+    LPARAM lParam,
+    UINT_PTR,
+    DWORD_PTR
+) {
+    switch (message) {
+        case WM_LBUTTONDOWN:
+            BeginDragTarget(window, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            return 0;
+        case WM_MOUSEMOVE:
+            if ((wParam & MK_LBUTTON) != 0) {
+                MoveDragTarget(window, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                return 0;
+            }
+            break;
+        case WM_LBUTTONUP:
+            MoveDragTarget(window, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            EndDragTarget();
+            return 0;
+        case WM_CAPTURECHANGED:
+            EndDragTarget();
+            return 0;
+        case WM_NCDESTROY:
+            RemoveWindowSubclass(window, DragTargetSubclass, 1);
+            break;
+        default:
+            break;
+    }
+    return DefSubclassProc(window, message, wParam, lParam);
 }
 
 void BuildEmployees() {
@@ -278,6 +535,52 @@ void CreateTableControls() {
     g_app.pageInfoLabel = CreateLabel(panel, L"");
 }
 
+void CreateDragControls() {
+    HWND panel = g_app.dragPanel;
+    g_app.dragHeading = CreateLabel(panel, L"元素拖拽测试");
+    g_app.dragInstructions = CreateLabel(
+        panel,
+        L"拖拽 drag-target 以校验位移、锚点、轨迹数量和耗时；delay_after 需由调用方统计。"
+    );
+    g_app.dragPositionLabel = CreateLabel(panel, L"");
+    g_app.dragAnchorLabel = CreateLabel(panel, L"");
+    g_app.dragResultLabel = CreateLabel(panel, L"");
+    g_app.dragStatusLabel = CreateLabel(panel, L"");
+    g_app.dragResetButton = CreateControl(
+        0,
+        WC_BUTTONW,
+        L"重置位置",
+        BS_PUSHBUTTON | WS_TABSTOP,
+        panel,
+        DragReset
+    );
+    g_app.dragCopyButton = CreateControl(
+        0,
+        WC_BUTTONW,
+        L"复制当前结果",
+        BS_PUSHBUTTON | WS_TABSTOP,
+        panel,
+        DragCopy
+    );
+    g_app.dragArena = CreateControl(
+        WS_EX_CLIENTEDGE | WS_EX_CONTROLPARENT,
+        kPanelWindowClass,
+        L"拖拽区域",
+        WS_BORDER | WS_CLIPCHILDREN,
+        panel,
+        DragArena
+    );
+    g_app.dragTarget = CreateControl(
+        0,
+        WC_BUTTONW,
+        L"drag-target",
+        BS_PUSHBUTTON | WS_TABSTOP,
+        g_app.dragArena,
+        DragTarget
+    );
+    SetWindowSubclass(g_app.dragTarget, DragTargetSubclass, 1, 0);
+}
+
 void LayoutFormPanel(int width, int height) {
     constexpr int labelX = 28;
     constexpr int fieldX = 172;
@@ -341,6 +644,25 @@ void LayoutTablePanel(int width, int height) {
     MoveControl(g_app.pageInfoLabel, 18, height - 44, width - 36, 28);
 }
 
+void LayoutDragPanel(int width, int height) {
+    constexpr int margin = 24;
+    constexpr int detailsWidth = 310;
+    const int arenaX = margin + detailsWidth + 24;
+    const int arenaWidth = std::max(320, std::min(560, width - arenaX - margin));
+    const int arenaHeight = std::max(280, std::min(420, height - 90));
+
+    MoveControl(g_app.dragHeading, margin, 12, detailsWidth, 30);
+    MoveControl(g_app.dragInstructions, margin, 45, width - margin * 2, 30);
+    MoveControl(g_app.dragPositionLabel, margin, 90, detailsWidth, 48);
+    MoveControl(g_app.dragAnchorLabel, margin, 142, detailsWidth, 48);
+    MoveControl(g_app.dragResultLabel, margin, 194, detailsWidth, 64);
+    MoveControl(g_app.dragStatusLabel, margin, 262, detailsWidth, 32);
+    MoveControl(g_app.dragResetButton, margin, 306, 120, 34);
+    MoveControl(g_app.dragCopyButton, margin + 132, 306, 150, 34);
+    MoveControl(g_app.dragArena, arenaX, 86, arenaWidth, arenaHeight);
+    PositionDragTarget(false);
+}
+
 void LayoutMainWindow() {
     RECT client{};
     GetClientRect(g_app.mainWindow, &client);
@@ -353,8 +675,10 @@ void LayoutMainWindow() {
     const int pageHeight = page.bottom - page.top;
     MoveControl(g_app.formPanel, page.left, page.top, pageWidth, pageHeight);
     MoveControl(g_app.tablePanel, page.left, page.top, pageWidth, pageHeight);
+    MoveControl(g_app.dragPanel, page.left, page.top, pageWidth, pageHeight);
     LayoutFormPanel(pageWidth, pageHeight);
     LayoutTablePanel(pageWidth, pageHeight);
+    LayoutDragPanel(pageWidth, pageHeight);
 }
 
 void ResetForm() {
@@ -451,9 +775,39 @@ void ShowSelectedTab() {
     const int selected = TabCtrl_GetCurSel(g_app.tab);
     ShowWindow(g_app.formPanel, selected == 0 ? SW_SHOW : SW_HIDE);
     ShowWindow(g_app.tablePanel, selected == 1 ? SW_SHOW : SW_HIDE);
+    ShowWindow(g_app.dragPanel, selected == 2 ? SW_SHOW : SW_HIDE);
 }
 
 LRESULT CALLBACK PanelWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
+    if (GetDlgCtrlID(window) == DragArena && message == WM_PAINT) {
+        PAINTSTRUCT paint{};
+        HDC context = BeginPaint(window, &paint);
+        RECT client{};
+        GetClientRect(window, &client);
+        FillRect(context, &client, GetSysColorBrush(COLOR_WINDOW));
+
+        HPEN gridPen = CreatePen(PS_SOLID, 1, RGB(232, 232, 232));
+        HGDIOBJ oldPen = SelectObject(context, gridPen);
+        for (int x = 40; x < client.right; x += 40) {
+            MoveToEx(context, x, 0, nullptr);
+            LineTo(context, x, client.bottom);
+        }
+        for (int y = 40; y < client.bottom; y += 40) {
+            MoveToEx(context, 0, y, nullptr);
+            LineTo(context, client.right, y);
+        }
+        SelectObject(context, oldPen);
+        DeleteObject(gridPen);
+
+        SetBkMode(context, TRANSPARENT);
+        SetTextColor(context, RGB(112, 112, 112));
+        HGDIOBJ oldFont = SelectObject(context, g_app.font);
+        RECT label{10, 8, client.right - 10, 32};
+        DrawTextW(context, L"拖拽区域 · 网格 40px", -1, &label, DT_LEFT | DT_SINGLELINE);
+        SelectObject(context, oldFont);
+        EndPaint(window, &paint);
+        return 0;
+    }
     if (message == WM_COMMAND || message == WM_NOTIFY) {
         HWND root = GetAncestor(window, GA_ROOT);
         return SendMessageW(root, message, wParam, lParam);
@@ -472,11 +826,15 @@ LRESULT CALLBACK MainWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM
             TabCtrl_InsertItem(g_app.tab, 0, &tabItem);
             tabItem.pszText = const_cast<wchar_t*>(L"表格数据");
             TabCtrl_InsertItem(g_app.tab, 1, &tabItem);
+            tabItem.pszText = const_cast<wchar_t*>(L"拖拽测试");
+            TabCtrl_InsertItem(g_app.tab, 2, &tabItem);
 
             g_app.formPanel = CreateControl(WS_EX_CONTROLPARENT, kPanelWindowClass, L"表单控件页", WS_CLIPCHILDREN, g_app.tab, 0);
             g_app.tablePanel = CreateControl(WS_EX_CONTROLPARENT, kPanelWindowClass, L"表格数据页", WS_CLIPCHILDREN, g_app.tab, 0);
+            g_app.dragPanel = CreateControl(WS_EX_CONTROLPARENT, kPanelWindowClass, L"拖拽测试页", WS_CLIPCHILDREN, g_app.tab, 0);
             CreateFormControls();
             CreateTableControls();
+            CreateDragControls();
             BuildEmployees();
             RefreshTable();
             ShowSelectedTab();
@@ -507,6 +865,15 @@ LRESULT CALLBACK MainWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM
             }
             if (id == ResetButton && HIWORD(wParam) == BN_CLICKED) {
                 ResetForm();
+                return 0;
+            }
+            if (id == DragReset && HIWORD(wParam) == BN_CLICKED) {
+                EndDragTarget();
+                PositionDragTarget(true);
+                return 0;
+            }
+            if (id == DragCopy && HIWORD(wParam) == BN_CLICKED) {
+                CopyDragState();
                 return 0;
             }
             if (id == FirstPage) {

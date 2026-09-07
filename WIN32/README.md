@@ -61,6 +61,19 @@ Windows 仍可能为标题栏、最小化、最大化和关闭按钮提供非客
 - 每页 20 条
 - 首页、上一页、页码、下一页、末页按钮
 
+### Tab 3：拖拽测试
+
+- `drag-target` 是 120×80 的可拖拽目标，初始位于拖拽区域中心
+- 目标会被限制在拖拽区域内，“重置位置”可恢复到中心
+- “复制当前结果”将当前拖拽状态以固定字段顺序的 JSON 写入 Unicode 剪贴板，状态文字显示复制成功或失败
+- 显示当前 `left/top`、相对初始位移和本次拖拽的 `Δleft/Δtop`
+- 记录按下锚点的局部坐标和九宫格区域
+- 记录 `WM_MOUSEMOVE` 数量和拖拽耗时，可用于对比 `smooth`/`instant`、`simulative` 和 `move_speed`
+- `delay_after` 是调用方在拖拽完成后的等待，靶场程序无法直接观测，需由调用方统计 `drag_to` 总耗时
+- UIA 版使用名称为 `drag-target` 的原生按钮子窗口
+- MSAA 版暴露名称为 `drag-target`、带 `STATE_SYSTEM_MOVEABLE` 的动态 `IAccessible` 节点
+- Canvas 版提供相同的可视拖拽功能，但不暴露内部 UIA/MSAA 节点
+
 ## 环境要求
 
 - Visual Studio 2019 或更高版本，并安装“使用 C++ 的桌面开发”工作负载

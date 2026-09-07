@@ -27,10 +27,13 @@ constexpr wchar_t kWindowTitle[] = L"Win32 靶场 - Canvas Only";
 #endif
 constexpr int kPageSize = 20;
 constexpr int kTotalRows = 1000;
+constexpr int kDragTargetWidth = 120;
+constexpr int kDragTargetHeight = 80;
 
 enum ElementKey : int {
     TabForm = 1000,
     TabTable,
+    TabDrag,
     FormHeading = 1010,
     NameEdit = 101,
     PasswordEdit,
@@ -57,6 +60,16 @@ enum ElementKey : int {
     HeaderFirst = 3200,
     PageInfoLabel = 3300,
     StatusLabel = 3400,
+    DragHeading = 4000,
+    DragInstructions,
+    DragPositionLabel,
+    DragAnchorLabel,
+    DragResultLabel,
+    DragStatusLabel,
+    DragReset,
+    DragCopy,
+    DragArena,
+    DragTarget,
     CellFirst = 10000
 };
 
@@ -70,6 +83,8 @@ enum class ElementKind {
     CheckBox,
     RadioButton,
     Button,
+    Arena,
+    DragTarget,
     Table,
     Header,
     Cell
@@ -93,7 +108,7 @@ struct AppState {
 #if WIN32_SHOOTING_RANGE_ENABLE_MSAA
     IAccessible* accessible{};
 #endif
-    bool tableTab{};
+    int selectedTab{};
     int focusedKey{NameEdit};
     int age{25};
     int city{};
@@ -107,6 +122,21 @@ struct AppState {
     std::array<bool, 5> cityChecks{};
     std::array<bool, 4> hobbyChecks{};
     bool agreed{};
+    bool dragPositionInitialized{};
+    bool dragging{};
+    int dragLeft{};
+    int dragTop{};
+    int dragInitialLeft{};
+    int dragInitialTop{};
+    int dragStartLeft{};
+    int dragStartTop{};
+    int dragAnchorX{};
+    int dragAnchorY{};
+    int dragMoveCount{};
+    unsigned long long dragStartedAt{};
+    unsigned long long dragDuration{};
+    std::wstring dragAnchorRegion{L"middleCenter"};
+    std::wstring dragClipboardStatus;
 };
 
 AppState g_app;
@@ -188,13 +218,138 @@ std::array<std::wstring, 7> EmployeeValues(int id) {
     };
 }
 
+std::wstring DragAnchorRegion(int x, int y) {
+    const int column = std::clamp(x * 3 / kDragTargetWidth, 0, 2);
+    const int row = std::clamp(y * 3 / kDragTargetHeight, 0, 2);
+    constexpr std::array<const wchar_t*, 9> regions = {
+        L"topLeft", L"topCenter", L"topRight",
+        L"middleLeft", L"middleCenter", L"middleRight",
+        L"bottomLeft", L"bottomCenter", L"bottomRight"
+    };
+    return regions[row * 3 + column];
+}
+
+std::wstring DragStateJson() {
+    return L"{\"left\":" + std::to_wstring(g_app.dragLeft)
+        + L",\"top\":" + std::to_wstring(g_app.dragTop)
+        + L",\"initialLeft\":" + std::to_wstring(g_app.dragInitialLeft)
+        + L",\"initialTop\":" + std::to_wstring(g_app.dragInitialTop)
+        + L",\"deltaLeft\":" + std::to_wstring(g_app.dragLeft - g_app.dragInitialLeft)
+        + L",\"deltaTop\":" + std::to_wstring(g_app.dragTop - g_app.dragInitialTop)
+        + L",\"startLeft\":" + std::to_wstring(g_app.dragStartLeft)
+        + L",\"startTop\":" + std::to_wstring(g_app.dragStartTop)
+        + L",\"sessionDeltaLeft\":" + std::to_wstring(g_app.dragLeft - g_app.dragStartLeft)
+        + L",\"sessionDeltaTop\":" + std::to_wstring(g_app.dragTop - g_app.dragStartTop)
+        + L",\"anchor\":{\"x\":" + std::to_wstring(g_app.dragAnchorX)
+        + L",\"y\":" + std::to_wstring(g_app.dragAnchorY)
+        + L",\"sudokuPart\":\"" + g_app.dragAnchorRegion
+        + L"\"},\"moveCount\":" + std::to_wstring(g_app.dragMoveCount)
+        + L",\"durationMs\":" + std::to_wstring(g_app.dragDuration)
+        + L",\"dragging\":" + (g_app.dragging ? L"true" : L"false") + L"}";
+}
+
+bool CopyUnicodeText(HWND owner, const std::wstring& text) {
+    if (!OpenClipboard(owner)) {
+        return false;
+    }
+    if (!EmptyClipboard()) {
+        CloseClipboard();
+        return false;
+    }
+
+    const SIZE_T bytes = (text.size() + 1) * sizeof(wchar_t);
+    HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, bytes);
+    if (!memory) {
+        CloseClipboard();
+        return false;
+    }
+    void* destination = GlobalLock(memory);
+    if (!destination) {
+        GlobalFree(memory);
+        CloseClipboard();
+        return false;
+    }
+    CopyMemory(destination, text.c_str(), bytes);
+    GlobalUnlock(memory);
+    if (!SetClipboardData(CF_UNICODETEXT, memory)) {
+        GlobalFree(memory);
+        CloseClipboard();
+        return false;
+    }
+    CloseClipboard();
+    return true;
+}
+
+std::wstring DragStatusText() {
+    if (g_app.dragging) {
+        return L"状态: 拖拽中";
+    }
+    return g_app.dragClipboardStatus.empty()
+        ? L"状态: 空闲"
+        : L"状态: " + g_app.dragClipboardStatus;
+}
+
+RECT DragArenaBounds(HWND window) {
+    RECT client{};
+    GetClientRect(window, &client);
+    constexpr int left = 370;
+    constexpr int top = 90;
+    const int right = std::max(left + 320, std::min(left + 560, static_cast<int>(client.right) - 24));
+    const int bottom = std::max(top + 280, std::min(top + 420, static_cast<int>(client.bottom) - 40));
+    return MakeRect(left, top, right, bottom);
+}
+
+void EnsureDragPosition(HWND window, bool resetToCenter = false) {
+    const RECT arena = DragArenaBounds(window);
+    const int maxLeft = std::max(0, static_cast<int>(arena.right - arena.left) - kDragTargetWidth);
+    const int maxTop = std::max(0, static_cast<int>(arena.bottom - arena.top) - kDragTargetHeight);
+    if (resetToCenter || !g_app.dragPositionInitialized) {
+        g_app.dragLeft = maxLeft / 2;
+        g_app.dragTop = maxTop / 2;
+        g_app.dragInitialLeft = g_app.dragLeft;
+        g_app.dragInitialTop = g_app.dragTop;
+        g_app.dragStartLeft = g_app.dragLeft;
+        g_app.dragStartTop = g_app.dragTop;
+        g_app.dragAnchorX = kDragTargetWidth / 2;
+        g_app.dragAnchorY = kDragTargetHeight / 2;
+        g_app.dragAnchorRegion = L"middleCenter";
+        g_app.dragMoveCount = 0;
+        g_app.dragDuration = 0;
+        g_app.dragClipboardStatus.clear();
+        g_app.dragPositionInitialized = true;
+    } else {
+        g_app.dragLeft = std::clamp(g_app.dragLeft, 0, maxLeft);
+        g_app.dragTop = std::clamp(g_app.dragTop, 0, maxTop);
+    }
+}
+
+std::wstring DragPositionText() {
+    return L"当前位置: left=" + std::to_wstring(g_app.dragLeft)
+        + L", top=" + std::to_wstring(g_app.dragTop)
+        + L"    相对初始: Δleft=" + std::to_wstring(g_app.dragLeft - g_app.dragInitialLeft)
+        + L", Δtop=" + std::to_wstring(g_app.dragTop - g_app.dragInitialTop);
+}
+
+std::wstring DragAnchorText() {
+    return L"按下锚点: x=" + std::to_wstring(g_app.dragAnchorX)
+        + L", y=" + std::to_wstring(g_app.dragAnchorY)
+        + L", sudoku_part=" + g_app.dragAnchorRegion;
+}
+
+std::wstring DragResultText() {
+    return L"本次拖拽: Δleft=" + std::to_wstring(g_app.dragLeft - g_app.dragStartLeft)
+        + L", Δtop=" + std::to_wstring(g_app.dragTop - g_app.dragStartTop)
+        + L", move=" + std::to_wstring(g_app.dragMoveCount)
+        + L", duration=" + std::to_wstring(g_app.dragDuration) + L"ms";
+}
+
 std::vector<Element> BuildElements(HWND window) {
     RECT client{};
     GetClientRect(window, &client);
     const int width = client.right;
     const int height = client.bottom;
     std::vector<Element> elements;
-    elements.reserve(g_app.tableTab ? 160 : 40);
+    elements.reserve(g_app.selectedTab == 1 ? 160 : 40);
 
     AddElement(
         elements,
@@ -206,7 +361,7 @@ std::vector<Element> BuildElements(HWND window) {
         ElementKind::Tab,
         true,
         false,
-        !g_app.tableTab,
+        g_app.selectedTab == 0,
         false,
         L"切换"
     );
@@ -220,12 +375,26 @@ std::vector<Element> BuildElements(HWND window) {
         ElementKind::Tab,
         true,
         false,
-        g_app.tableTab,
+        g_app.selectedTab == 1,
+        false,
+        L"切换"
+    );
+    AddElement(
+        elements,
+        TabDrag,
+        MakeRect(210, 10, 310, 44),
+        L"拖拽测试",
+        L"",
+        ROLE_SYSTEM_PAGETAB,
+        ElementKind::Tab,
+        true,
+        false,
+        g_app.selectedTab == 2,
         false,
         L"切换"
     );
 
-    if (!g_app.tableTab) {
+    if (g_app.selectedTab == 0) {
         constexpr int labelX = 30;
         constexpr int fieldX = 180;
         constexpr int labelWidth = 140;
@@ -284,7 +453,7 @@ std::vector<Element> BuildElements(HWND window) {
             AddElement(elements, StatusLabel, MakeRect(width / 2 + 125, actionY, width - 20, actionY + 32), g_app.status, L"",
                        ROLE_SYSTEM_STATICTEXT, ElementKind::StaticText);
         }
-    } else {
+    } else if (g_app.selectedTab == 1) {
         const int tableLeft = 18;
         const int tableRight = width - 18;
         const int headerTop = 82;
@@ -356,6 +525,55 @@ std::vector<Element> BuildElements(HWND window) {
             + std::to_wstring(displayStart + kPageSize - 1) + L" 条";
         AddElement(elements, PageInfoLabel, MakeRect(18, height - 36, width - 18, height - 10), pageInfo, L"",
                    ROLE_SYSTEM_STATICTEXT, ElementKind::StaticText);
+    } else {
+        EnsureDragPosition(window);
+        const RECT arena = DragArenaBounds(window);
+        AddElement(elements, DragHeading, MakeRect(30, 52, 330, 80), L"元素拖拽测试", L"",
+                   ROLE_SYSTEM_STATICTEXT, ElementKind::StaticText);
+        AddElement(
+            elements,
+            DragInstructions,
+            MakeRect(30, 78, width - 24, 108),
+            L"拖拽 drag-target 以校验位移、锚点、轨迹数量和耗时；delay_after 需由调用方统计。",
+            L"",
+            ROLE_SYSTEM_STATICTEXT,
+            ElementKind::StaticText
+        );
+        AddElement(elements, DragPositionLabel, MakeRect(30, 120, 345, 165), DragPositionText(), L"",
+                   ROLE_SYSTEM_STATICTEXT, ElementKind::StaticText);
+        AddElement(elements, DragAnchorLabel, MakeRect(30, 170, 345, 215), DragAnchorText(), L"",
+                   ROLE_SYSTEM_STATICTEXT, ElementKind::StaticText);
+        AddElement(elements, DragResultLabel, MakeRect(30, 220, 345, 280), DragResultText(), L"",
+                   ROLE_SYSTEM_STATICTEXT, ElementKind::StaticText);
+        AddElement(
+            elements,
+            DragStatusLabel,
+            MakeRect(30, 285, 345, 317),
+            DragStatusText(),
+            L"",
+            ROLE_SYSTEM_STATICTEXT,
+            ElementKind::StaticText
+        );
+        AddElement(elements, DragReset, MakeRect(30, 330, 150, 364), L"重置位置", L"",
+                   ROLE_SYSTEM_PUSHBUTTON, ElementKind::Button, true, false, false, false, L"按下");
+        AddElement(elements, DragCopy, MakeRect(162, 330, 330, 364), L"复制当前结果", L"",
+                   ROLE_SYSTEM_PUSHBUTTON, ElementKind::Button, true, false, false, false, L"按下");
+        AddElement(elements, DragArena, arena, L"drag-arena", L"560x420 拖拽区域",
+                   ROLE_SYSTEM_PANE, ElementKind::Arena);
+
+        const RECT target = MakeRect(
+            arena.left + g_app.dragLeft,
+            arena.top + g_app.dragTop,
+            arena.left + g_app.dragLeft + kDragTargetWidth,
+            arena.top + g_app.dragTop + kDragTargetHeight
+        );
+        const std::wstring targetValue = L"left=" + std::to_wstring(g_app.dragLeft)
+            + L", top=" + std::to_wstring(g_app.dragTop)
+            + L", deltaLeft=" + std::to_wstring(g_app.dragLeft - g_app.dragInitialLeft)
+            + L", deltaTop=" + std::to_wstring(g_app.dragTop - g_app.dragInitialTop);
+        AddElement(elements, DragTarget, target, L"drag-target", targetValue,
+                   ROLE_SYSTEM_PUSHBUTTON, ElementKind::DragTarget, true);
+        elements.back().state |= STATE_SYSTEM_MOVEABLE;
     }
     return elements;
 }
@@ -429,10 +647,10 @@ void ChangePage(int page) {
 }
 
 void ActivateElement(int key) {
-    if (key == TabForm || key == TabTable) {
-        const bool newTableTab = key == TabTable;
-        if (newTableTab != g_app.tableTab) {
-            g_app.tableTab = newTableTab;
+    if (key == TabForm || key == TabTable || key == TabDrag) {
+        const int newTab = key == TabForm ? 0 : (key == TabTable ? 1 : 2);
+        if (newTab != g_app.selectedTab) {
+            g_app.selectedTab = newTab;
             g_app.focusedKey = key;
             NotifyRoot(EVENT_OBJECT_REORDER);
             InvalidateRect(g_app.window, nullptr, FALSE);
@@ -465,6 +683,19 @@ void ActivateElement(int key) {
     } else if (key == ResetButton) {
         ResetForm();
         return;
+    } else if (key == DragReset) {
+        EnsureDragPosition(g_app.window, true);
+        g_app.focusedKey = DragTarget;
+        NotifyElement(EVENT_OBJECT_LOCATIONCHANGE, DragTarget);
+        NotifyElement(EVENT_OBJECT_VALUECHANGE, DragTarget);
+        InvalidateRect(g_app.window, nullptr, FALSE);
+        return;
+    } else if (key == DragCopy) {
+        const bool copied = CopyUnicodeText(g_app.window, DragStateJson());
+        g_app.dragClipboardStatus = copied ? L"已复制当前结果" : L"复制失败（剪贴板可能正被占用）";
+        NotifyElement(EVENT_OBJECT_NAMECHANGE, DragStatusLabel);
+        InvalidateRect(g_app.window, nullptr, FALSE);
+        return;
     } else if (key == FirstPage) {
         ChangePage(1);
         return;
@@ -485,6 +716,59 @@ void ActivateElement(int key) {
         ChangePage(kTotalRows / kPageSize);
         return;
     }
+    InvalidateRect(g_app.window, nullptr, FALSE);
+}
+
+void BeginDragTarget(int x, int y, const RECT& targetBounds) {
+    g_app.dragging = true;
+    g_app.dragStartLeft = g_app.dragLeft;
+    g_app.dragStartTop = g_app.dragTop;
+    g_app.dragAnchorX = std::clamp(x - static_cast<int>(targetBounds.left), 0, kDragTargetWidth - 1);
+    g_app.dragAnchorY = std::clamp(y - static_cast<int>(targetBounds.top), 0, kDragTargetHeight - 1);
+    g_app.dragAnchorRegion = DragAnchorRegion(g_app.dragAnchorX, g_app.dragAnchorY);
+    g_app.dragMoveCount = 0;
+    g_app.dragDuration = 0;
+    g_app.dragClipboardStatus.clear();
+    g_app.dragStartedAt = GetTickCount64();
+    SetFocusedKey(DragTarget);
+    SetCapture(g_app.window);
+    NotifyElement(EVENT_OBJECT_STATECHANGE, DragTarget);
+    InvalidateRect(g_app.window, nullptr, FALSE);
+}
+
+void MoveDragTarget(int x, int y) {
+    if (!g_app.dragging || GetCapture() != g_app.window) {
+        return;
+    }
+
+    const RECT arena = DragArenaBounds(g_app.window);
+    const int maxLeft = std::max(0, static_cast<int>(arena.right - arena.left) - kDragTargetWidth);
+    const int maxTop = std::max(0, static_cast<int>(arena.bottom - arena.top) - kDragTargetHeight);
+    const int nextLeft = std::clamp(x - static_cast<int>(arena.left) - g_app.dragAnchorX, 0, maxLeft);
+    const int nextTop = std::clamp(y - static_cast<int>(arena.top) - g_app.dragAnchorY, 0, maxTop);
+    if (nextLeft == g_app.dragLeft && nextTop == g_app.dragTop) {
+        return;
+    }
+
+    g_app.dragLeft = nextLeft;
+    g_app.dragTop = nextTop;
+    ++g_app.dragMoveCount;
+    NotifyElement(EVENT_OBJECT_LOCATIONCHANGE, DragTarget);
+    NotifyElement(EVENT_OBJECT_VALUECHANGE, DragTarget);
+    InvalidateRect(g_app.window, nullptr, FALSE);
+}
+
+void EndDragTarget() {
+    if (!g_app.dragging) {
+        return;
+    }
+    g_app.dragging = false;
+    g_app.dragDuration = GetTickCount64() - g_app.dragStartedAt;
+    if (GetCapture() == g_app.window) {
+        ReleaseCapture();
+    }
+    NotifyElement(EVENT_OBJECT_STATECHANGE, DragTarget);
+    NotifyElement(EVENT_OBJECT_VALUECHANGE, DragTarget);
     InvalidateRect(g_app.window, nullptr, FALSE);
 }
 
@@ -884,7 +1168,12 @@ void DrawElement(HDC context, const Element& element) {
 
     switch (element.kind) {
         case ElementKind::StaticText:
-            DrawTextInRect(context, element.name, bounds, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+            if (element.key == DragInstructions || element.key == DragPositionLabel
+                || element.key == DragAnchorLabel || element.key == DragResultLabel) {
+                DrawTextInRect(context, element.name, bounds, DT_LEFT | DT_TOP | DT_WORDBREAK);
+            } else {
+                DrawTextInRect(context, element.name, bounds, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+            }
             break;
         case ElementKind::Tab: {
             FillRect(context, &bounds, GetSysColorBrush(selected ? COLOR_WINDOW : COLOR_BTNFACE));
@@ -939,6 +1228,41 @@ void DrawElement(HDC context, const Element& element) {
             DrawFrameControl(context, &bounds, DFC_BUTTON, style);
             DrawTextInRect(context, element.name, bounds, DT_CENTER | DT_VCENTER | DT_SINGLELINE,
                            unavailable ? GetSysColor(COLOR_GRAYTEXT) : GetSysColor(COLOR_BTNTEXT));
+            break;
+        }
+        case ElementKind::Arena: {
+            HBRUSH background = CreateSolidBrush(RGB(250, 250, 250));
+            FillRect(context, &bounds, background);
+            DeleteObject(background);
+            FrameRect(context, &bounds, GetSysColorBrush(COLOR_3DSHADOW));
+
+            HPEN gridPen = CreatePen(PS_SOLID, 1, RGB(232, 232, 232));
+            HGDIOBJ oldPen = SelectObject(context, gridPen);
+            for (int x = bounds.left + 40; x < bounds.right; x += 40) {
+                MoveToEx(context, x, bounds.top, nullptr);
+                LineTo(context, x, bounds.bottom);
+            }
+            for (int y = bounds.top + 40; y < bounds.bottom; y += 40) {
+                MoveToEx(context, bounds.left, y, nullptr);
+                LineTo(context, bounds.right, y);
+            }
+            SelectObject(context, oldPen);
+            DeleteObject(gridPen);
+
+            RECT label = MakeRect(bounds.left + 8, bounds.top + 6, bounds.right - 8, bounds.top + 28);
+            DrawTextInRect(context, L"拖拽区域 · 网格 40px", label, DT_LEFT | DT_SINGLELINE, RGB(112, 112, 112));
+            break;
+        }
+        case ElementKind::DragTarget: {
+            HBRUSH background = CreateSolidBrush(g_app.dragging ? RGB(22, 119, 255) : RGB(64, 150, 255));
+            FillRect(context, &bounds, background);
+            DeleteObject(background);
+            FrameRect(context, &bounds, GetSysColorBrush(COLOR_HIGHLIGHT));
+            RECT nameBounds = MakeRect(bounds.left, bounds.top + 16, bounds.right, bounds.top + 40);
+            RECT positionBounds = MakeRect(bounds.left, bounds.top + 42, bounds.right, bounds.bottom - 8);
+            DrawTextInRect(context, L"drag-target", nameBounds, DT_CENTER | DT_VCENTER | DT_SINGLELINE, RGB(255, 255, 255));
+            const std::wstring position = std::to_wstring(g_app.dragLeft) + L", " + std::to_wstring(g_app.dragTop);
+            DrawTextInRect(context, position, positionBounds, DT_CENTER | DT_VCENTER | DT_SINGLELINE, RGB(245, 245, 245));
             break;
         }
         case ElementKind::Table:
@@ -999,6 +1323,10 @@ void HandleClick(HWND window, int x, int y) {
     for (auto element = elements.rbegin(); element != elements.rend(); ++element) {
         if (!PtInRect(&element->bounds, point)) {
             continue;
+        }
+        if (element->key == DragTarget) {
+            BeginDragTarget(x, y, element->bounds);
+            return;
         }
         if ((element->state & STATE_SYSTEM_FOCUSABLE) != 0) {
             SetFocusedKey(element->key);
@@ -1086,6 +1414,22 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         case WM_LBUTTONDOWN:
             HandleClick(window, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             return 0;
+        case WM_MOUSEMOVE:
+            if (g_app.dragging && (wParam & MK_LBUTTON) != 0) {
+                MoveDragTarget(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                return 0;
+            }
+            break;
+        case WM_LBUTTONUP:
+            if (g_app.dragging) {
+                MoveDragTarget(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                EndDragTarget();
+                return 0;
+            }
+            break;
+        case WM_CAPTURECHANGED:
+            EndDragTarget();
+            return 0;
         case WM_CHAR:
             HandleCharacter(static_cast<wchar_t>(wParam));
             return 0;
@@ -1118,6 +1462,9 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
             break;
         }
         case WM_SIZE:
+            if (g_app.dragPositionInitialized) {
+                EnsureDragPosition(window);
+            }
             InvalidateRect(window, nullptr, FALSE);
             return 0;
         case WM_GETMINMAXINFO: {
