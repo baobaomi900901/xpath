@@ -18,17 +18,33 @@ if (-not $VsVersion) {
 }
 
 $Generator = switch ($VsVersion.Trim()) {
-    "18" { "Visual Studio 18 2026" }
-    "17" { "Visual Studio 17 2022" }
-    "16" { "Visual Studio 16 2019" }
+    "2026" { "Visual Studio 18 2026" }
+    "2022" { "Visual Studio 17 2022" }
+    "2019" { "Visual Studio 16 2019" }
     default { Write-Error "Unsupported Visual Studio product line: $VsVersion"; exit 1 }
 }
 
+$CMakeCommand = Get-Command cmake -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($CMakeCommand) {
+    $CMake = $CMakeCommand.Source
+} else {
+    $VsInstallPath = & $VsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+    if (-not $VsInstallPath) {
+        Write-Error "Visual Studio installation path not found."
+        exit 1
+    }
+    $CMake = Join-Path $VsInstallPath.Trim() "Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+    if (-not (Test-Path -LiteralPath $CMake -PathType Leaf)) {
+        Write-Error "CMake not found. Install C++ CMake tools for Windows in Visual Studio Installer, or add CMake to PATH."
+        exit 1
+    }
+}
+
 $BuildDir = Join-Path $PSScriptRoot "build"
-& cmake -S $PSScriptRoot -B $BuildDir -G $Generator -A x64
+& $CMake -S $PSScriptRoot -B $BuildDir -G $Generator -A x64
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-& cmake --build $BuildDir --config $Configuration
+& $CMake --build $BuildDir --config $Configuration
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $UiaExe = Join-Path $BuildDir "$Configuration\win32-shooting-range-uia.exe"
