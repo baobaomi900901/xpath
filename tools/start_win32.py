@@ -51,6 +51,12 @@ def green(text: str) -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="构建并启动 Win32 靶场。")
     parser.add_argument(
+        "backend",
+        nargs="?",
+        choices=BACKENDS,
+        help="直接指定并启动单个版本（uia、msaa 或 canvas）；不指定时显示交互菜单。",
+    )
+    parser.add_argument(
         "--configuration",
         choices=("Debug", "Release"),
         default="Release",
@@ -64,7 +70,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--skip-build", action="store_true", help="跳过构建，直接使用现有 EXE。")
     parser.add_argument("--no-launch", action="store_true", help="仅验证构建产物，不启动程序。")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.backend and args.backends:
+        parser.error("位置参数 backend 不能与 --backends 同时使用。")
+    return args
 
 
 def clear_screen() -> None:
@@ -216,7 +225,12 @@ def main() -> int:
         raise RuntimeError("Win32 靶场只能在 Windows 上运行。")
 
     args = parse_args()
-    backends = normalize_backends(args.backends) if args.backends else select_backends()
+    if args.backend:
+        backends = [args.backend]
+    elif args.backends:
+        backends = normalize_backends(args.backends)
+    else:
+        backends = select_backends()
     if not backends:
         clear_screen()
         print("已取消。")
