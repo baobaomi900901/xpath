@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Button, Space, Table, Tag, Typography, message } from 'antd';
+import { Button, Modal, Space, Table, Tag, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import PageLayout from '../components/PageLayout';
 
@@ -109,6 +109,7 @@ export default function KeysClickTestPage() {
   const [logs, setLogs] = useState<InteractionLog[]>([]);
   const [hoverActive, setHoverActive] = useState(false);
   const [focusActive, setFocusActive] = useState(false);
+  const [occlusionOpen, setOcclusionOpen] = useState(false);
 
   const appendLog = useCallback((
     entry: Omit<InteractionLog, 'key' | 'time'>,
@@ -392,6 +393,42 @@ export default function KeysClickTestPage() {
                 点击调试
               </Button>
             </Space>
+          </div>
+
+          <div>
+            <Typography.Title level={5} style={{ marginTop: 0 }}>
+              遮挡点击测试
+            </Typography.Title>
+            <Typography.Paragraph type="secondary">
+              先点击测试按钮确认 alert，再打开模态弹窗，尝试点击遮罩下的同一按钮。
+              弹窗保持打开，点击右上角关闭后可继续测试。
+            </Typography.Paragraph>
+            <Space wrap size={12}>
+              <Button id="btn-open-occlusion-modal" onClick={() => setOcclusionOpen(true)}>
+                打开遮挡弹窗
+              </Button>
+              <Button
+                id="btn-occluded-alert-target"
+                onClick={(event) => {
+                  handleClick('btn-occluded-alert-target', '遮挡测试按钮', ANY_EXPECTED, event);
+                  window.alert('遮挡测试按钮已被点击');
+                }}
+              >
+                测试按钮（触发 alert）
+              </Button>
+            </Space>
+            <Modal
+              title="遮挡测试弹窗"
+              open={occlusionOpen}
+              onCancel={() => setOcclusionOpen(false)}
+              maskClosable={false}
+              footer={null}
+            >
+              <Typography.Paragraph>
+                测试按钮仍在页面中，由模态遮罩覆盖。可以使用自动化工具尝试点击它；
+                如果点击事件到达按钮，会触发 alert，并写入点击记录。
+              </Typography.Paragraph>
+            </Modal>
           </div>
 
           <div>
