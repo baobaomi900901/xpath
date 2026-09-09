@@ -42,6 +42,7 @@ enum ControlId : int {
     LastPage,
     DragReset = 300,
     DragCopy,
+    DragHide,
     DragArena,
     DragTarget
 };
@@ -97,8 +98,10 @@ struct AppState {
     HWND dragStatusLabel{};
     HWND dragResetButton{};
     HWND dragCopyButton{};
+    HWND dragHideButton{};
     HWND dragArena{};
     HWND dragTarget{};
+    bool dragTargetVisible{true};
     bool dragPositionInitialized{};
     bool dragging{};
     int dragLeft{};
@@ -380,6 +383,52 @@ LRESULT CALLBACK DragTargetSubclass(
     return DefSubclassProc(window, message, wParam, lParam);
 }
 
+bool CreateDragTargetControl() {
+    if (g_app.dragTarget) {
+        return true;
+    }
+    g_app.dragTarget = CreateControl(
+        0,
+        WC_BUTTONW,
+        L"drag-target",
+        BS_PUSHBUTTON | WS_TABSTOP,
+        g_app.dragArena,
+        DragTarget
+    );
+    if (!g_app.dragTarget) {
+        g_app.dragTargetVisible = false;
+        return false;
+    }
+    SetWindowSubclass(g_app.dragTarget, DragTargetSubclass, 1, 0);
+    g_app.dragTargetVisible = true;
+    return true;
+}
+
+void HideDragTarget() {
+    EndDragTarget();
+    if (g_app.dragTarget && !DestroyWindow(g_app.dragTarget)) {
+        g_app.dragClipboardStatus = L"隐藏失败";
+        UpdateDragLabels();
+        return;
+    }
+    g_app.dragTarget = nullptr;
+    g_app.dragTargetVisible = false;
+    g_app.dragClipboardStatus = L"元素已隐藏";
+    EnableWindow(g_app.dragHideButton, FALSE);
+    UpdateDragLabels();
+}
+
+void ResetDragTarget() {
+    EndDragTarget();
+    if (!CreateDragTargetControl()) {
+        g_app.dragClipboardStatus = L"恢复失败";
+        UpdateDragLabels();
+        return;
+    }
+    EnableWindow(g_app.dragHideButton, TRUE);
+    PositionDragTarget(true);
+}
+
 void BuildEmployees() {
     constexpr std::array<const wchar_t*, 5> departments = {
         L"研发部", L"产品部", L"市场部", L"销售部", L"人事部"
@@ -562,6 +611,14 @@ void CreateDragControls() {
         panel,
         DragCopy
     );
+    g_app.dragHideButton = CreateControl(
+        0,
+        WC_BUTTONW,
+        L"隐藏 drag-target",
+        BS_PUSHBUTTON | WS_TABSTOP,
+        panel,
+        DragHide
+    );
     g_app.dragArena = CreateControl(
         WS_EX_CLIENTEDGE | WS_EX_CONTROLPARENT,
         kPanelWindowClass,
@@ -570,15 +627,7 @@ void CreateDragControls() {
         panel,
         DragArena
     );
-    g_app.dragTarget = CreateControl(
-        0,
-        WC_BUTTONW,
-        L"drag-target",
-        BS_PUSHBUTTON | WS_TABSTOP,
-        g_app.dragArena,
-        DragTarget
-    );
-    SetWindowSubclass(g_app.dragTarget, DragTargetSubclass, 1, 0);
+    CreateDragTargetControl();
 }
 
 void LayoutFormPanel(int width, int height) {
@@ -659,6 +708,7 @@ void LayoutDragPanel(int width, int height) {
     MoveControl(g_app.dragStatusLabel, margin, 262, detailsWidth, 32);
     MoveControl(g_app.dragResetButton, margin, 306, 120, 34);
     MoveControl(g_app.dragCopyButton, margin + 132, 306, 150, 34);
+    MoveControl(g_app.dragHideButton, margin, 350, 150, 34);
     MoveControl(g_app.dragArena, arenaX, 86, arenaWidth, arenaHeight);
     PositionDragTarget(false);
 }
@@ -868,12 +918,15 @@ LRESULT CALLBACK MainWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM
                 return 0;
             }
             if (id == DragReset && HIWORD(wParam) == BN_CLICKED) {
-                EndDragTarget();
-                PositionDragTarget(true);
+                ResetDragTarget();
                 return 0;
             }
             if (id == DragCopy && HIWORD(wParam) == BN_CLICKED) {
                 CopyDragState();
+                return 0;
+            }
+            if (id == DragHide && HIWORD(wParam) == BN_CLICKED) {
+                HideDragTarget();
                 return 0;
             }
             if (id == FirstPage) {

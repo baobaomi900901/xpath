@@ -69,6 +69,7 @@ enum ElementKey : int {
     DragStatusLabel,
     DragReset,
     DragCopy,
+    DragHide,
     DragArena,
     DragTarget,
     CellFirst = 10000
@@ -127,6 +128,7 @@ struct AppState {
     bool cityComboExpanded{};
     int hoveredCityOption{-1};
     bool trackingMouseLeave{};
+    bool dragTargetVisible{true};
     bool dragPositionInitialized{};
     bool dragging{};
     int dragLeft{};
@@ -591,22 +593,27 @@ std::vector<Element> BuildElements(HWND window) {
                    ROLE_SYSTEM_PUSHBUTTON, ElementKind::Button, true, false, false, false, L"按下");
         AddElement(elements, DragCopy, MakeRect(162, 330, 330, 364), L"复制当前结果", L"",
                    ROLE_SYSTEM_PUSHBUTTON, ElementKind::Button, true, false, false, false, L"按下");
+        AddElement(elements, DragHide, MakeRect(30, 376, 180, 410), L"隐藏 drag-target", L"",
+                   ROLE_SYSTEM_PUSHBUTTON, ElementKind::Button, true, false, false,
+                   !g_app.dragTargetVisible, g_app.dragTargetVisible ? L"按下" : L"");
         AddElement(elements, DragArena, arena, L"drag-arena", L"560x420 拖拽区域",
                    ROLE_SYSTEM_PANE, ElementKind::Arena);
 
-        const RECT target = MakeRect(
-            arena.left + g_app.dragLeft,
-            arena.top + g_app.dragTop,
-            arena.left + g_app.dragLeft + kDragTargetWidth,
-            arena.top + g_app.dragTop + kDragTargetHeight
-        );
-        const std::wstring targetValue = L"left=" + std::to_wstring(g_app.dragLeft)
-            + L", top=" + std::to_wstring(g_app.dragTop)
-            + L", deltaLeft=" + std::to_wstring(g_app.dragLeft - g_app.dragInitialLeft)
-            + L", deltaTop=" + std::to_wstring(g_app.dragTop - g_app.dragInitialTop);
-        AddElement(elements, DragTarget, target, L"drag-target", targetValue,
-                   ROLE_SYSTEM_PUSHBUTTON, ElementKind::DragTarget, true);
-        elements.back().state |= STATE_SYSTEM_MOVEABLE;
+        if (g_app.dragTargetVisible) {
+            const RECT target = MakeRect(
+                arena.left + g_app.dragLeft,
+                arena.top + g_app.dragTop,
+                arena.left + g_app.dragLeft + kDragTargetWidth,
+                arena.top + g_app.dragTop + kDragTargetHeight
+            );
+            const std::wstring targetValue = L"left=" + std::to_wstring(g_app.dragLeft)
+                + L", top=" + std::to_wstring(g_app.dragTop)
+                + L", deltaLeft=" + std::to_wstring(g_app.dragLeft - g_app.dragInitialLeft)
+                + L", deltaTop=" + std::to_wstring(g_app.dragTop - g_app.dragInitialTop);
+            AddElement(elements, DragTarget, target, L"drag-target", targetValue,
+                       ROLE_SYSTEM_PUSHBUTTON, ElementKind::DragTarget, true);
+            elements.back().state |= STATE_SYSTEM_MOVEABLE;
+        }
     }
     return elements;
 }
@@ -661,6 +668,8 @@ void SetCityComboExpanded(bool expanded) {
     NotifyRoot(EVENT_OBJECT_REORDER);
     InvalidateRect(g_app.window, nullptr, FALSE);
 }
+
+void EndDragTarget();
 
 void ResetForm() {
     g_app.name.clear();
@@ -739,8 +748,15 @@ void ActivateElement(int key) {
         ResetForm();
         return;
     } else if (key == DragReset) {
+        const bool wasHidden = !g_app.dragTargetVisible;
         EnsureDragPosition(g_app.window, true);
-        g_app.focusedKey = DragTarget;
+        g_app.dragTargetVisible = true;
+        if (wasHidden) {
+            NotifyRoot(EVENT_OBJECT_REORDER);
+            NotifyElement(EVENT_OBJECT_SHOW, DragTarget);
+            NotifyElement(EVENT_OBJECT_STATECHANGE, DragHide);
+        }
+        SetFocusedKey(DragTarget);
         NotifyElement(EVENT_OBJECT_LOCATIONCHANGE, DragTarget);
         NotifyElement(EVENT_OBJECT_VALUECHANGE, DragTarget);
         InvalidateRect(g_app.window, nullptr, FALSE);
@@ -748,6 +764,20 @@ void ActivateElement(int key) {
     } else if (key == DragCopy) {
         const bool copied = CopyUnicodeText(g_app.window, DragStateJson());
         g_app.dragClipboardStatus = copied ? L"已复制当前结果" : L"复制失败（剪贴板可能正被占用）";
+        NotifyElement(EVENT_OBJECT_NAMECHANGE, DragStatusLabel);
+        InvalidateRect(g_app.window, nullptr, FALSE);
+        return;
+    } else if (key == DragHide) {
+        if (!g_app.dragTargetVisible) {
+            return;
+        }
+        EndDragTarget();
+        NotifyElement(EVENT_OBJECT_HIDE, DragTarget);
+        g_app.dragTargetVisible = false;
+        g_app.dragClipboardStatus = L"元素已隐藏";
+        SetFocusedKey(DragHide);
+        NotifyRoot(EVENT_OBJECT_REORDER);
+        NotifyElement(EVENT_OBJECT_STATECHANGE, DragHide);
         NotifyElement(EVENT_OBJECT_NAMECHANGE, DragStatusLabel);
         InvalidateRect(g_app.window, nullptr, FALSE);
         return;

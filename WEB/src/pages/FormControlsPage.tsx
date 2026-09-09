@@ -1,7 +1,5 @@
 import {
-  useEffect,
   useMemo,
-  useRef,
   useState,
   type CSSProperties,
   type FocusEvent,
@@ -259,210 +257,25 @@ type NativeMultiSelectProps = {
   value?: string[];
   onChange?: (value: string[]) => void;
   options: Array<{ value: string; label: string }>;
-  placeholder?: string;
 };
 
-const NATIVE_MULTI_SHELL_STYLE: CSSProperties = {
-  ...NATIVE_INPUT_STYLE,
-  position: 'relative',
-  height: 'auto',
-  minHeight: 32,
-  display: 'flex',
-  flexWrap: 'wrap',
-  alignItems: 'center',
-  gap: 4,
-  padding: '3px 7px',
-  cursor: 'text',
-};
-
-const NATIVE_MULTI_TAG_STYLE: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 4,
-  height: 24,
-  padding: '0 7px',
-  fontSize: 12,
-  lineHeight: '22px',
-  borderRadius: 4,
-  background: 'rgba(0, 0, 0, 0.06)',
-  color: 'rgba(0, 0, 0, 0.88)',
-};
-
-const NATIVE_MULTI_INPUT_STYLE: CSSProperties = {
-  flex: 1,
-  minWidth: 80,
-  height: 24,
-  margin: 0,
-  padding: 0,
-  border: 'none',
-  outline: 'none',
-  background: 'transparent',
-  fontSize: 14,
-  lineHeight: '24px',
-  color: 'rgba(0, 0, 0, 0.88)',
-};
-
-const NATIVE_MULTI_DROPDOWN_STYLE: CSSProperties = {
-  position: 'absolute',
-  top: 'calc(100% + 4px)',
-  left: 0,
-  right: 0,
-  zIndex: 20,
-  maxHeight: 180,
-  overflowY: 'auto',
-  margin: 0,
-  padding: '4px 0',
-  listStyle: 'none',
-  background: '#fff',
-  border: '1px solid #d9d9d9',
-  borderRadius: 6,
-  boxShadow: '0 6px 16px rgba(0, 0, 0, 0.08)',
-};
-
-function NativeMultiSelect({
-  id,
-  value = [],
-  onChange,
-  options,
-  placeholder = '请选择城市（可多选）',
-}: NativeMultiSelectProps) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  const [keyword, setKeyword] = useState('');
-  const [focused, setFocused] = useState(false);
-
-  const selectedSet = useMemo(() => new Set(value), [value]);
-  const labelMap = useMemo(
-    () => new Map(options.map((item) => [item.value, item.label])),
-    [options],
-  );
-  const filtered = useMemo(() => {
-    const key = keyword.trim().toLowerCase();
-    if (!key) return options;
-    return options.filter((item) => item.label.toLowerCase().includes(key) || item.value.toLowerCase().includes(key));
-  }, [keyword, options]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-        setKeyword('');
-      }
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
-  }, [open]);
-
-  const toggle = (optionValue: string) => {
-    if (selectedSet.has(optionValue)) {
-      onChange?.(value.filter((item) => item !== optionValue));
-    } else {
-      onChange?.([...value, optionValue]);
-    }
-    setKeyword('');
-  };
-
-  const shellStyle: CSSProperties = {
-    ...NATIVE_MULTI_SHELL_STYLE,
-    ...(focused
-      ? {
-          borderColor: '#4096ff',
-          boxShadow: '0 0 0 2px rgba(5, 145, 255, 0.1)',
-        }
-      : null),
-  };
-
+function NativeMultiSelect({ id, value = [], onChange, options }: NativeMultiSelectProps) {
   return (
-    <div
-      ref={rootRef}
-      style={shellStyle}
-      onMouseDown={(event) => {
-        if ((event.target as HTMLElement).closest('button')) return;
-        setOpen(true);
-      }}
-    >
-      {value.map((item) => (
-        <span key={item} style={NATIVE_MULTI_TAG_STYLE}>
-          {labelMap.get(item) ?? item}
-          <button
-            type="button"
-            aria-label={`移除 ${labelMap.get(item) ?? item}`}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              padding: 0,
-              margin: 0,
-              cursor: 'pointer',
-              lineHeight: 1,
-              color: 'rgba(0, 0, 0, 0.45)',
-            }}
-            onClick={(event) => {
-              event.stopPropagation();
-              onChange?.(value.filter((current) => current !== item));
-            }}
-          >
-            ×
-          </button>
-        </span>
-      ))}
-      <input
-        id={id}
-        type="text"
-        value={keyword}
-        placeholder={value.length === 0 ? placeholder : ''}
-        style={NATIVE_MULTI_INPUT_STYLE}
-        autoComplete="off"
-        onFocus={() => {
-          setFocused(true);
-          setOpen(true);
-        }}
-        onBlur={() => setFocused(false)}
-        onChange={(event) => {
-          setKeyword(event.target.value);
-          setOpen(true);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Backspace' && !keyword && value.length > 0) {
-            onChange?.(value.slice(0, -1));
-          }
-          if (event.key === 'Escape') {
-            setOpen(false);
-            setKeyword('');
-          }
-        }}
-      />
-      {open && (
-        <ul style={NATIVE_MULTI_DROPDOWN_STYLE} role="listbox" aria-multiselectable>
-          {filtered.length === 0 ? (
-            <li style={{ padding: '5px 12px', color: 'rgba(0, 0, 0, 0.25)' }}>无匹配选项</li>
-          ) : (
-            filtered.map((item) => {
-              const selected = selectedSet.has(item.value);
-              return (
-                <li
-                  key={item.value}
-                  role="option"
-                  aria-selected={selected}
-                  style={{
-                    padding: '5px 12px',
-                    cursor: 'pointer',
-                    background: selected ? '#e6f4ff' : 'transparent',
-                    color: 'rgba(0, 0, 0, 0.88)',
-                  }}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    toggle(item.value);
-                  }}
-                >
-                  {item.label}
-                </li>
-              );
-            })
-          )}
-        </ul>
+    <select
+      id={id}
+      name="cities"
+      multiple
+      size={4}
+      value={value}
+      style={{ width: '100%', boxSizing: 'border-box' }}
+      onChange={(event) => onChange?.(
+        Array.from(event.currentTarget.selectedOptions, (option) => option.value),
       )}
-    </div>
+    >
+      {options.map((item) => (
+        <option key={item.value} value={item.value}>{item.label}</option>
+      ))}
+    </select>
   );
 }
 
