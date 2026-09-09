@@ -25,6 +25,12 @@ const menuItems = [
     description: '左侧 Ant Design 表单, 右侧原生 HTML 表单, id 每次刷新随机',
   },
   {
+    id: 'menu-iframe-shadow-form',
+    href: '/iframe-shadow-form',
+    title: 'iframe + Shadow 表单测试',
+    description: 'iframe 内嵌 Open Shadow DOM，包含完整的左右两栏表单与动态 ID 开关',
+  },
+  {
     id: 'menu-save-dialog',
     href: '/download-dialog-test',
     title: '下载对话框测试',

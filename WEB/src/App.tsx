@@ -3,6 +3,7 @@ import HomePage from './pages/HomePage';
 import { HashRouter } from 'react-router-dom';
 import AnchorTestPage from './pages/AnchorTestPage';
 import FormControlsPage from './pages/FormControlsPage';
+import IframeShadowFormPage, { ShadowFormContent } from './pages/IframeShadowFormPage';
 import DownloadDialogTestPage from './pages/DownloadDialogTestPage';
 import UploadDialogTestPage from './pages/UploadDialogTestPage';
 import WebDialogTestPage from './pages/WebDialogTestPage';
@@ -22,6 +23,8 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/anchor-test" element={<AnchorTestPage />} />
         <Route path="/form-controls" element={<FormControlsPage />} />
+        <Route path="/iframe-shadow-form" element={<IframeShadowFormPage />} />
+        <Route path="/iframe-shadow-form-content" element={<ShadowFormContent />} />
         <Route path="/download-dialog-test" element={<DownloadDialogTestPage />} />
         <Route path="/upload-dialog-test" element={<UploadDialogTestPage />} />
         <Route path="/web-dialog-test" element={<WebDialogTestPage />} />

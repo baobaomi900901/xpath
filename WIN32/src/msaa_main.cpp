@@ -61,6 +61,13 @@ enum ElementKey : int {
     PageInfoLabel = 3300,
     StatusLabel = 3400,
     CityOptionFirst = 3500,
+    MenuBar = 3600,
+    MenuFile,
+    MenuEdit,
+    PopupMenuButton,
+    MenuFileItemFirst = 3700,
+    MenuEditItemFirst = 3710,
+    MenuActionItemFirst = 3720,
     DragHeading = 4000,
     DragInstructions,
     DragPositionLabel,
@@ -86,6 +93,9 @@ enum class ElementKind {
     RadioButton,
     Button,
     ComboOption,
+    MenuBar,
+    TopMenuItem,
+    PopupMenuItem,
     Arena,
     DragTarget,
     Table,
@@ -104,9 +114,17 @@ struct Element {
     ElementKind kind;
 };
 
+enum class ActiveMenu {
+    None,
+    File,
+    Edit,
+    Action
+};
+
 struct AppState {
     HINSTANCE instance{};
     HWND window{};
+    HMENU mainMenu{};
     HFONT font{};
 #if WIN32_SHOOTING_RANGE_ENABLE_MSAA
     IAccessible* accessible{};
@@ -127,6 +145,8 @@ struct AppState {
     bool agreed{};
     bool cityComboExpanded{};
     int hoveredCityOption{-1};
+    ActiveMenu activeMenu{ActiveMenu::None};
+    int hoveredMenuItem{-1};
     bool trackingMouseLeave{};
     bool dragTargetVisible{true};
     bool dragPositionInitialized{};
@@ -158,6 +178,67 @@ constexpr std::array<const wchar_t*, 5> kDepartments = {
     L"研发部", L"产品部", L"市场部", L"销售部", L"人事部"
 };
 constexpr std::array<const wchar_t*, 3> kStatuses = {L"在职", L"离职", L"待入职"};
+constexpr std::array<const wchar_t*, 3> kFileMenuItems = {L"新建", L"打开", L"保存"};
+constexpr std::array<const wchar_t*, 5> kEditMenuItems = {L"撤销", L"剪切", L"复制", L"粘贴", L"全选"};
+constexpr std::array<const wchar_t*, 5> kActionMenuItems = {L"打开", L"复制", L"重命名", L"删除", L"属性"};
+
+bool IsPopupMenuItemKey(int key) {
+    return (key >= MenuFileItemFirst && key < MenuFileItemFirst + static_cast<int>(kFileMenuItems.size()))
+        || (key >= MenuEditItemFirst && key < MenuEditItemFirst + static_cast<int>(kEditMenuItems.size()))
+        || (key >= MenuActionItemFirst && key < MenuActionItemFirst + static_cast<int>(kActionMenuItems.size()));
+}
+
+int MenuOwnerKey(ActiveMenu menu) {
+    switch (menu) {
+        case ActiveMenu::File: return MenuFile;
+        case ActiveMenu::Edit: return MenuEdit;
+        case ActiveMenu::Action: return PopupMenuButton;
+        case ActiveMenu::None: return 0;
+    }
+    return 0;
+}
+
+std::wstring MenuItemSelectionText(int key) {
+    if (key >= MenuFileItemFirst && key < MenuFileItemFirst + static_cast<int>(kFileMenuItems.size())) {
+        return L"文件 > " + std::wstring(kFileMenuItems[key - MenuFileItemFirst]);
+    }
+    if (key >= MenuEditItemFirst && key < MenuEditItemFirst + static_cast<int>(kEditMenuItems.size())) {
+        return L"编辑 > " + std::wstring(kEditMenuItems[key - MenuEditItemFirst]);
+    }
+    if (key >= MenuActionItemFirst && key < MenuActionItemFirst + static_cast<int>(kActionMenuItems.size())) {
+        return L"操作菜单 > " + std::wstring(kActionMenuItems[key - MenuActionItemFirst]);
+    }
+    return L"";
+}
+
+#if WIN32_SHOOTING_RANGE_ENABLE_MSAA
+HMENU CreateNativeMainMenu() {
+    HMENU menuBar = CreateMenu();
+    HMENU fileMenu = CreatePopupMenu();
+    HMENU editMenu = CreatePopupMenu();
+    if (!menuBar || !fileMenu || !editMenu) {
+        if (fileMenu) {
+            DestroyMenu(fileMenu);
+        }
+        if (editMenu) {
+            DestroyMenu(editMenu);
+        }
+        if (menuBar) {
+            DestroyMenu(menuBar);
+        }
+        return nullptr;
+    }
+    for (int index = 0; index < static_cast<int>(kFileMenuItems.size()); ++index) {
+        AppendMenuW(fileMenu, MF_STRING, MenuFileItemFirst + index, kFileMenuItems[index]);
+    }
+    for (int index = 0; index < static_cast<int>(kEditMenuItems.size()); ++index) {
+        AppendMenuW(editMenu, MF_STRING, MenuEditItemFirst + index, kEditMenuItems[index]);
+    }
+    AppendMenuW(menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(fileMenu), L"文件(&F)");
+    AppendMenuW(menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(editMenu), L"编辑(&E)");
+    return menuBar;
+}
+#endif
 
 RECT MakeRect(int left, int top, int right, int bottom) {
     return RECT{left, top, right, bottom};
@@ -196,7 +277,8 @@ void AddElement(
     if (kind == ElementKind::Password) {
         state |= STATE_SYSTEM_PROTECTED;
     }
-    if (kind == ElementKind::Cell || kind == ElementKind::Tab || kind == ElementKind::ComboOption) {
+    if (kind == ElementKind::Cell || kind == ElementKind::Tab || kind == ElementKind::ComboOption
+        || kind == ElementKind::TopMenuItem || kind == ElementKind::PopupMenuItem) {
         state |= STATE_SYSTEM_SELECTABLE;
     }
     elements.push_back(Element{
@@ -400,6 +482,24 @@ std::vector<Element> BuildElements(HWND window) {
         false,
         L"切换"
     );
+#if !WIN32_SHOOTING_RANGE_ENABLE_MSAA
+    AddElement(elements, MenuBar, MakeRect(320, 10, 472, 44), L"主菜单", L"",
+               ROLE_SYSTEM_MENUBAR, ElementKind::MenuBar);
+    AddElement(elements, MenuFile, MakeRect(326, 10, 396, 44), L"文件", L"",
+               ROLE_SYSTEM_MENUITEM, ElementKind::TopMenuItem, true, false,
+               g_app.activeMenu == ActiveMenu::File, false,
+               g_app.activeMenu == ActiveMenu::File ? L"折叠" : L"展开");
+    elements.back().state |= STATE_SYSTEM_HASPOPUP;
+    elements.back().state |= g_app.activeMenu == ActiveMenu::File
+        ? STATE_SYSTEM_EXPANDED : STATE_SYSTEM_COLLAPSED;
+    AddElement(elements, MenuEdit, MakeRect(396, 10, 466, 44), L"编辑", L"",
+               ROLE_SYSTEM_MENUITEM, ElementKind::TopMenuItem, true, false,
+               g_app.activeMenu == ActiveMenu::Edit, false,
+               g_app.activeMenu == ActiveMenu::Edit ? L"折叠" : L"展开");
+    elements.back().state |= STATE_SYSTEM_HASPOPUP;
+    elements.back().state |= g_app.activeMenu == ActiveMenu::Edit
+        ? STATE_SYSTEM_EXPANDED : STATE_SYSTEM_COLLAPSED;
+#endif
 
     if (g_app.selectedTab == 0) {
         constexpr int labelX = 30;
@@ -414,6 +514,17 @@ std::vector<Element> BuildElements(HWND window) {
 
         AddElement(elements, FormHeading, MakeRect(30, 50, 300, 74), L"用户信息表单", L"",
                    ROLE_SYSTEM_STATICTEXT, ElementKind::StaticText);
+        AddElement(elements, PopupMenuButton, MakeRect(width - 218, 50, width - 30, 82),
+#if WIN32_SHOOTING_RANGE_ENABLE_MSAA
+                   L"展开原生菜单 ▼", L"",
+#else
+                   L"展开菜单 ▼", L"",
+#endif
+                   ROLE_SYSTEM_PUSHBUTTON, ElementKind::Button, true, false, false, false,
+                   g_app.activeMenu == ActiveMenu::Action ? L"折叠" : L"展开");
+        elements.back().state |= STATE_SYSTEM_HASPOPUP;
+        elements.back().state |= g_app.activeMenu == ActiveMenu::Action
+            ? STATE_SYSTEM_EXPANDED : STATE_SYSTEM_COLLAPSED;
         for (int index = 0; index < static_cast<int>(labels.size()); ++index) {
             AddElement(elements, FormLabelFirst + index, MakeRect(labelX, rowY[index], labelX + labelWidth, rowY[index] + 30),
                        labels[index], L"", ROLE_SYSTEM_STATICTEXT, ElementKind::StaticText);
@@ -615,6 +726,43 @@ std::vector<Element> BuildElements(HWND window) {
             elements.back().state |= STATE_SYSTEM_MOVEABLE;
         }
     }
+
+    const auto appendPopupItems = [&elements](
+        int firstKey,
+        const auto& labels,
+        int left,
+        int top,
+        int width
+    ) {
+        constexpr int itemHeight = 30;
+        for (int index = 0; index < static_cast<int>(labels.size()); ++index) {
+            AddElement(
+                elements,
+                firstKey + index,
+                MakeRect(left, top + index * itemHeight, left + width, top + (index + 1) * itemHeight),
+                labels[index],
+                L"",
+                ROLE_SYSTEM_MENUITEM,
+                ElementKind::PopupMenuItem,
+                true,
+                false,
+                false,
+                false,
+                L"选择"
+            );
+        }
+    };
+#if !WIN32_SHOOTING_RANGE_ENABLE_MSAA
+    if (g_app.activeMenu == ActiveMenu::File) {
+        appendPopupItems(MenuFileItemFirst, kFileMenuItems, 326, 44, 180);
+    } else if (g_app.activeMenu == ActiveMenu::Edit) {
+        appendPopupItems(MenuEditItemFirst, kEditMenuItems, 396, 44, 180);
+    } else if (g_app.activeMenu == ActiveMenu::Action && g_app.selectedTab == 0) {
+        appendPopupItems(MenuActionItemFirst, kActionMenuItems, width - 218, 82, 188);
+    }
+#else
+    static_cast<void>(appendPopupItems);
+#endif
     return elements;
 }
 
@@ -658,9 +806,14 @@ void SetFocusedKey(int key) {
     InvalidateRect(g_app.window, nullptr, FALSE);
 }
 
+void SetActiveMenu(ActiveMenu menu);
+
 void SetCityComboExpanded(bool expanded) {
     if (g_app.cityComboExpanded == expanded) {
         return;
+    }
+    if (expanded && g_app.activeMenu != ActiveMenu::None) {
+        SetActiveMenu(ActiveMenu::None);
     }
     g_app.cityComboExpanded = expanded;
     g_app.hoveredCityOption = -1;
@@ -668,6 +821,72 @@ void SetCityComboExpanded(bool expanded) {
     NotifyRoot(EVENT_OBJECT_REORDER);
     InvalidateRect(g_app.window, nullptr, FALSE);
 }
+
+void SetActiveMenu(ActiveMenu menu) {
+    if (g_app.activeMenu == menu) {
+        return;
+    }
+    if (menu != ActiveMenu::None && g_app.cityComboExpanded) {
+        SetCityComboExpanded(false);
+    }
+    const int oldOwner = MenuOwnerKey(g_app.activeMenu);
+    g_app.activeMenu = menu;
+    g_app.hoveredMenuItem = -1;
+    const int newOwner = MenuOwnerKey(menu);
+    NotifyRoot(EVENT_OBJECT_REORDER);
+    if (oldOwner != 0) {
+        NotifyElement(EVENT_OBJECT_STATECHANGE, oldOwner);
+    }
+    if (newOwner != 0) {
+        NotifyElement(EVENT_OBJECT_STATECHANGE, newOwner);
+    }
+    InvalidateRect(g_app.window, nullptr, FALSE);
+}
+
+void CommitMenuItem(int key) {
+    const int owner = MenuOwnerKey(g_app.activeMenu);
+    g_app.status = L"最近选择: " + MenuItemSelectionText(key);
+    SetActiveMenu(ActiveMenu::None);
+    if (owner != 0) {
+        SetFocusedKey(owner);
+    }
+    NotifyRoot(EVENT_OBJECT_REORDER);
+    InvalidateRect(g_app.window, nullptr, FALSE);
+}
+
+#if WIN32_SHOOTING_RANGE_ENABLE_MSAA
+void ShowNativeActionPopupMenu() {
+    HMENU popup = CreatePopupMenu();
+    if (!popup) {
+        g_app.status = L"菜单创建失败";
+        NotifyRoot(EVENT_OBJECT_REORDER);
+        InvalidateRect(g_app.window, nullptr, FALSE);
+        return;
+    }
+    for (int index = 0; index < static_cast<int>(kActionMenuItems.size()); ++index) {
+        AppendMenuW(popup, MF_STRING, MenuActionItemFirst + index, kActionMenuItems[index]);
+    }
+    RECT client{};
+    GetClientRect(g_app.window, &client);
+    POINT anchor{client.right - 218, 82};
+    ClientToScreen(g_app.window, &anchor);
+    SetActiveMenu(ActiveMenu::Action);
+    const int command = TrackPopupMenuEx(
+        popup,
+        TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RIGHTBUTTON | TPM_RETURNCMD,
+        anchor.x,
+        anchor.y,
+        g_app.window,
+        nullptr
+    );
+    DestroyMenu(popup);
+    if (command != 0 && IsPopupMenuItemKey(command)) {
+        CommitMenuItem(command);
+    } else {
+        SetActiveMenu(ActiveMenu::None);
+    }
+}
+#endif
 
 void EndDragTarget();
 
@@ -685,6 +904,8 @@ void ResetForm() {
     g_app.agreed = false;
     g_app.cityComboExpanded = false;
     g_app.hoveredCityOption = -1;
+    g_app.activeMenu = ActiveMenu::None;
+    g_app.hoveredMenuItem = -1;
     g_app.focusedKey = NameEdit;
     NotifyRoot(EVENT_OBJECT_REORDER);
     InvalidateRect(g_app.window, nullptr, FALSE);
@@ -707,11 +928,33 @@ void ActivateElement(int key) {
         if (newTab != g_app.selectedTab) {
             g_app.cityComboExpanded = false;
             g_app.hoveredCityOption = -1;
+            g_app.activeMenu = ActiveMenu::None;
+            g_app.hoveredMenuItem = -1;
             g_app.selectedTab = newTab;
             g_app.focusedKey = key;
             NotifyRoot(EVENT_OBJECT_REORDER);
             InvalidateRect(g_app.window, nullptr, FALSE);
         }
+        return;
+    }
+    if (key == MenuFile) {
+        SetActiveMenu(g_app.activeMenu == ActiveMenu::File ? ActiveMenu::None : ActiveMenu::File);
+        return;
+    }
+    if (key == MenuEdit) {
+        SetActiveMenu(g_app.activeMenu == ActiveMenu::Edit ? ActiveMenu::None : ActiveMenu::Edit);
+        return;
+    }
+    if (key == PopupMenuButton) {
+#if WIN32_SHOOTING_RANGE_ENABLE_MSAA
+        ShowNativeActionPopupMenu();
+#else
+        SetActiveMenu(g_app.activeMenu == ActiveMenu::Action ? ActiveMenu::None : ActiveMenu::Action);
+#endif
+        return;
+    }
+    if (IsPopupMenuItemKey(key)) {
+        CommitMenuItem(key);
         return;
     }
     if (key >= CityMultiFirst && key < CityMultiFirst + static_cast<int>(g_app.cityChecks.size())) {
@@ -1267,6 +1510,21 @@ void DrawElement(HDC context, const Element& element) {
             DrawTextInRect(context, element.name, bounds, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
             break;
         }
+        case ElementKind::MenuBar:
+            FillRect(context, &bounds, GetSysColorBrush(COLOR_MENU));
+            FrameRect(context, &bounds, GetSysColorBrush(COLOR_3DSHADOW));
+            break;
+        case ElementKind::TopMenuItem: {
+            FillRect(context, &bounds, GetSysColorBrush(selected ? COLOR_HIGHLIGHT : COLOR_MENU));
+            DrawTextInRect(
+                context,
+                element.name,
+                bounds,
+                DT_CENTER | DT_VCENTER | DT_SINGLELINE,
+                selected ? GetSysColor(COLOR_HIGHLIGHTTEXT) : GetSysColor(COLOR_MENUTEXT)
+            );
+            break;
+        }
         case ElementKind::Edit:
         case ElementKind::Password:
         case ElementKind::Spinner:
@@ -1361,6 +1619,54 @@ void DrawElement(HDC context, const Element& element) {
                 selected ? GetSysColor(COLOR_HIGHLIGHTTEXT) : GetSysColor(COLOR_WINDOWTEXT)
             );
             if (element.key == CityOptionFirst + static_cast<int>(kCities.size()) - 1) {
+                FrameRect(context, &panelBounds, GetSysColorBrush(COLOR_3DSHADOW));
+            }
+            break;
+        }
+        case ElementKind::PopupMenuItem: {
+            int firstKey = MenuFileItemFirst;
+            int itemCount = static_cast<int>(kFileMenuItems.size());
+            if (element.key >= MenuEditItemFirst && element.key < MenuEditItemFirst + static_cast<int>(kEditMenuItems.size())) {
+                firstKey = MenuEditItemFirst;
+                itemCount = static_cast<int>(kEditMenuItems.size());
+            } else if (element.key >= MenuActionItemFirst
+                       && element.key < MenuActionItemFirst + static_cast<int>(kActionMenuItems.size())) {
+                firstKey = MenuActionItemFirst;
+                itemCount = static_cast<int>(kActionMenuItems.size());
+            }
+            constexpr int itemHeight = 30;
+            const int index = element.key - firstKey;
+            RECT panelBounds = MakeRect(
+                bounds.left,
+                bounds.top - index * itemHeight,
+                bounds.right,
+                bounds.top - index * itemHeight + itemCount * itemHeight
+            );
+            if (index == 0) {
+                RECT outerShadow = panelBounds;
+                OffsetRect(&outerShadow, 6, 6);
+                HBRUSH outerShadowBrush = CreateSolidBrush(RGB(235, 235, 235));
+                FillRect(context, &outerShadow, outerShadowBrush);
+                DeleteObject(outerShadowBrush);
+                RECT innerShadow = panelBounds;
+                OffsetRect(&innerShadow, 3, 3);
+                HBRUSH innerShadowBrush = CreateSolidBrush(RGB(210, 210, 210));
+                FillRect(context, &innerShadow, innerShadowBrush);
+                DeleteObject(innerShadowBrush);
+                FillRect(context, &panelBounds, GetSysColorBrush(COLOR_MENU));
+            }
+            const bool hovered = g_app.hoveredMenuItem == element.key;
+            if (hovered) {
+                FillRect(context, &bounds, GetSysColorBrush(COLOR_HIGHLIGHT));
+            }
+            DrawTextInRect(
+                context,
+                element.name,
+                bounds,
+                DT_LEFT | DT_VCENTER | DT_SINGLELINE,
+                hovered ? GetSysColor(COLOR_HIGHLIGHTTEXT) : GetSysColor(COLOR_MENUTEXT)
+            );
+            if (index == itemCount - 1) {
                 FrameRect(context, &panelBounds, GetSysColorBrush(COLOR_3DSHADOW));
             }
             break;
@@ -1476,9 +1782,41 @@ void UpdateCityComboHover(HWND window, int x, int y) {
     }
 }
 
+void UpdateMenuHover(HWND window, int x, int y) {
+    int hoveredKey = -1;
+    if (g_app.activeMenu != ActiveMenu::None) {
+        const POINT point{x, y};
+        const auto elements = BuildElements(window);
+        const auto hovered = std::find_if(elements.begin(), elements.end(), [&point](const Element& element) {
+            return IsPopupMenuItemKey(element.key) && PtInRect(&element.bounds, point);
+        });
+        if (hovered != elements.end()) {
+            hoveredKey = hovered->key;
+        }
+    }
+    if (g_app.hoveredMenuItem != hoveredKey) {
+        g_app.hoveredMenuItem = hoveredKey;
+        InvalidateRect(window, nullptr, FALSE);
+    }
+    if (!g_app.trackingMouseLeave) {
+        TRACKMOUSEEVENT tracking{sizeof(tracking), TME_LEAVE, window, 0};
+        g_app.trackingMouseLeave = TrackMouseEvent(&tracking) != FALSE;
+    }
+}
+
 void HandleClick(HWND window, int x, int y) {
     POINT point{x, y};
     const auto elements = BuildElements(window);
+    if (g_app.activeMenu != ActiveMenu::None) {
+        const bool insideMenu = std::any_of(elements.begin(), elements.end(), [&point](const Element& element) {
+            const bool isMenuControl = element.key == MenuFile || element.key == MenuEdit
+                || element.key == PopupMenuButton || IsPopupMenuItemKey(element.key);
+            return isMenuControl && PtInRect(&element.bounds, point);
+        });
+        if (!insideMenu) {
+            SetActiveMenu(ActiveMenu::None);
+        }
+    }
     if (g_app.cityComboExpanded) {
         const bool insideComboOrOptions = std::any_of(elements.begin(), elements.end(), [&point](const Element& element) {
             const bool isComboOrOption = element.key == CityCombo
@@ -1517,6 +1855,9 @@ void HandleClick(HWND window, int x, int y) {
 }
 
 void MoveFocus(bool backwards) {
+    if (g_app.activeMenu != ActiveMenu::None) {
+        SetActiveMenu(ActiveMenu::None);
+    }
     if (g_app.cityComboExpanded) {
         SetCityComboExpanded(false);
     }
@@ -1570,6 +1911,10 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
             g_app.window = window;
 #if WIN32_SHOOTING_RANGE_ENABLE_MSAA
             g_app.accessible = new MsaaAccessible(window);
+            g_app.mainMenu = CreateNativeMainMenu();
+            if (g_app.mainMenu) {
+                SetMenu(window, g_app.mainMenu);
+            }
 #endif
             return 0;
 #if WIN32_SHOOTING_RANGE_ENABLE_MSAA
@@ -1596,11 +1941,19 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
                 UpdateCityComboHover(window, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
                 return 0;
             }
+            if (g_app.activeMenu != ActiveMenu::None) {
+                UpdateMenuHover(window, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                return 0;
+            }
             break;
         case WM_MOUSELEAVE:
             g_app.trackingMouseLeave = false;
             if (g_app.hoveredCityOption != -1) {
                 g_app.hoveredCityOption = -1;
+                InvalidateRect(window, nullptr, FALSE);
+            }
+            if (g_app.hoveredMenuItem != -1) {
+                g_app.hoveredMenuItem = -1;
                 InvalidateRect(window, nullptr, FALSE);
             }
             return 0;
@@ -1617,7 +1970,25 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         case WM_CHAR:
             HandleCharacter(static_cast<wchar_t>(wParam));
             return 0;
+#if WIN32_SHOOTING_RANGE_ENABLE_MSAA
+        case WM_COMMAND: {
+            const int command = LOWORD(wParam);
+            if (IsPopupMenuItemKey(command)) {
+                CommitMenuItem(command);
+                return 0;
+            }
+            break;
+        }
+#endif
         case WM_KEYDOWN: {
+            if (wParam == VK_ESCAPE && g_app.activeMenu != ActiveMenu::None) {
+                const int owner = MenuOwnerKey(g_app.activeMenu);
+                SetActiveMenu(ActiveMenu::None);
+                if (owner != 0) {
+                    SetFocusedKey(owner);
+                }
+                return 0;
+            }
             if (wParam == VK_ESCAPE && g_app.cityComboExpanded) {
                 SetCityComboExpanded(false);
                 SetFocusedKey(CityCombo);
@@ -1651,6 +2022,9 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
             break;
         }
         case WM_KILLFOCUS:
+            if (g_app.activeMenu != ActiveMenu::None) {
+                SetActiveMenu(ActiveMenu::None);
+            }
             if (g_app.cityComboExpanded) {
                 SetCityComboExpanded(false);
             }
@@ -1669,6 +2043,11 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         }
         case WM_DESTROY:
 #if WIN32_SHOOTING_RANGE_ENABLE_MSAA
+            if (g_app.mainMenu) {
+                SetMenu(window, nullptr);
+                DestroyMenu(g_app.mainMenu);
+                g_app.mainMenu = nullptr;
+            }
             if (g_app.accessible) {
                 g_app.accessible->Release();
                 g_app.accessible = nullptr;

@@ -8,6 +8,8 @@
 
 `win32-shooting-range-uia.exe` 使用标准 Win32 控件。Windows 为这些控件提供 UIA Provider，输入框、按钮、复选框和表格等元素可通过 UIA 的名称、AutomationId 和 Pattern 定位。
 
+UIA 版还提供原生“文件/编辑”顶部菜单，以及表单页右上角的“展开原生菜单”按钮。按钮每次点击都会动态创建原生弹出菜单，关闭后销毁，可用于测试菜单项捕获、菜单关闭后的相似捕获启动及重新展开后的选择。MSAA 版使用相同类型的原生系统菜单；Canvas 版保留自绘菜单，以维持无内部无障碍树的边界。
+
 ### MSAA 版
 
 `win32-shooting-range-msaa.exe` 使用单个自绘 HWND 表现全部控件，通过 `WM_GETOBJECT(OBJID_CLIENT)` 暴露完整的 `IAccessible` 树：
@@ -18,6 +20,7 @@
 - 桥接节点可通过 `IsLegacyIAccessiblePatternAvailable=true` 和 `LegacyIAccessible.*` 属性识别
 - 提供 MSAA Name、Value、Role、State、Location、Focus 和 DefaultAction
 - 表单输入、选择、保存/重置和表格分页可通过 MSAA 操作
+- 使用原生 `HMENU` 提供“文件/编辑”顶部菜单，表单页“展开原生菜单”按钮通过 `TrackPopupMenuEx` 创建动态菜单；系统自动提供 MSAA 菜单节点
 
 ### 自绘版
 
@@ -27,6 +30,7 @@
 - 不实现或返回内部 `IAccessible`/MSAA 树
 - UIA 和 MSAA 客户端只能获得系统为顶层 HWND 提供的窗口外壳，看不到内部表单和表格
 - 内部元素只能通过图像、坐标或程序私有接口操作
+- 显示与 MSAA 版相同的自绘顶部菜单和动态弹出菜单，但不暴露对应的内部可访问节点
 
 ## 关闭 MSAA Proxy 的 UIA 检测工具
 

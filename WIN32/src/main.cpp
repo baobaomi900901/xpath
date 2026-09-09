@@ -34,6 +34,7 @@ enum ControlId : int {
     AgreeCheck,
     SaveButton = 160,
     ResetButton,
+    PopupMenuButton = 170,
     EmployeeList = 200,
     FirstPage = 210,
     PreviousPage,
@@ -45,6 +46,22 @@ enum ControlId : int {
     DragHide,
     DragArena,
     DragTarget
+};
+
+enum MenuCommandId : UINT {
+    MenuFileNew = 500,
+    MenuFileOpen,
+    MenuFileSave,
+    MenuEditUndo = 510,
+    MenuEditCut,
+    MenuEditCopy,
+    MenuEditPaste,
+    MenuEditSelectAll,
+    PopupActionOpen = 520,
+    PopupActionCopy,
+    PopupActionRename,
+    PopupActionDelete,
+    PopupActionProperties
 };
 
 struct Employee {
@@ -60,6 +77,7 @@ struct Employee {
 struct AppState {
     HINSTANCE instance{};
     HWND mainWindow{};
+    HMENU mainMenu{};
     HWND tab{};
     HWND formPanel{};
     HWND tablePanel{};
@@ -80,6 +98,8 @@ struct AppState {
     HWND agreeCheck{};
     HWND saveButton{};
     HWND resetButton{};
+    HWND popupMenuButton{};
+    HWND popupMenuStatus{};
 
     HWND summaryLabel{};
     HWND employeeList{};
@@ -158,6 +178,95 @@ void MoveControl(HWND control, int x, int y, int width, int height) {
 
 HWND CreateLabel(HWND parent, const wchar_t* text, int id = 0) {
     return CreateControl(0, WC_STATICW, text, SS_LEFT | SS_CENTERIMAGE, parent, id);
+}
+
+HMENU CreateApplicationMenu() {
+    HMENU menuBar = CreateMenu();
+    HMENU fileMenu = CreatePopupMenu();
+    HMENU editMenu = CreatePopupMenu();
+    if (!menuBar || !fileMenu || !editMenu) {
+        if (fileMenu) {
+            DestroyMenu(fileMenu);
+        }
+        if (editMenu) {
+            DestroyMenu(editMenu);
+        }
+        if (menuBar) {
+            DestroyMenu(menuBar);
+        }
+        return nullptr;
+    }
+
+    AppendMenuW(fileMenu, MF_STRING, MenuFileNew, L"新建(&N)");
+    AppendMenuW(fileMenu, MF_STRING, MenuFileOpen, L"打开(&O)");
+    AppendMenuW(fileMenu, MF_STRING, MenuFileSave, L"保存(&S)");
+    AppendMenuW(editMenu, MF_STRING, MenuEditUndo, L"撤销(&U)");
+    AppendMenuW(editMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(editMenu, MF_STRING, MenuEditCut, L"剪切(&T)");
+    AppendMenuW(editMenu, MF_STRING, MenuEditCopy, L"复制(&C)");
+    AppendMenuW(editMenu, MF_STRING, MenuEditPaste, L"粘贴(&P)");
+    AppendMenuW(editMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(editMenu, MF_STRING, MenuEditSelectAll, L"全选(&A)");
+    AppendMenuW(menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(fileMenu), L"文件(&F)");
+    AppendMenuW(menuBar, MF_POPUP, reinterpret_cast<UINT_PTR>(editMenu), L"编辑(&E)");
+    return menuBar;
+}
+
+const wchar_t* MenuCommandLabel(UINT command) {
+    switch (command) {
+        case MenuFileNew: return L"文件 > 新建";
+        case MenuFileOpen: return L"文件 > 打开";
+        case MenuFileSave: return L"文件 > 保存";
+        case MenuEditUndo: return L"编辑 > 撤销";
+        case MenuEditCut: return L"编辑 > 剪切";
+        case MenuEditCopy: return L"编辑 > 复制";
+        case MenuEditPaste: return L"编辑 > 粘贴";
+        case MenuEditSelectAll: return L"编辑 > 全选";
+        case PopupActionOpen: return L"操作菜单 > 打开";
+        case PopupActionCopy: return L"操作菜单 > 复制";
+        case PopupActionRename: return L"操作菜单 > 重命名";
+        case PopupActionDelete: return L"操作菜单 > 删除";
+        case PopupActionProperties: return L"操作菜单 > 属性";
+        default: return nullptr;
+    }
+}
+
+void SetMenuStatus(UINT command) {
+    const wchar_t* label = MenuCommandLabel(command);
+    if (!label || !g_app.popupMenuStatus) {
+        return;
+    }
+    const std::wstring status = L"最近选择: " + std::wstring(label);
+    SetWindowTextW(g_app.popupMenuStatus, status.c_str());
+}
+
+void ShowActionPopupMenu() {
+    HMENU popup = CreatePopupMenu();
+    if (!popup) {
+        SetWindowTextW(g_app.popupMenuStatus, L"菜单创建失败");
+        return;
+    }
+    AppendMenuW(popup, MF_STRING, PopupActionOpen, L"打开");
+    AppendMenuW(popup, MF_STRING, PopupActionCopy, L"复制");
+    AppendMenuW(popup, MF_STRING, PopupActionRename, L"重命名");
+    AppendMenuW(popup, MF_STRING, PopupActionDelete, L"删除");
+    AppendMenuW(popup, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(popup, MF_STRING, PopupActionProperties, L"属性");
+
+    RECT buttonBounds{};
+    GetWindowRect(g_app.popupMenuButton, &buttonBounds);
+    const UINT command = static_cast<UINT>(TrackPopupMenuEx(
+        popup,
+        TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RIGHTBUTTON | TPM_RETURNCMD,
+        buttonBounds.left,
+        buttonBounds.bottom,
+        g_app.mainWindow,
+        nullptr
+    ));
+    DestroyMenu(popup);
+    if (command != 0) {
+        SetMenuStatus(command);
+    }
 }
 
 std::wstring DragAnchorRegion(int x, int y) {
@@ -536,6 +645,15 @@ void CreateFormControls() {
     g_app.agreeCheck = CreateControl(0, WC_BUTTONW, L"同意用户协议", BS_AUTOCHECKBOX | WS_TABSTOP, panel, AgreeCheck);
     g_app.saveButton = CreateControl(0, WC_BUTTONW, L"保存", BS_PUSHBUTTON | WS_TABSTOP, panel, SaveButton);
     g_app.resetButton = CreateControl(0, WC_BUTTONW, L"重置", BS_PUSHBUTTON | WS_TABSTOP, panel, ResetButton);
+    g_app.popupMenuButton = CreateControl(
+        0,
+        WC_BUTTONW,
+        L"展开原生菜单 ▼",
+        BS_PUSHBUTTON | WS_TABSTOP,
+        panel,
+        PopupMenuButton
+    );
+    g_app.popupMenuStatus = CreateLabel(panel, L"菜单测试: 尚未选择菜单项");
 }
 
 void CreateTableControls() {
@@ -665,6 +783,8 @@ void LayoutFormPanel(int width, int height) {
     const int actionY = std::max(515, height - 48);
     MoveControl(g_app.saveButton, width / 2 - 104, actionY, 92, 32);
     MoveControl(g_app.resetButton, width / 2 + 12, actionY, 92, 32);
+    MoveControl(g_app.popupMenuButton, width - 198, 8, 168, 32);
+    MoveControl(g_app.popupMenuStatus, width - 348, 42, 318, 28);
 }
 
 void LayoutTablePanel(int width, int height) {
@@ -869,6 +989,10 @@ LRESULT CALLBACK MainWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM
     switch (message) {
         case WM_CREATE: {
             g_app.mainWindow = window;
+            g_app.mainMenu = CreateApplicationMenu();
+            if (g_app.mainMenu) {
+                SetMenu(window, g_app.mainMenu);
+            }
             g_app.tab = CreateControl(WS_EX_CONTROLPARENT, WC_TABCONTROLW, L"", WS_TABSTOP | WS_CLIPCHILDREN, window, Tab);
             TCITEMW tabItem{};
             tabItem.mask = TCIF_TEXT;
@@ -909,12 +1033,20 @@ LRESULT CALLBACK MainWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM
         }
         case WM_COMMAND: {
             const int id = LOWORD(wParam);
+            if (MenuCommandLabel(static_cast<UINT>(id))) {
+                SetMenuStatus(static_cast<UINT>(id));
+                return 0;
+            }
             if (id == SaveButton && HIWORD(wParam) == BN_CLICKED) {
                 MessageBoxW(window, L"提交成功！", L"提示", MB_OK | MB_ICONINFORMATION);
                 return 0;
             }
             if (id == ResetButton && HIWORD(wParam) == BN_CLICKED) {
                 ResetForm();
+                return 0;
+            }
+            if (id == PopupMenuButton && HIWORD(wParam) == BN_CLICKED) {
+                ShowActionPopupMenu();
                 return 0;
             }
             if (id == DragReset && HIWORD(wParam) == BN_CLICKED) {
@@ -953,6 +1085,11 @@ LRESULT CALLBACK MainWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM
             break;
         }
         case WM_DESTROY:
+            if (g_app.mainMenu) {
+                SetMenu(window, nullptr);
+                DestroyMenu(g_app.mainMenu);
+                g_app.mainMenu = nullptr;
+            }
             PostQuitMessage(0);
             return 0;
         default:
