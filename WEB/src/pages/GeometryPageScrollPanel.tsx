@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button, InputNumber, Space, Table, Typography, message } from 'antd';
+import { formatLogTime } from '../utils/formatLogTime';
 
 type ScrollLog = { key: number; time: string; y: number };
 
@@ -32,7 +33,7 @@ export default function GeometryPageScrollPanel({ mode = 'page' }: { mode?: 'pag
         return;
       }
       if (!visible()) return;
-      const record = { key: ++sequence.current, time: new Date().toLocaleTimeString('zh-CN', { hour12: false }), y: readY() };
+      const record = { key: ++sequence.current, time: formatLogTime(), y: readY() };
       setLogs(previous => [record, ...previous].slice(0, 100));
     };
     const onScroll = () => {
@@ -98,7 +99,7 @@ export default function GeometryPageScrollPanel({ mode = 'page' }: { mode?: 'pag
           <Table<ScrollLog> id={`${prefix}-log`} size="small" pagination={false} dataSource={logs}
             tableLayout="fixed" scroll={{ y: 220, x: 240 }} locale={{ emptyText: `${label}滚动停止后记录，最多 100 条` }}
             columns={[
-              { title: '时间', dataIndex: 'time', width: 110 },
+              { title: '时间', dataIndex: 'time', width: 120 },
               { title: <span style={{ whiteSpace: 'nowrap' }}>Y（CSS px）</span>, dataIndex: 'y', width: 130, render: (value: number) => value.toFixed(2) },
             ]}
           />

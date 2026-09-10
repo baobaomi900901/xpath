@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { Button, Table, Typography, message } from 'antd';
+import { formatLogTime } from '../utils/formatLogTime';
 
-type DragLog = { key: number; time: string; left: number; top: number };
+type DragLog = { key: number; time: string; left: number; top: number; deltaX: number; deltaY: number };
 
 export default function GeometryDragPanel() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const targetRef = useRef<HTMLDivElement>(null);
+  const originRef = useRef<HTMLDivElement>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const sequence = useRef(0);
   const [dragging, setDragging] = useState(false);
@@ -63,8 +65,10 @@ export default function GeometryDragPanel() {
     const stop = (mouse: MouseEvent) => {
       move(mouse);
       const final = target.getBoundingClientRect();
-      const record = { key: ++sequence.current, time: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
-        left: final.left, top: final.top };
+      const origin = originRef.current!.getBoundingClientRect();
+      const record = { key: ++sequence.current, time: formatLogTime(),
+        left: final.left, top: final.top,
+        deltaX: final.left - origin.left, deltaY: final.top - origin.top };
       setLogs(previous => [record, ...previous].slice(0, 100));
       setDragging(false);
       cleanup();
@@ -87,6 +91,13 @@ export default function GeometryDragPanel() {
           border: '1px solid #d9d9d9', borderRadius: 8, overflow: 'hidden', backgroundColor: '#fafcff',
           backgroundImage: 'linear-gradient(#e8eef7 1px, transparent 1px), linear-gradient(90deg, #e8eef7 1px, transparent 1px)',
           backgroundSize: '20px 20px' }}>
+          <div aria-hidden style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, borderLeft: '1px dashed #f59e0b', pointerEvents: 'none' }} />
+          <div aria-hidden style={{ position: 'absolute', top: '50%', left: 0, right: 0, borderTop: '1px dashed #f59e0b', pointerEvents: 'none' }} />
+          <div id="coordinate-drag-origin" ref={originRef} style={{ position: 'absolute', left: '50%', top: '50%',
+            transform: 'translate(-50%, -50%)', width: 100, height: 64, maxWidth: '100%',
+            outline: '2px dashed #f59e0b', borderRadius: 6, pointerEvents: 'none' }}>
+            <span style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', color: '#b45309' }}>初始位置 · ΔX=0，ΔY=0</span>
+          </div>
           <div id="coordinate-drag-target" ref={targetRef} onMouseDown={startDrag}
             style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 100, height: 64, maxWidth: '100%',
               display: 'grid', placeItems: 'center', borderRadius: 6, color: '#fff', background: '#1677ff',
@@ -102,13 +113,16 @@ export default function GeometryDragPanel() {
         </div>
         <Typography.Paragraph type="secondary">
           记录元素左上角；原点为整个网页可视窗口左上角，单位 CSS px（非画布坐标、非屏幕坐标）。保留最近 100 条。
+          ΔX、ΔY 为相对画布中央初始位置的累计位移，向右、向下为正。
         </Typography.Paragraph>
         <Table<DragLog> id="coordinate-drag-log" size="small" pagination={false} dataSource={logs}
           scroll={{ y: 330, x: 'max-content' }} locale={{ emptyText: '拖动左侧元素，松开后显示坐标' }}
           columns={[
-            { title: '时间', dataIndex: 'time', width: 100 },
+            { title: '时间', dataIndex: 'time', width: 120 },
             { title: 'X / left', dataIndex: 'left', render: (value: number) => value.toFixed(2) },
             { title: 'Y / top', dataIndex: 'top', render: (value: number) => value.toFixed(2) },
+            { title: '初始偏移 ΔX', dataIndex: 'deltaX', render: (value: number) => value.toFixed(2) },
+            { title: '初始偏移 ΔY', dataIndex: 'deltaY', render: (value: number) => value.toFixed(2) },
           ]}
         />
       </section>

@@ -38,7 +38,7 @@ type DragSession = {
 };
 
 function formatTime(date: Date) {
-  return date.toLocaleTimeString('zh-CN', { hour12: false });
+  return `${date.toLocaleTimeString('zh-CN', { hour12: false })}.${String(date.getMilliseconds()).padStart(3, '0')}`;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -195,7 +195,7 @@ export default function DragToTestPage() {
   };
 
   const columns: ColumnsType<DragLog> = [
-    { title: '时间', dataIndex: 'time', width: 90 },
+    { title: '时间', dataIndex: 'time', width: 120 },
     {
       title: '阶段',
       dataIndex: 'phase',

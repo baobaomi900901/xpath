@@ -4,6 +4,7 @@ import PageLayout from '../components/PageLayout';
 import GeometryDragPanel from './GeometryDragPanel';
 import GeometryCoordinatesPanel from './GeometryCoordinatesPanel';
 import GeometryPageScrollPanel from './GeometryPageScrollPanel';
+import GeometryElementPanel from './GeometryElementPanel';
 
 type ScreenDetails = EventTarget & {
   currentScreen: EventTarget & { devicePixelRatio: number };
@@ -79,6 +80,7 @@ export default function GeometryTestPage() {
                     { key: 'coordinates', label: '九宫格(坐标)', children: <GeometryCoordinatesPanel /> },
                     { key: 'page-scroll', label: '网页滚动测试', children: <GeometryPageScrollPanel /> },
                     { key: 'element-scroll', label: '元素滚动测试', children: <GeometryPageScrollPanel mode="element" /> },
+                    { key: 'element-geometry', label: '元素几何测试', children: <GeometryElementPanel /> },
                   ]}
                 />
               </div>

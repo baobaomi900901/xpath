@@ -1,5 +1,6 @@
 import { useRef, useState, type MouseEvent } from 'react';
-import { Button, Table, Typography, message } from 'antd';
+import { Button, Table, Tag, Typography, message } from 'antd';
+import { formatLogTime } from '../utils/formatLogTime';
 
 type ClickLog = { key: number; time: string; x: number; y: number; deltaX: number; deltaY: number; outside: boolean };
 
@@ -28,7 +29,7 @@ export default function GeometryCoordinatesPanel() {
     const bounds = target.getBoundingClientRect();
     const record = {
       key: ++sequence.current,
-      time: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
+      time: formatLogTime(),
       x: event.clientX,
       y: event.clientY,
       deltaX: event.clientX - (bounds.left + bounds.width / 2),
@@ -74,12 +75,12 @@ export default function GeometryCoordinatesPanel() {
         <Table<ClickLog> id="coordinate-click-log" size="small" pagination={false} dataSource={logs}
           scroll={{ y: 330, x: 'max-content' }} locale={{ emptyText: '点击左侧画布后显示坐标' }}
           columns={[
-            { title: '时间', dataIndex: 'time', width: 100 },
+            { title: '时间', dataIndex: 'time', width: 120 },
             { title: 'X / clientX', dataIndex: 'x', render: (value: number) => value.toFixed(2) },
             { title: 'Y / clientY', dataIndex: 'y', render: (value: number) => value.toFixed(2) },
             { title: '中心偏移 ΔX', dataIndex: 'deltaX', render: (value: number) => value.toFixed(2) },
             { title: '中心偏移 ΔY', dataIndex: 'deltaY', render: (value: number) => value.toFixed(2) },
-            { title: '元素外', dataIndex: 'outside', render: (value: boolean) => value ? '是' : '否' },
+            { title: '元素内', dataIndex: 'outside', render: (value: boolean) => <Tag color={value ? 'warning' : 'success'}>{value ? '否' : '是'}</Tag> },
           ]}
         />
       </section>
