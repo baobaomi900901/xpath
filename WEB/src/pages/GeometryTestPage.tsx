@@ -5,6 +5,7 @@ import GeometryDragPanel from './GeometryDragPanel';
 import GeometryCoordinatesPanel from './GeometryCoordinatesPanel';
 import GeometryPageScrollPanel from './GeometryPageScrollPanel';
 import GeometryElementPanel from './GeometryElementPanel';
+import GeometryIframePanel from './GeometryIframePanel';
 
 type ScreenDetails = EventTarget & {
   currentScreen: EventTarget & { devicePixelRatio: number };
@@ -86,7 +87,7 @@ export default function GeometryTestPage() {
               </div>
             ),
           },
-          { key: 'iframe', label: 'iframe', children: <div id="iframe-test-content" /> },
+          { key: 'iframe', label: 'iframe', children: <GeometryIframePanel /> },
         ]}
       />
     </PageLayout>
