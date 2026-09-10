@@ -1,0 +1,21 @@
+.geometry-lab { color: #172554; }
+.geometry-env, .geometry-toolbar, .geometry-tabs { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.geometry-env { padding: 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; }
+.geometry-lab label { display: inline-flex; flex-direction: column; gap: 4px; margin-bottom: 8px; font-size: 13px; }
+.geometry-lab input, .geometry-lab select, .geometry-lab textarea, .geometry-lab button { font: inherit; padding: 6px 9px; border: 1px solid #cbd5e1; border-radius: 5px; background: white; color: #172554; }
+.geometry-lab input[type=number] { width: 115px; }
+.geometry-lab button { cursor: pointer; }
+.geometry-lab button:disabled { opacity: .45; cursor: default; }
+.geometry-lab button[aria-selected=true], #geometry-capture { background: #2563eb; color: white; border-color: #2563eb; }
+.geometry-hint { color: #64748b; font-size: 13px; }
+.geometry-layout { display: grid; grid-template-columns: minmax(580px, 1fr) 390px; gap: 20px; align-items: start; }
+.geometry-scene { min-width: 0; border: 1px solid #cbd5e1; border-radius: 8px; }
+.geometry-data { padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+.geometry-data h3 { margin: 0 0 12px; }
+.geometry-data textarea { width: 100%; box-sizing: border-box; }
+.geometry-data > label { display: flex; }
+.geometry-lab pre { font-size: 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; background: #eef2f6; padding: 12px; overflow: auto; }
+#geometry-snapshot { height: 260px; }
+.geometry-data details pre { max-height: 220px; }
+.geometry-events { height: 180px; }
+@media (max-width: 1050px) { .geometry-layout { grid-template-columns: minmax(0, 1fr); } }

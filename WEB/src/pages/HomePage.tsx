@@ -13,6 +13,12 @@ const menuItems = [
     description: '测试 load_timeout（默认 20s 超时抛 UIAError）与 stop_if_timeout 行为',
   },
   {
+    id: 'menu-geometry-test',
+    href: '/geometry-test',
+    title: '坐标、滚动与拖拽测试',
+    description: '缩放环境记录、iframe / Shadow 场景、坐标对照与滚动快照',
+  },
+  {
     id: 'menu-anchor-test',
     href: '/anchor-test',
     title: '锚点测试',
