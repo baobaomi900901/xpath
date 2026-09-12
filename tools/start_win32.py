@@ -12,12 +12,16 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WIN32_ROOT = REPO_ROOT / "WIN32"
 BUILD_SCRIPT = WIN32_ROOT / "build.ps1"
-BACKENDS = ("uia", "msaa", "canvas")
+BACKENDS = ("uia", "msaa", "canvas", "pressure500", "pressure1000", "pressure2000")
 BACKEND_LABELS = {
     "uia": "UIA 版（标准 Win32 控件）",
     "msaa": "MSAA 版（仅 IAccessible）",
     "canvas": "自绘版（无内部无障碍树）",
+    "pressure500": "UIA 压力靶场（500 层）",
+    "pressure1000": "UIA 压力靶场（1000 层）",
+    "pressure2000": "UIA 压力靶场（2000 层）",
 }
+PRESSURE_DEPTHS = {"pressure500": "500", "pressure1000": "1000", "pressure2000": "2000"}
 COLOR_ENABLED = False
 
 
@@ -165,6 +169,8 @@ def find_powershell() -> str:
 
 
 def executable_path(configuration: str, backend: str) -> Path:
+    if backend in PRESSURE_DEPTHS:
+        return WIN32_ROOT / "build" / configuration / "win32-uia-pressure.exe"
     return WIN32_ROOT / "build" / configuration / f"win32-shooting-range-{backend}.exe"
 
 
@@ -202,7 +208,10 @@ def launch_backends(backends: list[str], executables: dict[str, Path]) -> None:
     processes: list[tuple[str, subprocess.Popen[bytes]]] = []
     try:
         for backend in backends:
-            process = subprocess.Popen([str(executables[backend])], cwd=WIN32_ROOT, close_fds=True)
+            command = [str(executables[backend])]
+            if backend in PRESSURE_DEPTHS:
+                command.append(PRESSURE_DEPTHS[backend])
+            process = subprocess.Popen(command, cwd=WIN32_ROOT, close_fds=True)
             processes.append((backend, process))
 
         time.sleep(0.7)

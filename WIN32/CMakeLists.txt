@@ -14,6 +14,10 @@ add_executable(win32-shooting-range-canvas WIN32
     src/msaa_main.cpp
 )
 
+add_executable(win32-uia-pressure WIN32
+    src/uia_pressure_main.cpp
+)
+
 add_executable(uia-no-msaa-probe
     src/uia_no_msaa_probe.cpp
 )
@@ -22,6 +26,7 @@ foreach(target IN ITEMS
     win32-shooting-range-uia
     win32-shooting-range-msaa
     win32-shooting-range-canvas
+    win32-uia-pressure
     uia-no-msaa-probe
 )
     target_compile_features(${target} PRIVATE cxx_std_17)
@@ -41,6 +46,7 @@ target_compile_definitions(win32-shooting-range-canvas PRIVATE
 )
 
 target_link_libraries(win32-shooting-range-uia PRIVATE comctl32)
+target_link_libraries(win32-uia-pressure PRIVATE comctl32)
 target_link_libraries(win32-shooting-range-msaa PRIVATE oleacc ole32 oleaut32)
 target_link_libraries(uia-no-msaa-probe PRIVATE ole32 oleaut32 uiautomationcore)
 
@@ -49,6 +55,7 @@ if(MSVC)
         win32-shooting-range-uia
         win32-shooting-range-msaa
         win32-shooting-range-canvas
+        win32-uia-pressure
         uia-no-msaa-probe
     )
         target_compile_options(${target} PRIVATE /utf-8 /W4 /permissive-)

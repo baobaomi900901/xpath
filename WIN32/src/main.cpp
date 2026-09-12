@@ -143,6 +143,15 @@ struct AppState {
 };
 
 AppState g_app;
+int g_controlIdOffset{};
+
+int RuntimeControlId(int logicalId) {
+    return logicalId == 0 ? 0 : logicalId + g_controlIdOffset;
+}
+
+int LogicalControlId(int runtimeId) {
+    return runtimeId == 0 ? 0 : runtimeId - g_controlIdOffset;
+}
 
 HWND CreateControl(
     DWORD extendedStyle,
@@ -162,7 +171,7 @@ HWND CreateControl(
         0,
         0,
         parent,
-        reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),
+        reinterpret_cast<HMENU>(static_cast<INT_PTR>(RuntimeControlId(id))),
         g_app.instance,
         nullptr
     );
@@ -949,7 +958,7 @@ void ShowSelectedTab() {
 }
 
 LRESULT CALLBACK PanelWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
-    if (GetDlgCtrlID(window) == DragArena && message == WM_PAINT) {
+    if (LogicalControlId(GetDlgCtrlID(window)) == DragArena && message == WM_PAINT) {
         PAINTSTRUCT paint{};
         HDC context = BeginPaint(window, &paint);
         RECT client{};
@@ -989,6 +998,9 @@ LRESULT CALLBACK MainWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM
     switch (message) {
         case WM_CREATE: {
             g_app.mainWindow = window;
+            g_controlIdOffset = 1000 + static_cast<int>(
+                (GetTickCount64() ^ static_cast<ULONGLONG>(GetCurrentProcessId())) % 50000
+            );
             g_app.mainMenu = CreateApplicationMenu();
             if (g_app.mainMenu) {
                 SetMenu(window, g_app.mainMenu);
@@ -1032,7 +1044,8 @@ LRESULT CALLBACK MainWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM
             break;
         }
         case WM_COMMAND: {
-            const int id = LOWORD(wParam);
+            const int rawId = LOWORD(wParam);
+            const int id = lParam == 0 ? rawId : LogicalControlId(rawId);
             if (MenuCommandLabel(static_cast<UINT>(id))) {
                 SetMenuStatus(static_cast<UINT>(id));
                 return 0;

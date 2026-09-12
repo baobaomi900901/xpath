@@ -86,6 +86,18 @@ Windows 仍可能为标题栏、最小化、最大化和关闭按钮提供非客
 
 ## 构建与运行
 
+### UIA 深度压力靶场
+
+`win32-uia-pressure.exe` 只生成标准 Win32 UIA 元素树，不包含测试统计逻辑。通过参数选择嵌套深度：
+
+```powershell
+.\WIN32\build\Release\win32-uia-pressure.exe 500
+.\WIN32\build\Release\win32-uia-pressure.exe 1000
+.\WIN32\build\Release\win32-uia-pressure.exe 2000
+```
+
+每层是标准 Win32 `TreeView` 的嵌套 `TreeItem`，名称为 `uia-pressure-level-N`，父子关系形成单链；最后一层使用红色文字和浅红背景标识。
+
 ```powershell
 cd D:\code\xpath
 
