@@ -13,6 +13,12 @@ const menuItems = [
     description: '测试 load_timeout（默认 20s 超时抛 UIAError）与 stop_if_timeout 行为',
   },
   {
+    id: 'menu-delayed-element',
+    href: '/delayed-element.html',
+    title: '元素出现/消失测试',
+    description: '每 1.5s 交替插入/移除同一个 #delayed-target，供 wait_appear / wait_disappear',
+  },
+  {
     id: 'menu-geometry-test',
     href: '/geometry-test',
     title: '坐标、滚动与拖拽测试',
