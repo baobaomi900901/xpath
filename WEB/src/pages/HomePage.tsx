@@ -19,6 +19,12 @@ const menuItems = [
     description: '缩放环境记录、iframe / Shadow 场景、坐标对照与滚动快照',
   },
   {
+    id: 'menu-element-html-test',
+    href: '/element-html-test',
+    title: '元素 HTML 测试',
+    description: '输入文本或 HTML 渲染到靶元素，测试获取元素 HTML',
+  },
+  {
     id: 'menu-anchor-test',
     href: '/anchor-test',
     title: '锚点测试',
