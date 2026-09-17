@@ -1,0 +1,113 @@
+:root { color-scheme: light; }
+
+* { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  color: #201f1e;
+  background: #ffffff;
+}
+
+.pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #edebe9;
+}
+
+.pane-title { font-weight: 600; }
+
+.pane-status { color: #107c10; font-weight: 600; }
+
+.pane-body { padding: 16px; }
+
+.account-slot { position: relative; display: inline-block; }
+
+.btn {
+  font: inherit;
+  cursor: pointer;
+  padding: 6px 14px;
+  border: 1px solid #8a8886;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #201f1e;
+}
+
+.btn:hover { background: #f3f2f1; }
+
+.btn-primary { background: #217346; border-color: #217346; color: #ffffff; }
+
+.btn-primary:hover { background: #1b5e39; }
+
+.btn-user { display: inline-flex; align-items: center; gap: 6px; }
+
+.caret { font-size: 10px; line-height: 1; }
+
+.user-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 140px;
+  padding: 4px;
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: 0 3.2px 7.2px rgba(0, 0, 0, 0.13);
+}
+
+.user-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.user-menu-item:hover { background: #f3f2f1; }
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.dialog {
+  width: min(320px, calc(100% - 32px));
+  padding: 16px;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.dialog-title { margin: 0 0 12px; font-size: 16px; }
+
+.field { display: block; margin: 8px 0 4px; font-size: 12px; color: #605e5c; }
+
+.dialog input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #8a8886;
+  border-radius: 4px;
+  font: inherit;
+}
+
+.dialog input:focus { outline: 2px solid #217346; outline-offset: -1px; border-color: #217346; }
+
+.dialog-error { margin: 10px 0 0; color: #a4262c; font-size: 12px; }
+
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Excel 靶场插件</title>
+    <link rel="stylesheet" href="taskpane.css" />
+    <!-- async: 离线时不会阻塞面板渲染; 逻辑见 taskpane.js 的有界等待 -->
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js" async></script>
+  </head>
+  <body>
+    <header class="pane-header">
+      <span class="pane-title">Excel 靶场插件</span>
+      <span id="login-status" data-testid="login-status" class="pane-status" hidden>已登录</span>
+    </header>
+
+    <main class="pane-body">
+      <div class="account-slot">
+        <button id="login-trigger" data-testid="login-trigger" type="button" class="btn btn-primary">点击登录</button>
+
+        <button id="user-menu-trigger" data-testid="user-menu-trigger" type="button" class="btn btn-user"
+                aria-haspopup="menu" aria-expanded="false" aria-controls="user-menu" hidden>
+          <span id="user-menu-name" data-testid="user-menu-name">admin</span>
+          <span class="caret" aria-hidden="true">&#9662;</span>
+        </button>
+
+        <div id="user-menu" data-testid="user-menu" class="user-menu" role="menu" hidden>
+          <button id="logout-item" data-testid="logout-item" type="button" class="user-menu-item" role="menuitem">退出登录</button>
+        </div>
+      </div>
+    </main>
+
+    <div id="login-dialog" data-testid="login-dialog" class="dialog-backdrop" hidden>
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="login-dialog-title">
+        <h2 id="login-dialog-title" class="dialog-title">登录</h2>
+        <form id="login-form" data-testid="login-form" novalidate>
+          <label class="field" for="username-input">名称</label>
+          <input id="username-input" data-testid="username-input" name="username" type="text" autocomplete="off" />
+          <label class="field" for="password-input">密码</label>
+          <input id="password-input" data-testid="password-input" name="password" type="password" autocomplete="off" />
+          <p id="login-error" data-testid="login-error" class="dialog-error" role="alert" hidden>账号或密码错误</p>
+          <div class="dialog-actions">
+            <button id="login-cancel" data-testid="login-cancel" type="button" class="btn">取消</button>
+            <button id="login-submit" data-testid="login-submit" type="submit" class="btn btn-primary">登录</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="taskpane.js"></script>
+  </body>
+</html>
