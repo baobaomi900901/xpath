@@ -10,6 +10,8 @@ import shutil
 import ssl
 import subprocess
 import sys
+import winreg
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +26,9 @@ MANIFEST_PORT_ANCHOR = "localhost:7300"
 SIDELOAD_NAME = "xpath-excel-addin.manifest.xml"
 WEF_DIR = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "Office" / "16.0" / "Wef"
 EXCEL_REGISTRY_KEY = r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\excel.exe"
+# 桌面版 Excel 的开发者加载项目录: 值名是 manifest 里的插件 Id, 数据是 manifest 的绝对路径。
+DEVELOPER_KEY = r"SOFTWARE\Microsoft\Office\16.0\WEF\Developer"
+MANIFEST_NAMESPACE = "http://schemas.microsoft.com/office/appforoffice/1.1"
 
 
 def configure_output() -> None:
@@ -206,11 +211,28 @@ def render_manifest(port: int) -> str:
     return source.replace(MANIFEST_PORT_ANCHOR, f"localhost:{port}")
 
 
-def sideload(port: int) -> Path:
+def manifest_addin_id(port: int = DEFAULT_PORT) -> str:
+    root = ET.fromstring(render_manifest(port))
+    element = root.find(f"{{{MANIFEST_NAMESPACE}}}Id")
+    if element is None or not (element.text or "").strip():
+        raise RuntimeError("manifest.xml 缺少 <Id>, 无法注册到 Excel 开发者目录。")
+    return element.text.strip()
+
+
+def sideload(port: int) -> tuple[Path, str]:
+    """写入 manifest 并把插件注册进 Excel 的开发者加载项目录。
+
+    实测(与 office-addin-dev-settings register 行为一致): 桌面版 Excel 认的是
+    HKCU\\...\\WEF\\Developer\\<插件 Id> = manifest 绝对路径, 只往 Wef 目录拷文件不会生效。
+    """
+
     WEF_DIR.mkdir(parents=True, exist_ok=True)
     target = WEF_DIR / SIDELOAD_NAME
     target.write_text(render_manifest(port), encoding="utf-8")
-    return target
+    addin_id = manifest_addin_id(port)
+    with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, DEVELOPER_KEY, 0, winreg.KEY_SET_VALUE) as key:
+        winreg.SetValueEx(key, addin_id, 0, winreg.REG_SZ, str(target))
+    return target, addin_id
 
 
 def find_excel() -> Path | None:
@@ -267,10 +289,10 @@ def main() -> int:
         print("已跳过 sideload。")
     else:
         try:
-            target = sideload(args.port)
-            print(f"已写入 sideload manifest: {target}")
-        except OSError as error:
-            print(f"错误: 写入 Wef 目录失败({error})。可用 --skip-sideload 只起服务。", file=sys.stderr)
+            target, addin_id = sideload(args.port)
+            print(f"已注册到 Excel 开发者目录: {addin_id} -> {target}")
+        except (OSError, RuntimeError) as error:
+            print(f"错误: 注册加载项失败({error})。可用 --skip-sideload 只起服务。", file=sys.stderr)
 
     excel = find_excel()
     if excel is None:

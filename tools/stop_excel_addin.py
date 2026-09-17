@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import winreg
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -12,17 +13,33 @@ sys.path.insert(0, str(REPO_ROOT / "tools"))
 from start_excel_addin import (  # noqa: E402 - 复用启动器的常量与 PowerShell 桥
     CERT_DIR,
     CER_PATH,
+    DEVELOPER_KEY,
     PEM_PATH,
     PFX_PATH,
     SIDELOAD_NAME,
     WEF_DIR,
     configure_output,
+    manifest_addin_id,
     run_powershell,
 )
 
 
 def remove_sideload() -> None:
     target = WEF_DIR / SIDELOAD_NAME
+
+    # 先摘掉开发者目录里的注册项: 这才是 Excel 认的入口。
+    try:
+        addin_id = manifest_addin_id()
+    except Exception:  # noqa: BLE001 - manifest 缺失也要能继续清理文件和注册表
+        addin_id = None
+    if addin_id:
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, DEVELOPER_KEY, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.DeleteValue(key, addin_id)
+            print(f"已从 Excel 开发者目录移除: {addin_id}")
+        except FileNotFoundError:
+            print(f"开发者目录中没有该插件, 无需移除: {addin_id}")
+
     if not target.exists():
         print(f"sideload manifest 不存在, 无需移除: {target}")
         return

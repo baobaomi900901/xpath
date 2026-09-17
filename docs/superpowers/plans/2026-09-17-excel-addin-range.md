@@ -1229,3 +1229,6 @@ git commit -m "office: 补充 Excel 插件靶场使用说明"
 | Task 5 停服务 | `stop` 脚本"停服务" | 未实现停服务:服务在前台终端里用 Ctrl+C 结束 | 跨进程杀服务不可靠,文档已说明 |
 | Task 5 Excel 侧验证 | 由脚本重启 Excel | 改为请用户手动重启 Excel 后再用 UIA 断言 | 用户当时有两个含真实工作簿的 Excel 进程在运行,不能强杀 |
 | Task 6 | — | 新增本偏差记录 | 让计划与实现保持可追溯 |
+| Task 3/5 sideload 机制 | 把 manifest 复制进 `%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\` | 改为注册表开发者目录 `HKCU\SOFTWARE\Microsoft\Office\16.0\WEF\Developer\<插件Id> = manifest 绝对路径`(Wef 目录仍保留一份 manifest 副本) | **实测桌面版 Excel 不认"只拷 Wef 目录"**,重启后选项卡不出现;官方 `office-addin-dev-settings register` 写入的正是这个注册表项,且 manifest 已被官方校验器判定 `The manifest is valid.` |
+| Task 5 卸载 | 只删 Wef 里的 manifest | 先删注册表项,再删 manifest 文件 | 注册表项才是 Excel 认的入口;另官方文档警告"不要只删单个 manifest 文件,可能导致所有加载项停止加载",已写进 README 故障排查 |
+| Session 收尾 | — | 追加一次机制修正:第一次重启 Excel 时只有 Wef 拷贝,机制本身是错的,验证放到注册机制修好之后 | 避免把"机制错误"误判成"重装次数不够" |

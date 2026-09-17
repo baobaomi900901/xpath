@@ -22,8 +22,13 @@
 python tools/start_excel_addin.py
 ```
 
-脚本会依次:创建并信任 `localhost` 自签证书 → 把 manifest 复制进 Excel 的 sideload 目录
-(`%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\`)→ 启动 HTTPS 服务 `https://localhost:7300` → 尝试拉起 Excel。
+脚本会依次:创建并信任 `localhost` 自签证书 → 生成 manifest 副本 → **注册到 Excel 的开发者加载项目录**
+→ 启动 HTTPS 服务 `https://localhost:7300` → 尝试拉起 Excel。
+
+桌面版 Excel 实际认的是注册表项
+`HKCU\SOFTWARE\Microsoft\Office\16.0\WEF\Developer\<插件Id> = manifest 绝对路径`
+(与官方 `office-addin-dev-settings register` 行为一致)。**只把 manifest 拷进 `Wef` 目录是不会生效的**,
+这一点在 Windows 桌面版上实测过。
 
 **然后完全退出并重新打开 Excel**(Ribbon 只在启动时读取加载项列表),顶部即出现 `Excel 靶场插件` 选项卡。
 
@@ -31,8 +36,8 @@ python tools/start_excel_addin.py
 |---|---|
 | `--port 7300` | 换端口(manifest 里的端口会被同步改写) |
 | `--no-launch` | 只起服务,不自动开 Excel |
-| `--skip-sideload` | 只起服务,不写 Excel 的 sideload 目录 |
-| `--prepare-only` | 只做证书与 sideload,不启动服务 |
+| `--skip-sideload` | 只起服务,不注册加载项 |
+| `--prepare-only` | 只做证书与注册,不启动服务 |
 | `--renew-cert` | 强制重建 localhost 证书 |
 
 ## 使用流程
@@ -96,14 +101,15 @@ node OFFICE\excel-addin\verify\verify-flow.mjs                  # 终端 2
 
 | 现象 | 处理 |
 |---|---|
-| Excel 里没有 `Excel 靶场插件` 选项卡 | 确认服务在运行、`%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\xpath-excel-addin.manifest.xml` 存在,并**完全重启** Excel |
+| Excel 里没有 `Excel 靶场插件` 选项卡 | 按顺序查:① 服务在跑(`curl -s -o NUL -w "%{http_code}" https://localhost:7300/src/taskpane.html` 应为 200);② 注册表 `HKCU\SOFTWARE\Microsoft\Office\16.0\WEF\Developer` 里有插件 Id;③ 该值指向的 manifest 文件存在;④ **完全退出** Excel(不是关窗口)后重开 |
+| 上面都正常但选项卡仍不出现 | Office 的 Wef 缓存可能已不一致。**先完全退出 Excel**,再删除 `%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\` 下的**全部内容**(官方文档:要清就整体清,不要只删单个 manifest,否则所有加载项都可能停止加载),然后重跑 `python tools/start_excel_addin.py --prepare-only` 并重开 Excel |
 | 任务窗格空白或显示旧内容 | 面板内右键 → 重新加载;服务已强制 `no-store`,旧内容一般是没重启面板 |
 | Excel 提示加载项来源不受信任 | 重跑 `python tools/start_excel_addin.py --renew-cert`,它会重建证书并写入 `CurrentUser\Root` |
 | 端口 7300 被占用 | `python tools/start_excel_addin.py --port 7301`(manifest 端口会同步改写) |
 | 提示需要 openssl 或 pwsh | 装 Git for Windows(自带 openssl)或 PowerShell 7 |
-| 无法写入 Wef 目录 | 手动把 `OFFICE\excel-addin\manifest.xml` 复制到 `%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\`(文件名需以 `.xml` 结尾) |
+| 想用官方工具确认注册状态 | `npx office-addin-dev-settings registered` 会列出已注册插件的 Id 与 manifest 路径 |
 | 改了面板页面不生效 | 面板内右键 → 重新加载即可,不用重装 |
-| 改了 Ribbon 文案/按钮 | 改 `manifest.xml` 后需重启 Excel |
+| 改了 Ribbon 文案/按钮 | 改 `manifest.xml` 后需重跑注册并重启 Excel |
 
 ## 目录结构
 
@@ -115,6 +121,6 @@ OFFICE/excel-addin/
   assets/icon-16|32|80.png    按钮图标, 由 assets/generate_icons.py 生成
   verify/verify-flow.mjs      零依赖端到端验收脚本
   verify/screenshot-*.png     验收截图
-tools/start_excel_addin.py    证书 + HTTPS 服务 + sideload
+tools/start_excel_addin.py    证书 + HTTPS 服务 + 注册到 Excel 开发者目录
 tools/stop_excel_addin.py     卸载
 ```
