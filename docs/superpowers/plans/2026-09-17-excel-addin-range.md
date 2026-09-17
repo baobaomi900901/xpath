@@ -1232,3 +1232,9 @@ git commit -m "office: 补充 Excel 插件靶场使用说明"
 | Task 3/5 sideload 机制 | 把 manifest 复制进 `%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\` | 改为注册表开发者目录 `HKCU\SOFTWARE\Microsoft\Office\16.0\WEF\Developer\<插件Id> = manifest 绝对路径`(Wef 目录仍保留一份 manifest 副本) | **实测桌面版 Excel 不认"只拷 Wef 目录"**,重启后选项卡不出现;官方 `office-addin-dev-settings register` 写入的正是这个注册表项,且 manifest 已被官方校验器判定 `The manifest is valid.` |
 | Task 5 卸载 | 只删 Wef 里的 manifest | 先删注册表项,再删 manifest 文件 | 注册表项才是 Excel 认的入口;另官方文档警告"不要只删单个 manifest 文件,可能导致所有加载项停止加载",已写进 README 故障排查 |
 | Session 收尾 | — | 追加一次机制修正:第一次重启 Excel 时只有 Wef 拷贝,机制本身是错的,验证放到注册机制修好之后 | 避免把"机制错误"误判成"重装次数不够" |
+| Task 3 证书颁发方式 | `New-SelfSignedCertificate` 默认参数 | 增加 `-Provider 'Microsoft Enhanced RSA and AES Cryptographic Provider' -KeyExportPolicy Exportable -TextExtension @('2.5.29.19={critical}{text}ca=1')` | ① 默认的 CNG 密钥在 .NET Framework 下 `ExportParameters`/`CngKey.Export` 都不可用,换 CSP 提供程序后 `RSACryptoServiceProvider.ExportParameters` 可用,于是 PEM 导出可以完全不用 openssl / PowerShell 7;② CSP 路径建的证书**默认没有 basicConstraints**,schannel 会以 `SEC_E_UNTRUSTED_ROOT` 拒绝,必须显式补 `ca=1` |
+| Task 3 PEM 导出 | openssl / pwsh | 新增首选的纯 PowerShell 5.1 + .NET + Python PKCS#1 DER 编码路径,openssl / pwsh 退为兜底 | 目标机器可能既没有 Git(openssl)也没有 PowerShell 7;这是"换一台电脑也能测"的关键前置 |
+| Task 5 卸载证书 | PowerShell `Remove-Item Cert:\...\Root` | 改用 `certutil -user -delstore` | 非交互会话下 Root 存储的删除同样报 "UI is not allowed",`certutil` 可静默完成(与安装端对称) |
+| Task 5 卸载产物 | 只删 manifest | 追加删除靶场工作簿与 Excel 的 `~$` 锁文件 | 否则 `dist/` 因锁文件残留而无法清理 |
+| `start` 输出 | 直接 `print` | `configure_output()` 增加 `line_buffering=True` | 输出被重定向/接管时 Python 会缓冲,"端口被占用"之类的报错会被吞掉,表现为"启动了但什么都没发生" |
+| 新电脑可移植性 | — | 新增 README 第 1-8 节:前置条件、新机完整步骤、每次开机只需一步、持久性对照表、验收清单 | 用户明确要求"换一台电脑也能测试",需要一份经过复演验证的步骤 |

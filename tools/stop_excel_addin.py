@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 import winreg
 from pathlib import Path
@@ -14,13 +15,14 @@ from start_excel_addin import (  # noqa: E402 - 复用启动器的常量与 Powe
     CERT_DIR,
     CER_PATH,
     DEVELOPER_KEY,
+    DIST_DIR,
     PEM_PATH,
     PFX_PATH,
     SIDELOAD_NAME,
+    SIDELOAD_WORKBOOK_NAME,
     WEF_DIR,
     configure_output,
     manifest_addin_id,
-    run_powershell,
 )
 
 
@@ -42,29 +44,38 @@ def remove_sideload() -> None:
 
     if not target.exists():
         print(f"sideload manifest 不存在, 无需移除: {target}")
-        return
-    try:
-        target.unlink()
-    except OSError as error:
-        raise RuntimeError(
-            f"删除失败({error})。请完全退出 Excel 后重试, 或手动删除: {target}"
-        ) from error
-    print(f"已移除 sideload manifest: {target}")
+    else:
+        try:
+            target.unlink()
+        except OSError as error:
+            raise RuntimeError(
+                f"删除失败({error})。请完全退出 Excel 后重试, 或手动删除: {target}"
+            ) from error
+        print(f"已移除 sideload manifest: {target}")
+
+    # 靶场工作簿是可再生成的产物; Excel 打开后还会留下 ~$ 锁文件, 一并清掉。
+    if DIST_DIR.exists():
+        for path in (DIST_DIR / SIDELOAD_WORKBOOK_NAME, *DIST_DIR.glob(f"~${SIDELOAD_WORKBOOK_NAME}")):
+            if path.exists():
+                path.unlink(missing_ok=True)
+                print(f"已移除 {path.name}")
+        if not any(DIST_DIR.iterdir()):
+            DIST_DIR.rmdir()
 
 
 def remove_certificate() -> None:
-    script = """
-$ErrorActionPreference = 'Continue'
-Get-ChildItem Cert:\\CurrentUser\\Root | Where-Object { $_.Subject -eq 'CN=localhost' } | Remove-Item -Force
-Get-ChildItem Cert:\\CurrentUser\\My | Where-Object { $_.Subject -eq 'CN=localhost' } | Remove-Item -Force
-'removed'
-"""
-    print(run_powershell(script))
+    # Root 存储的增删在非交互会话下都会被 "UI is not allowed" 拒绝, 与安装时对称, 统一用 certutil。
+    for store in ("Root", "My"):
+        completed = subprocess.run(
+            ["certutil.exe", "-user", "-delstore", store, "localhost"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+        )
+        print(f"  {store} 存储: {'已清理 CN=localhost' if completed.returncode == 0 else '无需清理'}")
     for path in (PFX_PATH, CER_PATH, PEM_PATH):
         path.unlink(missing_ok=True)
     if CERT_DIR.exists() and not any(CERT_DIR.iterdir()):
         CERT_DIR.rmdir()
-    print("已移除 localhost 证书。")
+    print("已移除 localhost 证书材料。")
 
 
 def parse_args() -> argparse.Namespace:
