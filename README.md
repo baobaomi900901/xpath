@@ -23,3 +23,15 @@ $env:VITE_GITHUB_PAGES = 'true'
 pnpm run build --base /xpath/
 Remove-Item Env:VITE_GITHUB_PAGES
 ```
+
+## Excel 插件靶场
+
+在 Excel 桌面版安装一个 Office 加载项, 用于验证 Ribbon + WebView2 任务窗格场景
+(点击登录 → admin/1 → 已登录 → admin ▾ → 退出登录)。
+
+```powershell
+python tools/start_excel_addin.py   # 装证书 + 起 HTTPS 服务 + sideload, 之后重启 Excel
+python tools/stop_excel_addin.py    # 卸载
+```
+
+详见 [OFFICE/excel-addin/README.md](OFFICE/excel-addin/README.md)。

@@ -1208,3 +1208,24 @@ git commit -m "office: 补充 Excel 插件靶场使用说明"
 - **Spec 覆盖**:§3 组件 → Task 1/2/3/5;§4.1 托管 → Task 3;§4.2 证书 → Task 3 Step 3-5;§4.3 sideload → Task 3 Step 1 + Task 5 Step 2;§4.4 CLI → Task 3/5;§5 Ribbon 契约 → Task 1 Step 3 + Task 4 Step 4;§6 状态机与元素契约 → Task 2;§7 错误处理 → Task 3(端口/证书/Wef/Excel 检测)+ Task 5(删除失败提示);§8 验证 → Task 3/4/5;§10 交付物 → Task 1-6。无遗漏。
 - **占位符**:无 TBD / TODO;每个代码步骤都给出完整可粘贴内容。
 - **一致性**:`SIDELOAD_NAME`、`WEF_DIR`、`DEFAULT_PORT`、`MANIFEST_PORT_ANCHOR` 在 Task 3 定义、Task 5 复用同名常量;元素 id 在 Task 2 定义、Task 4/5 引用同一批字符串;端口 7300 在 manifest 与脚本中一致。
+
+---
+
+## 实施偏差记录(实施后回填)
+
+计划里的以下内容在实施中被证伪或改进,最终实现以代码为准。
+
+| 位置 | 计划原方案 | 实际实现 | 原因 |
+|---|---|---|---|
+| Task 1 Step 5 | 用 `bt:String` 的 `.text` 校验文案 | 改为读 `DefaultValue` 属性 | manifest 的 `bt:String` 用属性而非文本节点承载文案 |
+| Task 2 `office.js` | `<script>` 同步加载 | 加 `async` + `taskpane.js` 内 3 秒有界等待 | 离线时 CDN 会阻塞整个面板渲染 |
+| Task 3 证书链 | 只见 `Import-Certificate` | 改用 `certutil -user -addstore -f Root`,失败才回落 `Import-Certificate` | 非交互会话下 `Import-Certificate` 写 Root 会要求 UI 同意而报错 |
+| Task 3 PowerShell 调用 | 直接继承环境变量 | 新增 `powershell_environment()`,把 `PSModulePath` 规范化为 Windows PowerShell 自己的路径 | 继承 PowerShell 7 的 `PSModulePath` 会让 `Microsoft.PowerShell.Security`/PKI 加载失败,`Cert:` 提供程序不存在 |
+| Task 3 证书复用判断 | 只看 `CurrentUser\My` 是否有效 | 要求同一指纹也在 `CurrentUser\Root` | 否则会复用上一轮没进 Root 的证书,信任链断裂 |
+| Task 3 TLS 材料 | `ssl.SSLContext.load_pkcs12` | 新增 `ensure_pem()`:openssl(`pkcs12 -nodes`,3.x 需 `-legacy`)优先、`pwsh` 的 .NET API 兜底,再 `load_cert_chain` | CPython 的 `SSLContext` 没有 `load_pkcs12` 这个 API |
+| Task 3 CLI | 无 | 新增 `--prepare-only` | 需要一个有界、可重复执行的"只装不服务"入口,便于验收与非交互安装 |
+| Task 4 浏览器验证 | agent-browser / 人工浏览器会话 | 自研零依赖 CDP 脚本 `verify/verify-flow.mjs`,自动断言 56 项并截图 | agent-browser 需联网下载 Chromium;本机已有 Chrome/Edge,Node 24 自带 `WebSocket`,零依赖更契合仓库风格 |
+| Task 4 落点 | 仅 `verify-flow.mjs` 静态契约 | 静态契约 + 真实浏览器流程合并进同一脚本 | 一条命令即可完整验收 |
+| Task 5 停服务 | `stop` 脚本"停服务" | 未实现停服务:服务在前台终端里用 Ctrl+C 结束 | 跨进程杀服务不可靠,文档已说明 |
+| Task 5 Excel 侧验证 | 由脚本重启 Excel | 改为请用户手动重启 Excel 后再用 UIA 断言 | 用户当时有两个含真实工作簿的 Excel 进程在运行,不能强杀 |
+| Task 6 | — | 新增本偏差记录 | 让计划与实现保持可追溯 |
