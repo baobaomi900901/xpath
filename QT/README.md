@@ -23,7 +23,7 @@
 ## 一键打包 + 运行
 
 ```powershell
-cd D:\code\xpath\靶场\QT
+cd D:\code\xpath\QT
 .\run.ps1
 ```
 
