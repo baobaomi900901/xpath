@@ -1,0 +1,24 @@
+:root { color-scheme: light; font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; font-size: 14px; color: #202020; background: #f0f0f0; }
+* { box-sizing: border-box; }
+body { margin: 0; overflow: hidden; }
+aside { position: absolute; inset: 0 auto 34px 0; width: 208px; padding: 12px; }
+h1 { margin: 0 0 18px; font-size: 18px; font-weight: 600; }
+#menu { padding: 2px; border: 1px solid #a9a9a9; background: white; }
+#menu button { display: block; width: 100%; padding: 10px 12px; border: 0; background: white; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+#menu button:hover { background: #e7f1fa; }
+#menu button[aria-selected='true'] { background: #0078d4; color: white; }
+#menu:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid #005a9e; outline-offset: 2px; }
+.hint { margin: 10px 2px 26px; color: #666; font-size: 12px; }
+dl { margin: 0; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+dt { margin-top: 10px; color: #666; }
+dd { margin: 0; }
+header { position: absolute; top: 10px; left: 220px; right: 12px; height: 32px; display: flex; gap: 10px; }
+#address { width: 100%; min-width: 0; padding: 5px 8px; border: 1px solid #999; background: white; font: inherit; }
+#refresh { flex: 0 0 80px; border: 1px solid #999; border-radius: 2px; background: #fafafa; font: inherit; cursor: pointer; }
+#refresh:hover { background: #e7f1fa; }
+#browser-placeholder { position: absolute; top: 52px; left: 220px; right: 12px; bottom: 34px; background: white; }
+footer { position: absolute; bottom: 0; left: 0; right: 0; height: 34px; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-top: 1px solid #ccc; font-size: 12px; }
+#status { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; }
+#status[data-error='true'] { color: #a1260d; }
+#view-mode { color: #666; white-space: nowrap; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }

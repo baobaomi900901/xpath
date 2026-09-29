@@ -1,0 +1,8 @@
+{
+  "name": "xpath-electron-shooting-range",
+  "productName": "XPath Electron 靶场",
+  "version": "1.0.0",
+  "description": "元素探测器的 Electron 多版本浏览器嵌入靶场",
+  "main": "main.cjs",
+  "private": true
+}

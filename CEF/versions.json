@@ -1,0 +1,101 @@
+{
+  "109": {
+    "cef_version": "109.1.18+gf1c41e4+chromium-109.0.5414.120",
+    "chromium_version": "109.0.5414.120",
+    "archive": "cef_binary_109.1.18+gf1c41e4+chromium-109.0.5414.120_windows64_minimal.tar.bz2",
+    "sha1": "338ea5ebea4045405c1fe144d6ac82629120b8aa",
+    "size": 168318857,
+    "runtime_files": [
+      "chrome_elf.dll",
+      "d3dcompiler_47.dll",
+      "libEGL.dll",
+      "libGLESv2.dll",
+      "libcef.dll",
+      "snapshot_blob.bin",
+      "v8_context_snapshot.bin",
+      "vk_swiftshader.dll",
+      "vk_swiftshader_icd.json",
+      "vulkan-1.dll"
+    ]
+  },
+  "125": {
+    "cef_version": "125.0.22+gc410c95+chromium-125.0.6422.142",
+    "chromium_version": "125.0.6422.142",
+    "archive": "cef_binary_125.0.22+gc410c95+chromium-125.0.6422.142_windows64_minimal.tar.bz2",
+    "sha1": "045f3153ff579616594dfda462d8e66994e1d6eb",
+    "size": 191337288,
+    "runtime_files": [
+      "chrome_elf.dll",
+      "d3dcompiler_47.dll",
+      "dxcompiler.dll",
+      "dxil.dll",
+      "libEGL.dll",
+      "libGLESv2.dll",
+      "libcef.dll",
+      "snapshot_blob.bin",
+      "v8_context_snapshot.bin",
+      "vk_swiftshader.dll",
+      "vk_swiftshader_icd.json",
+      "vulkan-1.dll"
+    ]
+  },
+  "128": {
+    "cef_version": "128.4.12+g1d7a1f9+chromium-128.0.6613.138",
+    "chromium_version": "128.0.6613.138",
+    "archive": "cef_binary_128.4.12+g1d7a1f9+chromium-128.0.6613.138_windows64_minimal.tar.bz2",
+    "sha1": "cf996113442821c788fd4e467eed2618b93fcf7c",
+    "size": 197048608,
+    "runtime_files": [
+      "chrome_elf.dll",
+      "d3dcompiler_47.dll",
+      "dxcompiler.dll",
+      "dxil.dll",
+      "libEGL.dll",
+      "libGLESv2.dll",
+      "libcef.dll",
+      "snapshot_blob.bin",
+      "v8_context_snapshot.bin",
+      "vk_swiftshader.dll",
+      "vk_swiftshader_icd.json",
+      "vulkan-1.dll"
+    ]
+  },
+  "133": {
+    "cef_version": "133.4.8+g99a2ab1+chromium-133.0.6943.142",
+    "chromium_version": "133.0.6943.142",
+    "archive": "cef_binary_133.4.8+g99a2ab1+chromium-133.0.6943.142_windows64_minimal.tar.bz2",
+    "sha1": "492e9ef0aa7c704598e873a907cd99dbf715b7d8",
+    "size": 193342490,
+    "runtime_files": [
+      "chrome_elf.dll",
+      "d3dcompiler_47.dll",
+      "dxcompiler.dll",
+      "dxil.dll",
+      "libEGL.dll",
+      "libGLESv2.dll",
+      "libcef.dll",
+      "v8_context_snapshot.bin",
+      "vk_swiftshader.dll",
+      "vk_swiftshader_icd.json",
+      "vulkan-1.dll"
+    ]
+  },
+  "154": {
+    "cef_version": "154.0.28+g564dd6c+chromium-154.0.8037.58",
+    "chromium_version": "154.0.8037.58",
+    "archive": "cef_binary_154.0.28+g564dd6c+chromium-154.0.8037.58_windows64_minimal.tar.bz2",
+    "sha1": "34a32277db8addfa355a009ed16c8dae939daed1",
+    "size": 172813193,
+    "runtime_files": [
+      "chrome_elf.dll",
+      "d3dcompiler_47.dll",
+      "dxcompiler.dll",
+      "dxil.dll",
+      "libcef.dll",
+      "v8_context_snapshot.bin",
+      "vk_swiftshader.dll",
+      "vk_swiftshader_icd.json",
+      "vulkan-1.dll"
+    ]
+  }
+}

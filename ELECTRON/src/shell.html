@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'">
+  <title>Electron 靶场</title>
+  <link rel="stylesheet" href="shell.css">
+  <script src="shell.js" defer></script>
+</head>
+<body>
+  <aside>
+    <h1 id="range-title">Electron 靶场</h1>
+    <div id="menu" role="listbox" aria-label="测试页面" tabindex="0" aria-activedescendant="menu-0" data-control-id="1001">
+      <button id="menu-0" role="option" aria-selected="true" tabindex="-1" data-index="0">点击测试</button>
+      <button id="menu-1" role="option" aria-selected="false" tabindex="-1" data-index="1">表单测试</button>
+      <button id="menu-2" role="option" aria-selected="false" tabindex="-1" data-index="2">iframe表单</button>
+    </div>
+    <p class="hint">↑ ↓ 切换页面</p>
+    <dl id="runtime-info"><dt>运行时</dt><dd>正在初始化…</dd></dl>
+  </aside>
+  <header>
+    <label for="address" class="visually-hidden">网页地址</label>
+    <input id="address" data-control-id="1002" readonly spellcheck="false" aria-label="网页地址">
+    <button id="refresh" data-control-id="1003" type="button">刷新</button>
+  </header>
+  <main id="browser-placeholder" aria-label="嵌入浏览器区域"></main>
+  <footer><span id="status" role="status" aria-live="polite" data-control-id="1004">正在初始化浏览器…</span><span id="view-mode"></span></footer>
+</body>
+</html>
