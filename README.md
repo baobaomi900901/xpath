@@ -267,6 +267,8 @@ python .\tools\start_cef.py --help                             # 查看全部参
 `--skip-build` 与 `--force-build` 互斥;`--no-launch` 可与 `--skip-build` 组合,只检查已有产物。
 多版本模式先准备所有选中版本的产物,再启动各个窗口。
 
+构建或启动前会自动终止当前仓库 `CEF/dist/<版本>/` 中所选版本的旧进程,包括同一 EXE 的渲染器、GPU 等 CEF 子进程,并等待退出,避免 EXE / DLL 被占用。所选版本已打开的窗口会关闭;未选中的版本和其他目录的同名程序不受影响。终止失败或等待超时会报错并停止后续构建/启动。只有 `--skip-build --no-launch` 的纯产物检查不清理进程。
+
 开发本地页面时,先在一个终端启动 WEB:
 
 ```powershell
@@ -287,7 +289,7 @@ python .\tools\start_cef.py --versions 109 125 128 133 154 --skip-build --base-u
 
 可执行程序在 `CEF/dist/<版本>/cef-shooting-range-<版本>.exe`,SDK 和下载缓存位于 `CEF/.cache/`,构建目录为 `CEF/build/<版本>/`。
 每次启动使用独立的 `CEF/.cache/profiles/<版本>/<进程ID>-<标识>/` 数据目录,其中包含 `cef.log`,可用于运行问题排查。
-当前五版本已完成本地和线上共 90 项实际程序验收;交互菜单加入后,CEF 启动器的 39 项测试通过。详细验收步骤见 [CEF/README.md](CEF/README.md)。
+当前五版本已完成本地和线上共 90 项实际程序验收;2026-09-29 自动清理加入后,CEF 启动器和进程清理的 65 项测试通过,133 残留清理重建及重启范围实测通过。详细验收步骤见 [CEF/README.md](CEF/README.md)。
 
 ### ELECTRON — 四版本浏览器嵌入靶场
 

@@ -55,6 +55,10 @@ python .\tools\start_cef.py --versions 109 125 128 133 154 --skip-build
 
 多版本模式先准备全部产物，再启动各窗口。标题显示 CEF 主版本和完整 Chromium 版本。
 
+构建或启动前自动清理当前仓库 `dist/<版本>/` 下所选版本的旧进程，并等待退出，避免旧进程占用 EXE / DLL 导致构建复制失败。清理包含使用同一 EXE 的渲染器、GPU 等 CEF 子进程，也会关闭所选版本已打开的窗口；未选中版本和其他目录的同名程序不受影响。清理失败或等待超过 10 秒时会报错并停止后续构建/启动。
+
+`--no-launch` 仍会先清理再构建。`--skip-build --no-launch` 只检查已有产物，不清理进程；取消选择、参数无效或版本清单无效也不会清理。
+
 ## 页面与控件
 
 | 左侧菜单 | 默认页面 |
@@ -126,7 +130,7 @@ python .\tools\start_cef.py --versions 109 125 128 133 154 --no-launch
 启动器测试：
 
 ```powershell
-python -m unittest tools.test_start_cef -v
+python -m unittest tools.test_start_cef tools.test_cef_processes -v
 ```
 
 实际五版本程序验收使用 Node.js 22+ 的内置 WebSocket，无需额外 npm 包。先启动本地 WEB，再运行：
@@ -141,6 +145,8 @@ node .\CEF\verify\verify-flow.mjs 109 154
 截图和结果写入 `verify/artifacts/`。验收程序只控制自己创建的靶场进程，结束时关闭它们。
 
 2026-09-28 验证结果：29 项 CEF 启动器测试通过；五个版本在本地 WEB 和内置线上默认地址下各通过 45 项实际验收，共 90 项。统一命令同时创建五个版本窗口的检查也通过。结果分别保存为 `results.json` 和 `results-hosted.json`。
+
+2026-09-29 自动清理验收：47 项启动器测试和 18 项进程清理测试通过。已用实际残留的 133 进程复现 DLL 占用，清理后重建成功；实际重启 133 时，旧主进程与 worker 退出、新窗口正常打开，未选中 109 和其他目录的同名程序保持运行。`--skip-build --no-launch` 保留全部旧进程。另覆盖了 Windows 在 worker 退出途中返回拒绝访问、稍后才完成退出的竞态。
 
 直接验证 EXE 内置的线上默认地址：
 

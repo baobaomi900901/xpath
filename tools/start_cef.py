@@ -159,7 +159,10 @@ def debugging_port(value: str) -> int:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="下载、构建并启动 Windows x64 CEF 多版本靶场。")
+    parser = argparse.ArgumentParser(
+        description="下载、构建并启动 Windows x64 CEF 多版本靶场。",
+        epilog="构建/启动前自动清理当前仓库所选版本的旧进程并关闭旧窗口；--skip-build --no-launch 只检查产物，不清理进程。",
+    )
     selection = parser.add_mutually_exclusive_group()
     selection.add_argument("--version", choices=VERSIONS, help="跳过菜单并选择一个 CEF 主版本。")
     selection.add_argument("--versions", nargs="+", choices=VERSIONS, help="跳过菜单并选择多个 CEF 主版本。")
@@ -409,6 +412,20 @@ def artifact_path(version: str) -> Path:
     return CEF_ROOT / "dist" / version / f"cef-shooting-range-{version}.exe"
 
 
+def cleanup_existing_processes(versions: list[str]) -> None:
+    if __package__:
+        from .cef_processes import cleanup_cef_processes
+    else:
+        from cef_processes import cleanup_cef_processes
+
+    print(f"正在清理所选 CEF {' / '.join(versions)} 版本的旧进程 ...")
+    process_ids = cleanup_cef_processes([artifact_path(version) for version in versions])
+    if process_ids:
+        print(f"已清理 {len(process_ids)} 个旧 CEF 进程 (PID {', '.join(map(str, process_ids))})。")
+    else:
+        print("未找到所选版本的旧 CEF 进程。")
+
+
 def validate_artifact(version: str, entry: dict | None = None) -> Path:
     entry = entry or load_manifest()[version]
     executable = artifact_path(version)
@@ -479,6 +496,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.remote_debugging_port is not None and len(versions) != 1:
         raise ValueError("--remote-debugging-port 只能与单个版本一起使用。")
     manifest = load_manifest()
+    if not (args.skip_build and args.no_launch):
+        cleanup_existing_processes(versions)
     executables: dict[str, Path] = {}
     for version in versions:
         executables[version] = (validate_artifact(version, manifest[version]) if args.skip_build

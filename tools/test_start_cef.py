@@ -65,6 +65,9 @@ class LauncherTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="cef-test-", dir=MODULE_PATH.parent)
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
+        cleanup = patch.object(start_cef, "cleanup_existing_processes")
+        cleanup.start()
+        self.addCleanup(cleanup.stop)
 
     def test_no_version_requests_interactive_selection_and_supported_base_urls(self) -> None:
         self.assertIsNone(start_cef.parse_args([]).versions)
@@ -418,10 +421,12 @@ class LauncherTests(unittest.TestCase):
             with redirect_stdout(io.StringIO()), self.assertRaisesRegex(RuntimeError, "321"):
                 start_cef.launch_versions(["109", "125"], paths, "https://example.com/#/", None)
 
-    def test_launch_detects_a_real_process_that_exits_during_startup(self) -> None:
+    def test_launch_detects_a_real_process_that_exited_before_startup_check(self) -> None:
         real_popen = subprocess.Popen
-        process = real_popen([sys.executable, "-c", "import sys,time; time.sleep(0.03); sys.exit(7)"])
+        process = real_popen([sys.executable, "-c", "import sys; sys.exit(7)"])
         try:
+            # Test exit detection without depending on interpreter startup speed.
+            process.wait(timeout=10)
             with patch.object(start_cef.subprocess, "Popen", return_value=process), redirect_stdout(io.StringIO()):
                 with self.assertRaisesRegex(RuntimeError, "7"):
                     start_cef.launch_versions(["109"], {"109": self.root / "range.exe"}, "https://example.com/#/", None)
@@ -430,6 +435,11 @@ class LauncherTests(unittest.TestCase):
 
 
 class VersionSelectorTests(unittest.TestCase):
+    def setUp(self) -> None:
+        cleanup = patch.object(start_cef, "cleanup_existing_processes")
+        cleanup.start()
+        self.addCleanup(cleanup.stop)
+
     def select(self, keys: list[str]) -> tuple[list[str], str]:
         output = io.StringIO()
         with (
@@ -519,6 +529,100 @@ class VersionSelectorTests(unittest.TestCase):
         with patch.object(start_cef.sys.stdin, "isatty", return_value=False):
             with self.assertRaisesRegex(RuntimeError, "--version"):
                 start_cef.select_versions()
+
+
+class CleanupDispatchTests(unittest.TestCase):
+    def test_cleanup_targets_only_selected_artifact_paths_and_reports_pids(self) -> None:
+        from tools import cef_processes
+
+        cef_root = Path(r'D:\example\xpath\CEF')
+        with (
+            patch.object(start_cef, 'CEF_ROOT', cef_root),
+            patch.object(cef_processes, 'cleanup_cef_processes', return_value=[101, 102]) as cleanup,
+            redirect_stdout(io.StringIO()) as output,
+        ):
+            start_cef.cleanup_existing_processes(['109', '133'])
+        cleanup.assert_called_once_with([
+            cef_root / 'dist' / '109' / 'cef-shooting-range-109.exe',
+            cef_root / 'dist' / '133' / 'cef-shooting-range-133.exe',
+        ])
+        self.assertIn('101, 102', output.getvalue())
+
+    def test_cleanup_selected_versions_before_any_build_and_launch(self) -> None:
+        events = []
+        with (
+            patch.object(start_cef, "cleanup_existing_processes",
+                         side_effect=lambda versions: events.append(('cleanup', versions))),
+            patch.object(start_cef, "build_version", side_effect=lambda v, e, f: events.append(('build', v)) or Path(v + '.exe')),
+            patch.object(start_cef, "launch_versions", side_effect=lambda *args: events.append(('launch', args[0]))),
+        ):
+            self.assertEqual(0, start_cef.main(['--versions', '109', '133']))
+        self.assertEqual([('cleanup', ['109', '133']), ('build', '109'), ('build', '133'),
+                          ('launch', ['109', '133'])], events)
+
+    def test_skip_build_restart_cleans_before_validation_and_launch(self) -> None:
+        events = []
+        with (
+            patch.object(start_cef, "cleanup_existing_processes",
+                         side_effect=lambda versions: events.append(('cleanup', versions))),
+            patch.object(start_cef, "validate_artifact", side_effect=lambda v, e: events.append(('validate', v)) or Path(v + '.exe')),
+            patch.object(start_cef, "launch_versions", side_effect=lambda *args: events.append(('launch', args[0]))),
+        ):
+            self.assertEqual(0, start_cef.main(['--version', '133', '--skip-build']))
+        self.assertEqual([('cleanup', ['133']), ('validate', '133'), ('launch', ['133'])], events)
+
+    def test_build_without_launch_still_cleans_locked_runtime(self) -> None:
+        events = []
+        with (
+            patch.object(start_cef, "cleanup_existing_processes",
+                         side_effect=lambda versions: events.append(('cleanup', versions))),
+            patch.object(start_cef, "build_version", side_effect=lambda v, e, f: events.append(('build', v)) or Path(v + '.exe')),
+            patch.object(start_cef, "launch_versions") as launch,
+            redirect_stdout(io.StringIO()),
+        ):
+            self.assertEqual(0, start_cef.main(['--version', '133', '--no-launch']))
+        self.assertEqual([('cleanup', ['133']), ('build', '133')], events)
+        launch.assert_not_called()
+
+    def test_pure_validation_preserves_running_processes(self) -> None:
+        with (
+            patch.object(start_cef, "cleanup_existing_processes") as cleanup,
+            patch.object(start_cef, "validate_artifact", return_value=Path('133.exe')),
+            redirect_stdout(io.StringIO()),
+        ):
+            self.assertEqual(0, start_cef.main(['--version', '133', '--skip-build', '--no-launch']))
+        cleanup.assert_not_called()
+
+    def test_cleanup_failure_stops_before_build_and_launch(self) -> None:
+        with (
+            patch.object(start_cef, "cleanup_existing_processes", side_effect=PermissionError('cannot stop PID 133')),
+            patch.object(start_cef, "build_version") as build,
+            patch.object(start_cef, "launch_versions") as launch,
+        ):
+            with self.assertRaisesRegex(PermissionError, 'PID 133'):
+                start_cef.main(['--version', '133'])
+        build.assert_not_called()
+        launch.assert_not_called()
+
+    def test_cancel_and_invalid_arguments_do_not_cleanup(self) -> None:
+        with (
+            patch.object(start_cef, "cleanup_existing_processes") as cleanup,
+            patch.object(start_cef, "select_versions", return_value=[]),
+            redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()),
+        ):
+            self.assertEqual(0, start_cef.main([]))
+            with self.assertRaises(SystemExit):
+                start_cef.main(['--version', '999'])
+        cleanup.assert_not_called()
+
+    def test_bad_manifest_does_not_cleanup(self) -> None:
+        with (
+            patch.object(start_cef, "cleanup_existing_processes") as cleanup,
+            patch.object(start_cef, "load_manifest", side_effect=ValueError('bad manifest')),
+        ):
+            with self.assertRaisesRegex(ValueError, 'bad manifest'):
+                start_cef.main(['--version', '133'])
+        cleanup.assert_not_called()
 
 
 if __name__ == "__main__":
