@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>停止加载测试 · 等待资源</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./fixture.js"></script>
+</head>
+<body data-page="loading">
+  <main class="panel">
+    <h1>网络资源正在加载</h1>
+    <p id="loading-status" role="status">正在发起慢资源请求…</p>
+    <dl class="metrics">
+      <div><dt>已等待</dt><dd><span id="elapsed-seconds">0</span> 秒</dd></div>
+      <div><dt>JS 心跳</dt><dd id="heartbeat">0</dd></div>
+      <div><dt>文档状态</dt><dd id="document-state">loading</dd></div>
+      <div><dt>资源状态</dt><dd id="resource-state">pending</dd></div>
+    </dl>
+    <div id="resource-host"></div>
+    <p id="loading-error" class="error" role="alert"></p>
+    <p><a href="./index.html">返回准备页</a></p>
+    <aside>
+      <p>此页面没有自动停止逻辑。资源等待期间，页面 JS 和计时器正常运行。</p>
+      <p>资源错误可能由停载或网络失败引起；确认停载应同时检查调用结果及网络取消事件。</p>
+      <p>结构化状态：<code>window.stopLoadTest.getState()</code></p>
+    </aside>
+    <h2>事件记录</h2>
+    <pre id="event-log" aria-live="polite"></pre>
+  </main>
+</body>
+</html>

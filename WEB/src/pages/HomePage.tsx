@@ -7,6 +7,12 @@ const { Paragraph } = Typography;
 
 const menuItems = [
   {
+    id: 'menu-stop-load-test',
+    href: '/stop-load-test/index.html',
+    title: '停止网络加载测试',
+    description: '资源延迟响应、JS 持续运行，测试 stop_load() 中止加载',
+  },
+  {
     id: 'menu-slow-load-30s',
     href: '/slow-load-30s.html',
     title: '30秒加载页面',

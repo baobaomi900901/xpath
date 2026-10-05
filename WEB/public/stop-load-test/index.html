@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>停止加载测试 · 准备</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./fixture.js"></script>
+</head>
+<body data-page="setup">
+  <main class="panel">
+    <h1>停止加载测试</h1>
+    <p>准备完成后，进入网络资源延迟响应的页面。等待期间页面仍可操作。</p>
+    <p id="setup-state" data-state="preparing" role="status">正在准备测试环境…</p>
+    <label for="delay-seconds">资源响应等待时间（秒）</label>
+    <input id="delay-seconds" type="number" value="30" min="1" max="120" step="1">
+    <div class="actions">
+      <button id="start-test" disabled>开始测试</button>
+      <button id="cleanup-worker" class="secondary" disabled>清理测试环境</button>
+    </div>
+    <p id="setup-error" class="error" role="alert"></p>
+    <aside>
+      <h2>观察方法</h2>
+      <ol>
+        <li>点击“开始测试”，新页面默认持续加载 30 秒。</li>
+        <li>观察等待秒数和 JS 心跳继续增长。</li>
+        <li>通过 SDK 调用 <code>stop_load()</code>，检查资源未完成、文档加载结束。</li>
+        <li>作为对照，再次开始测试并等待资源自然完成。</li>
+      </ol>
+      <p>首次进入需要准备 Service Worker。它只作用于本测试目录；清理按钮移除本目录注册。需使用 HTTPS 或 localhost。</p>
+    </aside>
+  </main>
+</body>
+</html>
