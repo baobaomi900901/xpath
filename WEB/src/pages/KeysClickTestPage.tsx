@@ -392,6 +392,14 @@ export default function KeysClickTestPage() {
               <Button id="btn-trusted-click-target" size="large" onClick={handleTrustedClick}>
                 点击调试
               </Button>
+              <Button
+                id="btn-disabled-click-target"
+                size="large"
+                disabled
+                onClick={(event) => handleClick('btn-disabled-click-target', '禁用按钮', ANY_EXPECTED, event)}
+              >
+                禁用按钮（disabled）
+              </Button>
             </Space>
           </div>
 
