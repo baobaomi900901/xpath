@@ -6,6 +6,11 @@ uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
   StdCtrls, ExtCtrls, ComCtrls, Menus, Clipbrd, CommCtrl;
 
+const
+  EMPLOYEE_PAGE_SIZE = 50;
+  EMPLOYEE_PAGE_COUNT = 10;
+  EMPLOYEE_VISIBLE_PAGES = 5;
+
 type
   TLayoutPanel = class(TPanel)
   protected
@@ -52,6 +57,14 @@ type
     FActionPopup: TPopupMenu;
 
     FEmployeeList: TListView;
+    FTablePager: TPanel;
+    FTablePageInfo: TStaticText;
+    FTableFirst: TButton;
+    FTablePrevious: TButton;
+    FTableNext: TButton;
+    FTableLast: TButton;
+    FTablePages: array[1..EMPLOYEE_VISIBLE_PAGES] of TButton;
+    FTableCurrentPage: Integer;
 
     FDragHeading: TLabel;
     FDragPosition: TLabel;
@@ -70,6 +83,8 @@ type
 
     procedure BuildFormPage;
     procedure BuildTablePage;
+    procedure ShowEmployeePage(APage: Integer);
+    procedure TablePageClick(Sender: TObject);
     procedure BuildDragPage;
     procedure BuildContextMenu;
     procedure BuildActionPopup;
@@ -133,6 +148,14 @@ const
   ID_DRAG_RESET = 2002;
   ID_DRAG_COPY = 2003;
   ID_DRAG_HIDE = 2004;
+  ID_EMPLOYEE_LIST = 3001;
+  ID_TABLE_PAGER = 3002;
+  ID_TABLE_PAGE_INFO = 3003;
+  ID_TABLE_FIRST = 3004;
+  ID_TABLE_PREVIOUS = 3005;
+  ID_TABLE_NEXT = 3006;
+  ID_TABLE_LAST = 3007;
+  ID_TABLE_PAGE_BASE = 3100;
 
 function ChooseString(Index: Integer; const Values: array of string): string;
 begin
@@ -589,9 +612,42 @@ end;
 procedure TLayoutForm.BuildTablePage;
 var
   Column: TListColumn;
-  Row: TListItem;
-  Index: Integer;
+  Index, ButtonLeft: Integer;
+
+  function AddPageButton(const ACaption: string; AWidth, APage, AId: Integer): TButton;
+  begin
+    Result := TButton.Create(FTablePager);
+    Result.Parent := FTablePager;
+    Result.Caption := ACaption;
+    Result.SetBounds(ButtonLeft, 36, AWidth, 28);
+    Result.Tag := APage;
+    Result.OnClick := TablePageClick;
+    SetAutomationId(Result, AId);
+    Inc(ButtonLeft, AWidth + 6);
+  end;
+
 begin
+  FTablePager := TPanel.Create(FTableTab);
+  FTablePager.Parent := FTableTab;
+  FTablePager.Align := alBottom;
+  FTablePager.Height := 76;
+  FTablePager.BevelOuter := bvNone;
+  SetAutomationId(FTablePager, ID_TABLE_PAGER);
+
+  FTablePageInfo := TStaticText.Create(FTablePager);
+  FTablePageInfo.Parent := FTablePager;
+  FTablePageInfo.AutoSize := False;
+  FTablePageInfo.SetBounds(16, 8, 760, 20);
+  SetAutomationId(FTablePageInfo, ID_TABLE_PAGE_INFO);
+
+  ButtonLeft := 16;
+  FTableFirst := AddPageButton('首页', 52, 1, ID_TABLE_FIRST);
+  FTablePrevious := AddPageButton('上一页', 68, 1, ID_TABLE_PREVIOUS);
+  for Index := Low(FTablePages) to High(FTablePages) do
+    FTablePages[Index] := AddPageButton(IntToStr(Index), 36, Index, ID_TABLE_PAGE_BASE + Index);
+  FTableNext := AddPageButton('下一页', 68, 2, ID_TABLE_NEXT);
+  FTableLast := AddPageButton('末页', 52, EMPLOYEE_PAGE_COUNT, ID_TABLE_LAST);
+
   FEmployeeList := TListView.Create(FTableTab);
   FEmployeeList.Parent := FTableTab;
   FEmployeeList.Align := alClient;
@@ -603,17 +659,65 @@ begin
     Column.Caption := ChooseString(Index + 1, ['ID', '姓名', '部门', '城市', '状态', '邮箱', '入职日期']);
     Column.Width := ChooseInteger(Index + 1, [60, 110, 100, 90, 80, 220, 120]);
   end;
-  for Index := 1 to 100 do
-  begin
-    Row := FEmployeeList.Items.Add;
-    Row.Caption := IntToStr(Index);
-    Row.SubItems.Add('用户' + IntToStr(Index));
-    Row.SubItems.Add(ChooseString((Index mod 5) + 1, ['研发部', '产品部', '市场部', '销售部', '人事部']));
-    Row.SubItems.Add(ChooseString((Index mod 5) + 1, ['北京', '上海', '广州', '深圳', '杭州']));
-    Row.SubItems.Add(ChooseString((Index mod 3) + 1, ['在职', '离职', '待入职']));
-    Row.SubItems.Add('user' + IntToStr(Index) + '@example.com');
-    Row.SubItems.Add(Format('2024-%2.2d-%2.2d', [(Index mod 12) + 1, (Index mod 28) + 1]));
+  SetAutomationId(FEmployeeList, ID_EMPLOYEE_LIST);
+  ShowEmployeePage(1);
+end;
+
+procedure TLayoutForm.ShowEmployeePage(APage: Integer);
+var
+  Row: TListItem;
+  Index, FirstRecord, LastRecord, FirstPage, PageNumber: Integer;
+begin
+  if APage < 1 then APage := 1;
+  if APage > EMPLOYEE_PAGE_COUNT then APage := EMPLOYEE_PAGE_COUNT;
+  FTableCurrentPage := APage;
+  FirstRecord := (APage - 1) * EMPLOYEE_PAGE_SIZE + 1;
+  LastRecord := APage * EMPLOYEE_PAGE_SIZE;
+
+  FEmployeeList.Items.BeginUpdate;
+  try
+    FEmployeeList.Items.Clear;
+    for Index := FirstRecord to LastRecord do
+    begin
+      Row := FEmployeeList.Items.Add;
+      Row.Caption := IntToStr(Index);
+      Row.SubItems.Add('用户' + IntToStr(Index));
+      Row.SubItems.Add(ChooseString((Index mod 5) + 1, ['研发部', '产品部', '市场部', '销售部', '人事部']));
+      Row.SubItems.Add(ChooseString((Index mod 5) + 1, ['北京', '上海', '广州', '深圳', '杭州']));
+      Row.SubItems.Add(ChooseString((Index mod 3) + 1, ['在职', '离职', '待入职']));
+      Row.SubItems.Add('user' + IntToStr(Index) + '@example.com');
+      Row.SubItems.Add(Format('2024-%2.2d-%2.2d', [(Index mod 12) + 1, (Index mod 28) + 1]));
+    end;
+  finally
+    FEmployeeList.Items.EndUpdate;
   end;
+
+  FTablePageInfo.Caption := Format('第 %d / %d 页 | 每页 %d 条 | 共 %d 条 | 当前 %d-%d 条',
+    [FTableCurrentPage, EMPLOYEE_PAGE_COUNT, EMPLOYEE_PAGE_SIZE,
+     EMPLOYEE_PAGE_COUNT * EMPLOYEE_PAGE_SIZE, FirstRecord, LastRecord]);
+  FTableFirst.Enabled := FTableCurrentPage > 1;
+  FTablePrevious.Enabled := FTableCurrentPage > 1;
+  FTablePrevious.Tag := FTableCurrentPage - 1;
+  FTableNext.Enabled := FTableCurrentPage < EMPLOYEE_PAGE_COUNT;
+  FTableNext.Tag := FTableCurrentPage + 1;
+  FTableLast.Enabled := FTableCurrentPage < EMPLOYEE_PAGE_COUNT;
+  { Start sliding when the selected page reaches the third button. }
+  FirstPage := FTableCurrentPage - 1;
+  if FirstPage < 1 then FirstPage := 1;
+  if FirstPage > EMPLOYEE_PAGE_COUNT - EMPLOYEE_VISIBLE_PAGES + 1 then
+    FirstPage := EMPLOYEE_PAGE_COUNT - EMPLOYEE_VISIBLE_PAGES + 1;
+  for Index := Low(FTablePages) to High(FTablePages) do
+  begin
+    PageNumber := FirstPage + Index - 1;
+    FTablePages[Index].Caption := IntToStr(PageNumber);
+    FTablePages[Index].Tag := PageNumber;
+    FTablePages[Index].Enabled := PageNumber <> FTableCurrentPage;
+  end;
+end;
+
+procedure TLayoutForm.TablePageClick(Sender: TObject);
+begin
+  ShowEmployeePage((Sender as TButton).Tag);
 end;
 
 procedure TLayoutForm.BuildDragPage;
