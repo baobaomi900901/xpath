@@ -7,9 +7,10 @@ uses
   StdCtrls, ExtCtrls, ComCtrls, Menus, Clipbrd, CommCtrl;
 
 const
-  EMPLOYEE_PAGE_SIZE = 50;
+  EMPLOYEE_PAGE_SIZE = 100;
   EMPLOYEE_PAGE_COUNT = 10;
   EMPLOYEE_VISIBLE_PAGES = 5;
+  FORM_ITEM_COUNT = 10;
 
 type
   TLayoutPanel = class(TPanel)
@@ -41,18 +42,23 @@ type
     FDragTab: TTabSheet;
     FFormHost: TfrmETFDate;
     FContentPanel: TRzPanel;
+    FFormItems: array[0..FORM_ITEM_COUNT - 1] of TPanel;
 
     FNameEdit: TEdit;
     FPasswordEdit: TEdit;
     FEmailEdit: TEdit;
     FAgeEdit: TEdit;
+    FAgeSpin: TUpDown;
     FCityCombo: THs08ComboBox;
+    FCityChecks: array[0..4] of TCheckBox;
+    FGenderRadios: array[0..2] of TRadioButton;
+    FHobbyChecks: array[0..3] of TCheckBox;
     FRemarkEdit: TMemo;
     FAgreeCheck: TCheckBox;
     FSaveButton: TButton;
     FResetButton: TButton;
     FPopupButton: TButton;
-    FPopupStatus: TLabel;
+    FPopupStatus: TStaticText;
     FContextMenu: TPopupMenu;
     FActionPopup: TPopupMenu;
 
@@ -82,6 +88,7 @@ type
     FDragMoveCount: Integer;
 
     procedure BuildFormPage;
+    function CreateFormItem(AIndex: Integer; const ACaption: string; ATop, AHeight: Integer): TPanel;
     procedure BuildTablePage;
     procedure ShowEmployeePage(APage: Integer);
     procedure TablePageClick(Sender: TObject);
@@ -144,6 +151,17 @@ const
   ID_AGE_EDIT = 1004;
   ID_REMARK_EDIT = 1005;
   ID_POPUP_BUTTON = 1010;
+  ID_AGREE_CHECK = 1006;
+  ID_SAVE_BUTTON = 1007;
+  ID_RESET_BUTTON = 1008;
+  ID_AGE_SPIN = 1009;
+  ID_POPUP_STATUS = 1011;
+  ID_FORM_HEADING = 1012;
+  ID_FORM_ITEM_BASE = 4000;
+  ID_FORM_LABEL_BASE = 4100;
+  ID_CITY_CHECK_BASE = 4200;
+  ID_GENDER_RADIO_BASE = 4300;
+  ID_HOBBY_CHECK_BASE = 4400;
   ID_DRAG_TARGET = 2001;
   ID_DRAG_RESET = 2002;
   ID_DRAG_COPY = 2003;
@@ -358,7 +376,8 @@ end;
 
 procedure TLayoutForm.BuildFormPage;
 var
-  LabelControl: TLabel;
+  Heading: TStaticText;
+  Item: TPanel;
   Cities: array[0..4] of string;
   Index: Integer;
 begin
@@ -374,73 +393,51 @@ begin
   FContentPanel.BevelOuter := bvNone;
   SetAutomationId(FContentPanel, ID_CONTENT_PANEL);
 
-  LabelControl := TLabel.Create(FContentPanel);
-  LabelControl.Parent := FContentPanel;
-  LabelControl.Caption := '用户信息表单';
-  LabelControl.Left := 30;
-  LabelControl.Top := 12;
-  LabelControl.AutoSize := True;
+  Heading := TStaticText.Create(FContentPanel);
+  Heading.Parent := FContentPanel;
+  Heading.Caption := '用户信息表单';
+  Heading.SetBounds(30, 12, 240, 24);
+  SetAutomationId(Heading, ID_FORM_HEADING);
 
-  LabelControl := TLabel.Create(FContentPanel);
-  LabelControl.Parent := FContentPanel;
-  LabelControl.Caption := '姓名';
-  LabelControl.Left := 30;
-  LabelControl.Top := 52;
-  FNameEdit := TEdit.Create(FContentPanel);
-  FNameEdit.Parent := FContentPanel;
-  FNameEdit.Left := 180;
-  FNameEdit.Top := 48;
-  FNameEdit.Width := 450;
+  Item := CreateFormItem(0, '姓名', 48, 32);
+  FNameEdit := TEdit.Create(Item);
+  FNameEdit.Parent := Item;
+  FNameEdit.SetBounds(150, 0, 450, 23);
   SetAutomationId(FNameEdit, ID_NAME_EDIT);
 
-  LabelControl := TLabel.Create(FContentPanel);
-  LabelControl.Parent := FContentPanel;
-  LabelControl.Caption := '密码';
-  LabelControl.Left := 30;
-  LabelControl.Top := 92;
-  FPasswordEdit := TEdit.Create(FContentPanel);
-  FPasswordEdit.Parent := FContentPanel;
-  FPasswordEdit.Left := 180;
-  FPasswordEdit.Top := 88;
-  FPasswordEdit.Width := 450;
+  Item := CreateFormItem(1, '密码', 88, 32);
+  FPasswordEdit := TEdit.Create(Item);
+  FPasswordEdit.Parent := Item;
+  FPasswordEdit.SetBounds(150, 0, 450, 23);
   FPasswordEdit.PasswordChar := '*';
   SetAutomationId(FPasswordEdit, ID_PASSWORD_EDIT);
 
-  LabelControl := TLabel.Create(FContentPanel);
-  LabelControl.Parent := FContentPanel;
-  LabelControl.Caption := '邮箱';
-  LabelControl.Left := 30;
-  LabelControl.Top := 132;
-  FEmailEdit := TEdit.Create(FContentPanel);
-  FEmailEdit.Parent := FContentPanel;
-  FEmailEdit.Left := 180;
-  FEmailEdit.Top := 128;
-  FEmailEdit.Width := 450;
+  Item := CreateFormItem(2, '邮箱', 128, 32);
+  FEmailEdit := TEdit.Create(Item);
+  FEmailEdit.Parent := Item;
+  FEmailEdit.SetBounds(150, 0, 450, 23);
   SetAutomationId(FEmailEdit, ID_EMAIL_EDIT);
 
-  LabelControl := TLabel.Create(FContentPanel);
-  LabelControl.Parent := FContentPanel;
-  LabelControl.Caption := '年龄';
-  LabelControl.Left := 30;
-  LabelControl.Top := 172;
-  FAgeEdit := TEdit.Create(FContentPanel);
-  FAgeEdit.Parent := FContentPanel;
-  FAgeEdit.Left := 180;
-  FAgeEdit.Top := 168;
-  FAgeEdit.Width := 140;
+  Item := CreateFormItem(3, '年龄', 168, 32);
+  FAgeEdit := TEdit.Create(Item);
+  FAgeEdit.Parent := Item;
+  FAgeEdit.SetBounds(150, 0, 140, 23);
   FAgeEdit.Text := '25';
   SetAutomationId(FAgeEdit, ID_AGE_EDIT);
+  FAgeSpin := TUpDown.Create(Item);
+  FAgeSpin.Parent := Item;
+  FAgeSpin.SetBounds(266, 0, 24, 23);
+  FAgeSpin.Associate := FAgeEdit;
+  FAgeSpin.Min := 18;
+  FAgeSpin.Max := 80;
+  FAgeSpin.Position := 25;
+  FAgeSpin.Thousands := False;
+  SetAutomationId(FAgeSpin, ID_AGE_SPIN);
 
-  LabelControl := TLabel.Create(FContentPanel);
-  LabelControl.Parent := FContentPanel;
-  LabelControl.Caption := '城市（单选）';
-  LabelControl.Left := 30;
-  LabelControl.Top := 212;
-  FCityCombo := THs08ComboBox.Create(FContentPanel);
-  FCityCombo.Parent := FContentPanel;
-  FCityCombo.Left := 180;
-  FCityCombo.Top := 208;
-  FCityCombo.Width := 250;
+  Item := CreateFormItem(4, '城市（单选）', 208, 32);
+  FCityCombo := THs08ComboBox.Create(Item);
+  FCityCombo.Parent := Item;
+  FCityCombo.SetBounds(150, 0, 250, 23);
   FCityCombo.Style := csDropDownList;
   Cities[0] := '北京';
   Cities[1] := '上海';
@@ -452,91 +449,60 @@ begin
   FCityCombo.ItemIndex := 0;
   SetAutomationId(FCityCombo, ID_CITY_COMBO);
 
-  LabelControl := TLabel.Create(FContentPanel);
-  LabelControl.Parent := FContentPanel;
-  LabelControl.Caption := '城市（多选）';
-  LabelControl.Left := 30;
-  LabelControl.Top := 252;
+  Item := CreateFormItem(5, '城市（多选）', 248, 32);
   for Index := 0 to 4 do
   begin
-    with TCheckBox.Create(FContentPanel) do
-    begin
-      Parent := FContentPanel;
-      Caption := Cities[Index];
-      Left := 180 + Index * 78;
-      Top := 248;
-      Width := 74;
-    end;
+    FCityChecks[Index] := TCheckBox.Create(Item);
+    FCityChecks[Index].Parent := Item;
+    FCityChecks[Index].Caption := Cities[Index];
+    FCityChecks[Index].SetBounds(150 + Index * 78, 0, 74, 25);
+    SetAutomationId(FCityChecks[Index], ID_CITY_CHECK_BASE + Index + 1);
   end;
 
-  LabelControl := TLabel.Create(FContentPanel);
-  LabelControl.Parent := FContentPanel;
-  LabelControl.Caption := '性别（单选）';
-  LabelControl.Left := 30;
-  LabelControl.Top := 292;
+  Item := CreateFormItem(6, '性别（单选）', 288, 32);
   for Index := 0 to 2 do
   begin
-    with TRadioButton.Create(FContentPanel) do
-    begin
-      Parent := FContentPanel;
-      Caption := ChooseString(Index + 1, ['男', '女', '其他']);
-      Left := 180 + Index * 88;
-      Top := 288;
-      Width := 82;
-      if Index = 0 then Checked := True;
-    end;
+    FGenderRadios[Index] := TRadioButton.Create(Item);
+    FGenderRadios[Index].Parent := Item;
+    FGenderRadios[Index].Caption := ChooseString(Index + 1, ['男', '女', '其他']);
+    FGenderRadios[Index].SetBounds(150 + Index * 88, 0, 82, 25);
+    FGenderRadios[Index].Checked := Index = 0;
+    SetAutomationId(FGenderRadios[Index], ID_GENDER_RADIO_BASE + Index + 1);
   end;
 
-  LabelControl := TLabel.Create(FContentPanel);
-  LabelControl.Parent := FContentPanel;
-  LabelControl.Caption := '兴趣爱好（多选）';
-  LabelControl.Left := 30;
-  LabelControl.Top := 332;
+  Item := CreateFormItem(7, '兴趣爱好（多选）', 328, 32);
   for Index := 0 to 3 do
   begin
-    with TCheckBox.Create(FContentPanel) do
-    begin
-      Parent := FContentPanel;
-      Caption := ChooseString(Index + 1, ['阅读', '运动', '音乐', '旅行']);
-      Left := 180 + Index * 88;
-      Top := 328;
-      Width := 82;
-    end;
+    FHobbyChecks[Index] := TCheckBox.Create(Item);
+    FHobbyChecks[Index].Parent := Item;
+    FHobbyChecks[Index].Caption := ChooseString(Index + 1, ['阅读', '运动', '音乐', '旅行']);
+    FHobbyChecks[Index].SetBounds(150 + Index * 88, 0, 82, 25);
+    SetAutomationId(FHobbyChecks[Index], ID_HOBBY_CHECK_BASE + Index + 1);
   end;
 
-  LabelControl := TLabel.Create(FContentPanel);
-  LabelControl.Parent := FContentPanel;
-  LabelControl.Caption := '备注';
-  LabelControl.Left := 30;
-  LabelControl.Top := 372;
-  FRemarkEdit := TMemo.Create(FContentPanel);
-  FRemarkEdit.Parent := FContentPanel;
-  FRemarkEdit.Left := 180;
-  FRemarkEdit.Top := 368;
-  FRemarkEdit.Width := 450;
-  FRemarkEdit.Height := 76;
+  Item := CreateFormItem(8, '备注', 368, 80);
+  FRemarkEdit := TMemo.Create(Item);
+  FRemarkEdit.Parent := Item;
+  FRemarkEdit.SetBounds(150, 0, 450, 76);
   SetAutomationId(FRemarkEdit, ID_REMARK_EDIT);
 
-  LabelControl := TLabel.Create(FContentPanel);
-  LabelControl.Parent := FContentPanel;
-  LabelControl.Caption := '协议';
-  LabelControl.Left := 30;
-  LabelControl.Top := 464;
-  FAgreeCheck := TCheckBox.Create(FContentPanel);
-  FAgreeCheck.Parent := FContentPanel;
+  Item := CreateFormItem(9, '协议', 460, 32);
+  FAgreeCheck := TCheckBox.Create(Item);
+  FAgreeCheck.Parent := Item;
   FAgreeCheck.Caption := '同意用户协议';
-  FAgreeCheck.Left := 180;
-  FAgreeCheck.Top := 460;
-  FAgreeCheck.Width := 180;
+  FAgreeCheck.SetBounds(150, 0, 180, 25);
+  SetAutomationId(FAgreeCheck, ID_AGREE_CHECK);
 
   FSaveButton := TButton.Create(FContentPanel);
   FSaveButton.Parent := FContentPanel;
   FSaveButton.Caption := '保存';
   FSaveButton.OnClick := FormSaveClick;
+  SetAutomationId(FSaveButton, ID_SAVE_BUTTON);
   FResetButton := TButton.Create(FContentPanel);
   FResetButton.Parent := FContentPanel;
   FResetButton.Caption := '重置';
   FResetButton.OnClick := FormResetClick;
+  SetAutomationId(FResetButton, ID_RESET_BUTTON);
 
   FPopupButton := TButton.Create(FContentPanel);
   FPopupButton.Parent := FContentPanel;
@@ -544,14 +510,37 @@ begin
   FPopupButton.OnClick := PopupButtonClick;
   FPopupButton.Width := 120;
   SetAutomationId(FPopupButton, ID_POPUP_BUTTON);
-  FPopupStatus := TLabel.Create(FContentPanel);
+  FPopupStatus := TStaticText.Create(FContentPanel);
   FPopupStatus.Parent := FContentPanel;
   FPopupStatus.Caption := '菜单测试: 尚未选择菜单项';
-  FPopupStatus.AutoSize := True;
+  FPopupStatus.AutoSize := False;
+  FPopupStatus.Height := 24;
+  SetAutomationId(FPopupStatus, ID_POPUP_STATUS);
 
   BuildContextMenu;
   BuildActionPopup;
   FContentPanel.OnResize := LayoutControls;
+end;
+
+function TLayoutForm.CreateFormItem(AIndex: Integer; const ACaption: string; ATop, AHeight: Integer): TPanel;
+var
+  LabelControl: TStaticText;
+begin
+  Result := TPanel.Create(FContentPanel);
+  FFormItems[AIndex] := Result;
+  Result.Parent := FContentPanel;
+  Result.Caption := ACaption;
+  Result.ShowCaption := False;
+  Result.BevelOuter := bvNone;
+  Result.TabOrder := AIndex;
+  Result.SetBounds(30, ATop, 760, AHeight);
+  SetAutomationId(Result, ID_FORM_ITEM_BASE + AIndex + 1);
+
+  LabelControl := TStaticText.Create(Result);
+  LabelControl.Parent := Result;
+  LabelControl.Caption := ACaption;
+  LabelControl.SetBounds(0, 4, 145, 24);
+  SetAutomationId(LabelControl, ID_FORM_LABEL_BASE + AIndex + 1);
 end;
 
 procedure TLayoutForm.BuildContextMenu;
@@ -783,7 +772,7 @@ end;
 
 procedure TLayoutForm.LayoutControls(Sender: TObject);
 var
-  EditWidth: Integer;
+  EditWidth, ItemWidth, Index: Integer;
 begin
   if Assigned(FSaveButton) then
   begin
@@ -791,6 +780,10 @@ begin
     FSaveButton.Top := FContentPanel.ClientHeight - 50;
     FResetButton.Left := (FContentPanel.ClientWidth div 2) + 12;
     FResetButton.Top := FContentPanel.ClientHeight - 50;
+    ItemWidth := FContentPanel.ClientWidth - 60;
+    if ItemWidth < 630 then ItemWidth := 630;
+    for Index := Low(FFormItems) to High(FFormItems) do
+      FFormItems[Index].Width := ItemWidth;
     EditWidth := FContentPanel.ClientWidth - 380;
     if EditWidth > 450 then EditWidth := 450;
     if EditWidth < 180 then EditWidth := 180;
@@ -802,6 +795,7 @@ begin
     FPopupButton.Top := 12;
     FPopupStatus.Left := 30;
     FPopupStatus.Top := 500;
+    FPopupStatus.Width := ItemWidth;
   end;
   if Assigned(FDragArena) then
   begin
@@ -822,18 +816,29 @@ end;
 procedure TLayoutForm.FormSaveClick(Sender: TObject);
 begin
   SetMenuStatus('表单 > 保存');
+  MessageDlg('提交成功！', mtInformation, [mbOK], 0);
 end;
 
 procedure TLayoutForm.FormResetClick(Sender: TObject);
+var
+  Index: Integer;
 begin
   FNameEdit.Clear;
   FPasswordEdit.Clear;
   FEmailEdit.Clear;
   FAgeEdit.Text := '25';
+  FAgeSpin.Position := 25;
   FCityCombo.ItemIndex := 0;
+  for Index := Low(FCityChecks) to High(FCityChecks) do
+    FCityChecks[Index].Checked := False;
+  for Index := Low(FGenderRadios) to High(FGenderRadios) do
+    FGenderRadios[Index].Checked := Index = 0;
+  for Index := Low(FHobbyChecks) to High(FHobbyChecks) do
+    FHobbyChecks[Index].Checked := False;
   FRemarkEdit.Clear;
   FAgreeCheck.Checked := False;
   SetMenuStatus('表单 > 重置');
+  FNameEdit.SetFocus;
 end;
 
 procedure TLayoutForm.PopupButtonClick(Sender: TObject);

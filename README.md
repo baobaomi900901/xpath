@@ -390,7 +390,7 @@ python .\tools\start_delphi.py --configuration Debug
 默认优先使用已安装的 Delphi 2010，也可指定 `--compiler-path` 或环境变量 `DELPHI_DCC32`。
 PowerShell 入口为 `.\DELPHI\build.ps1` / `.\DELPHI\run.ps1`。
 Release 产物为 `DELPHI/build/Release/Win32VclShootingRange.exe`，运行已有 EXE 无需 Delphi。
-包含 MDI 层级、表单、原生菜单、10 页表格（共 500 条，每页 50 条，5 个动态页码）和拖拽测试，构建参数与验收方式见 [DELPHI/README.md](DELPHI/README.md)。
+包含 MDI 层级、每个表单 item 的独立具名 Pane、原生菜单、10 页表格（共 1000 条，每页 100 条，5 个动态页码）和拖拽测试，构建参数与验收方式见 [DELPHI/README.md](DELPHI/README.md)。
 
 ## 启动器通用约定
 
