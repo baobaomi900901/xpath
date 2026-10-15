@@ -1,4 +1,4 @@
-program Win32VclShootingRange;
+﻿program Win32VclShootingRange;
 
 uses
   Forms,
@@ -8,6 +8,6 @@ begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
   Application.Title := 'Delphi VCL UIA Shooting Range';
-  Application.CreateForm(TMainForm, MainForm);
+  Application.CreateForm(TMainForm, RangeMainForm);
   Application.Run;
 end.

@@ -1,4 +1,4 @@
-unit MainForm;
+﻿unit MainForm;
 
 interface
 
@@ -99,14 +99,17 @@ type
     FMainMenu: TMainMenu;
     FLayoutForm: TLayoutForm;
     procedure BuildMainMenu;
+    procedure MainFormShow(Sender: TObject);
     procedure MainMenuClick(Sender: TObject);
+  protected
+    procedure CreateParams(var Params: TCreateParams); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
   end;
 
 var
-  MainForm: TMainForm;
+  RangeMainForm: TMainForm;
 
 procedure SetAutomationId(AControl: TWinControl; AId: Integer);
 
@@ -149,7 +152,7 @@ end;
 
 procedure SetAutomationId(AControl: TWinControl; AId: Integer);
 begin
-  if Assigned(AControl) and AControl.HandleAllocated then
+  if Assigned(AControl) then
     SetWindowLong(AControl.Handle, GWL_ID, AId);
 end;
 
@@ -193,13 +196,27 @@ begin
   Constraints.MinWidth := 900;
   Constraints.MinHeight := 680;
   BuildMainMenu;
+  OnShow := MainFormShow;
+end;
 
+procedure TMainForm.CreateParams(var Params: TCreateParams);
+begin
+  inherited CreateParams(Params);
+  { CreateNew bypasses the VCL main-form flag used by MainFormOnTaskbar. }
+  Params.WndParent := 0;
+end;
+
+procedure TMainForm.MainFormShow(Sender: TObject);
+begin
+  if Assigned(FLayoutForm) then
+    Exit;
+  { Application.MainForm is assigned after the main constructor returns. }
   FLayoutForm := TLayoutForm.Create(Self);
   FLayoutForm.Caption := 'ETF交易日期管理';
   FLayoutForm.FormStyle := fsMDIChild;
   FLayoutForm.BorderStyle := bsNone;
-  FLayoutForm.Align := alClient;
   FLayoutForm.Show;
+  FLayoutForm.WindowState := wsMaximized;
   SetAutomationId(FLayoutForm, ID_LAYOUT_FORM);
 end;
 
@@ -312,6 +329,8 @@ begin
   BuildTablePage;
   BuildDragPage;
   FPageControl.ActivePage := FFormTab;
+  OnResize := LayoutControls;
+  LayoutControls(Self);
 end;
 
 procedure TLayoutForm.BuildFormPage;
@@ -349,7 +368,6 @@ begin
   FNameEdit.Left := 180;
   FNameEdit.Top := 48;
   FNameEdit.Width := 450;
-  FNameEdit.Anchors := [akLeft, akTop, akRight];
   SetAutomationId(FNameEdit, ID_NAME_EDIT);
 
   LabelControl := TLabel.Create(FContentPanel);
@@ -363,7 +381,6 @@ begin
   FPasswordEdit.Top := 88;
   FPasswordEdit.Width := 450;
   FPasswordEdit.PasswordChar := '*';
-  FPasswordEdit.Anchors := [akLeft, akTop, akRight];
   SetAutomationId(FPasswordEdit, ID_PASSWORD_EDIT);
 
   LabelControl := TLabel.Create(FContentPanel);
@@ -376,7 +393,6 @@ begin
   FEmailEdit.Left := 180;
   FEmailEdit.Top := 128;
   FEmailEdit.Width := 450;
-  FEmailEdit.Anchors := [akLeft, akTop, akRight];
   SetAutomationId(FEmailEdit, ID_EMAIL_EDIT);
 
   LabelControl := TLabel.Create(FContentPanel);
@@ -476,7 +492,6 @@ begin
   FRemarkEdit.Top := 368;
   FRemarkEdit.Width := 450;
   FRemarkEdit.Height := 76;
-  FRemarkEdit.Anchors := [akLeft, akTop, akRight];
   SetAutomationId(FRemarkEdit, ID_REMARK_EDIT);
 
   LabelControl := TLabel.Create(FContentPanel);
@@ -504,16 +519,16 @@ begin
   FPopupButton.Parent := FContentPanel;
   FPopupButton.Caption := '展开菜单';
   FPopupButton.OnClick := PopupButtonClick;
-  FPopupButton.Anchors := [akTop, akRight];
+  FPopupButton.Width := 120;
   SetAutomationId(FPopupButton, ID_POPUP_BUTTON);
   FPopupStatus := TLabel.Create(FContentPanel);
   FPopupStatus.Parent := FContentPanel;
   FPopupStatus.Caption := '菜单测试: 尚未选择菜单项';
-  FPopupStatus.Anchors := [akTop, akRight];
+  FPopupStatus.AutoSize := True;
 
   BuildContextMenu;
   BuildActionPopup;
-  FFormTab.OnResize := LayoutControls;
+  FContentPanel.OnResize := LayoutControls;
 end;
 
 procedure TLayoutForm.BuildContextMenu;
@@ -637,6 +652,7 @@ begin
   FDragCopy.Caption := '复制当前结果';
   FDragCopy.Left := 165;
   FDragCopy.Top := 155;
+  FDragCopy.Width := 140;
   FDragCopy.OnClick := DragCopyClick;
   SetAutomationId(FDragCopy, ID_DRAG_COPY);
   FDragHide := TButton.Create(FDragTab);
@@ -644,6 +660,7 @@ begin
   FDragHide.Caption := '隐藏 drag-target';
   FDragHide.Left := 30;
   FDragHide.Top := 195;
+  FDragHide.Width := 200;
   FDragHide.OnClick := DragHideClick;
   SetAutomationId(FDragHide, ID_DRAG_HIDE);
 
@@ -654,7 +671,6 @@ begin
   FDragArena.Width := 600;
   FDragArena.Height := 450;
   FDragArena.BevelOuter := bvLowered;
-  FDragArena.Anchors := [akLeft, akTop, akRight, akBottom];
   CreateDragTarget;
   FDragTab.OnResize := LayoutControls;
   CenterDragTarget;
@@ -662,6 +678,8 @@ begin
 end;
 
 procedure TLayoutForm.LayoutControls(Sender: TObject);
+var
+  EditWidth: Integer;
 begin
   if Assigned(FSaveButton) then
   begin
@@ -669,15 +687,24 @@ begin
     FSaveButton.Top := FContentPanel.ClientHeight - 50;
     FResetButton.Left := (FContentPanel.ClientWidth div 2) + 12;
     FResetButton.Top := FContentPanel.ClientHeight - 50;
-    FPopupButton.Left := FContentPanel.ClientWidth - 198;
+    EditWidth := FContentPanel.ClientWidth - 380;
+    if EditWidth > 450 then EditWidth := 450;
+    if EditWidth < 180 then EditWidth := 180;
+    FNameEdit.Width := EditWidth;
+    FPasswordEdit.Width := EditWidth;
+    FEmailEdit.Width := EditWidth;
+    FRemarkEdit.Width := EditWidth;
+    FPopupButton.Left := FContentPanel.ClientWidth - 150;
     FPopupButton.Top := 12;
-    FPopupStatus.Left := FContentPanel.ClientWidth - 348;
-    FPopupStatus.Top := 50;
+    FPopupStatus.Left := 30;
+    FPopupStatus.Top := 500;
   end;
   if Assigned(FDragArena) then
   begin
     FDragArena.Width := FDragTab.ClientWidth - FDragArena.Left - 30;
     FDragArena.Height := FDragTab.ClientHeight - FDragArena.Top - 30;
+    if FDragArena.Width < 160 then FDragArena.Width := 160;
+    if FDragArena.Height < 120 then FDragArena.Height := 120;
     CenterDragTarget;
   end;
 end;

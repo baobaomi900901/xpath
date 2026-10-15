@@ -18,9 +18,9 @@
 | [`OFFICE/`](OFFICE/excel-addin) | Excel 加载项(Ribbon + WebView2 任务窗格) | Office.js + 静态 HTML/CSS/JS + Python 标准库 HTTPS | `python tools\start_excel_addin.py` |
 | [`JAVA/`](JAVA) | Swing 桌面程序,多 JDK 版本并行 | Java 8/11/17/21/25 + Maven | `python tools\start_java.py` |
 | [`QT/`](QT) | Qt Quick 桌面程序 | Qt 5.15.2 + MinGW 8.1 | `.\QT\run.ps1` |
-| [`DELPHI/`](DELPHI) | VCL 桌面工程(需 Delphi 编译) | Delphi 2010 (VCL) | 用 Delphi 打开 `Win32VclShootingRange.dpr` |
+| [`DELPHI/`](DELPHI) | VCL 桌面程序，表单 / 菜单 / 表格 / 拖拽 | Delphi 2010 (VCL / Win32) | `python tools\start_delphi.py` |
 
-跨靶场的启动器都在 [`tools/`](tools) 下;`WIN32` / `WEBVIEW2` / `JAVA` / `QT` 另外各自带 `build.ps1` / `run.ps1`。
+跨靶场的启动器都在 [`tools/`](tools) 下;`WIN32` / `WEBVIEW2` / `JAVA` / `QT` / `DELPHI` 另外各自带 `build.ps1` / `run.ps1`。
 
 ## 目录结构
 
@@ -52,7 +52,7 @@ xpath/
 │  ├─ src/ qml/ resources/
 │  ├─ build/               构建产物
 │  └─ run.ps1 / build.ps1
-├─ DELPHI/                 Delphi VCL 靶场工程
+├─ DELPHI/                 Delphi VCL 靶场工程、build.ps1 / run.ps1
 ├─ WEBVIEW2/               WebView2 浏览器套壳靶场
 │  ├─ src/                 原生菜单与 WebView2 宿主
 │  ├─ verify/              实际程序的原生控件与 CDP 验收
@@ -69,7 +69,7 @@ xpath/
 │  └─ dist/<版本>/         四个完整运行目录(已 gitignore)
 ├─ tools/                  跨靶场启动器(Python)
 │  ├─ start_win32.py
-│  ├─ start_java.py
+│  ├─ start_java.py / start_delphi.py
 │  ├─ start_webview2.py
 │  ├─ start_cef.py / test_start_cef.py
 │  ├─ start_electron.py / test_start_electron.py
@@ -347,11 +347,19 @@ cd QT
 
 用于验证 `Accessible.ignored` 的元素(头像、昵称)是否出现在 UI tree 中。详见 [QT/README.md](QT/README.md)。
 
-### DELPHI — VCL 工程
+### DELPHI — VCL 桌面靶场
 
-当前环境没有 Delphi 编译器,工程未实际编译。在装有 Delphi 2010 的机器上:
-用 Delphi 打开 `DELPHI/Win32VclShootingRange.dpr` → 目标平台选 Win32、关闭 Runtime Packages → Build Project。
-目标 UIA 树结构与功能见 [DELPHI/README.md](DELPHI/README.md)。
+```powershell
+python .\tools\start_delphi.py                       # 构建并启动
+python .\tools\start_delphi.py --no-launch           # 仅构建
+python .\tools\start_delphi.py --skip-build          # 启动已有程序
+python .\tools\start_delphi.py --configuration Debug
+```
+
+默认优先使用已安装的 Delphi 2010，也可指定 `--compiler-path` 或环境变量 `DELPHI_DCC32`。
+PowerShell 入口为 `.\DELPHI\build.ps1` / `.\DELPHI\run.ps1`。
+Release 产物为 `DELPHI/build/Release/Win32VclShootingRange.exe`，运行已有 EXE 无需 Delphi。
+包含 MDI 层级、表单、原生菜单、100 行表格和拖拽测试，构建参数与验收方式见 [DELPHI/README.md](DELPHI/README.md)。
 
 ## 启动器通用约定
 
