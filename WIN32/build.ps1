@@ -1,6 +1,8 @@
 param(
     [ValidateSet("Debug", "Release")]
-    [string]$Configuration = "Release"
+    [string]$Configuration = "Release",
+    [string]$BuildDirectory = (Join-Path $PSScriptRoot "build"),
+    [switch]$BuildTests
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,20 +45,31 @@ if ($CMakeCommand) {
     }
 }
 
-$BuildDir = Join-Path $PSScriptRoot "build"
-& $CMake -S $PSScriptRoot -B $BuildDir -G $Generator -A x64
+$BuildDir = [System.IO.Path]::GetFullPath($BuildDirectory)
+$TestsValue = if ($BuildTests) { "ON" } else { "OFF" }
+& $CMake -S $PSScriptRoot -B $BuildDir -G $Generator -A x64 "-DWIN32_SHOOTING_RANGE_BUILD_TESTS=$TestsValue"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 & $CMake --build $BuildDir --config $Configuration
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $UiaExe = Join-Path $BuildDir "$Configuration\win32-shooting-range-uia.exe"
+$UiaNoPaneExe = Join-Path $BuildDir "$Configuration\win32-shooting-range-uia-no-pane.exe"
+$UiaRandomExe = Join-Path $BuildDir "$Configuration\win32-shooting-range-uia-random.exe"
 $MsaaExe = Join-Path $BuildDir "$Configuration\win32-shooting-range-msaa.exe"
 $CanvasExe = Join-Path $BuildDir "$Configuration\win32-shooting-range-canvas.exe"
 $PressureExe = Join-Path $BuildDir "$Configuration\win32-uia-pressure.exe"
+$Pressure500Exe = Join-Path $BuildDir "$Configuration\win32-uia-pressure-500.exe"
+$Pressure1000Exe = Join-Path $BuildDir "$Configuration\win32-uia-pressure-1000.exe"
+$Pressure2000Exe = Join-Path $BuildDir "$Configuration\win32-uia-pressure-2000.exe"
 $ProbeExe = Join-Path $BuildDir "$Configuration\uia-no-msaa-probe.exe"
 Write-Host "Built UIA OK: $UiaExe"
+Write-Host "Built UIA without form panes OK: $UiaNoPaneExe"
+Write-Host "Built UIA with random form OK: $UiaRandomExe"
 Write-Host "Built MSAA OK: $MsaaExe"
 Write-Host "Built Canvas OK: $CanvasExe"
 Write-Host "Built UIA pressure OK: $PressureExe"
+Write-Host "Built UIA pressure 500 OK: $Pressure500Exe"
+Write-Host "Built UIA pressure 1000 OK: $Pressure1000Exe"
+Write-Host "Built UIA pressure 2000 OK: $Pressure2000Exe"
 Write-Host "Built UIA probe OK: $ProbeExe"

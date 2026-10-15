@@ -1,24 +1,25 @@
 # xpath
 
 面向 **UI 自动化 / RPA / 无障碍(UI tree)测试** 的靶场集合。每个靶场都是一个可独立运行的程序或页面,
-分别覆盖不同的宿主环境与技术栈(浏览器、CEF / WebView2 / Electron 嵌入、原生 Win32、Qt、Java Swing、Delphi VCL、Excel 加载项),
+分别覆盖不同的宿主环境与技术栈(浏览器、CEF / WebView2 / Electron 嵌入、原生 Win32、Tk、Qt、Java Swing、Delphi VCL、Excel 加载项),
 用于检验自动化在元素定位、坐标与几何、拖拽、菜单、对话框、iframe / Shadow DOM、UIA 压力等场景下的表现。
 
 ---
 
 ## 靶场一览
 
-| 目录 | 形态 | 技术栈 | 一键启动 |
-|---|---|---|---|
-| [`WEB/`](WEB) | 浏览器页面,19 条路由 | React 19 + antd 5 + Vite 6 | `cd WEB; pnpm dev` |
-| [`WIN32/`](WIN32) | 原生桌面程序 3 个 + UIA 压力程序 + 检测工具 | C++ / Win32 / CMake | `python tools\start_win32.py` |
-| [`WEBVIEW2/`](WEBVIEW2) | 浏览器套壳桌面程序,原生菜单 + 3 个线上测试页面 | C++ / Win32 / WebView2 SDK 1.0.4191.47 / CMake | `python tools\start_webview2.py` |
-| [`CEF/`](CEF) | 109 / 125 / 128 / 133 / 154 五版本浏览器嵌入靶场 | C++ / Win32 / CEF / CMake | `python tools\start_cef.py` |
-| [`ELECTRON/`](ELECTRON) | 22 / 29 / 38 / 44 四版本浏览器嵌入靶场 | Electron / BrowserView / WebContentsView | `python tools\start_electron.py` |
-| [`OFFICE/`](OFFICE/excel-addin) | Excel 加载项(Ribbon + WebView2 任务窗格) | Office.js + 静态 HTML/CSS/JS + Python 标准库 HTTPS | `python tools\start_excel_addin.py` |
-| [`JAVA/`](JAVA) | Swing 桌面程序,多 JDK 版本并行 | Java 8/11/17/21/25 + Maven | `python tools\start_java.py` |
-| [`QT/`](QT) | Qt Quick 桌面程序 | Qt 5.15.2 + MinGW 8.1 | `.\QT\run.ps1` |
-| [`DELPHI/`](DELPHI) | VCL 桌面程序，表单 / 菜单 / 表格 / 拖拽 | Delphi 2010 (VCL / Win32) | `python tools\start_delphi.py` |
+| 目录                            | 形态                                             | 技术栈                                             | 一键启动                            |
+| ------------------------------- | ------------------------------------------------ | -------------------------------------------------- | ----------------------------------- |
+| [`WEB/`](WEB)                   | 浏览器页面,19 条路由                             | React 19 + antd 5 + Vite 6                         | `cd WEB; pnpm dev`                  |
+| [`WIN32/`](WIN32)               | 原生桌面程序 5 个 + UIA 压力程序 + 检测工具      | C++ / Win32 / CMake                                | `python tools\start_win32.py`       |
+| [`TK/`](TK)                     | Tk 桌面程序，表单 / 表格 / 拖拽 / 菜单           | Python / tkinter / ttk                             | `python tools\start_tk.py`          |
+| [`WEBVIEW2/`](WEBVIEW2)         | 浏览器套壳桌面程序,原生菜单 + 3 个线上测试页面   | C++ / Win32 / WebView2 SDK 1.0.4191.47 / CMake     | `python tools\start_webview2.py`    |
+| [`CEF/`](CEF)                   | 109 / 125 / 128 / 133 / 154 五版本浏览器嵌入靶场 | C++ / Win32 / CEF / CMake                          | `python tools\start_cef.py`         |
+| [`ELECTRON/`](ELECTRON)         | 22 / 29 / 38 / 44 四版本浏览器嵌入靶场           | Electron / BrowserView / WebContentsView           | `python tools\start_electron.py`    |
+| [`OFFICE/`](OFFICE/excel-addin) | Excel 加载项(Ribbon + WebView2 任务窗格)         | Office.js + 静态 HTML/CSS/JS + Python 标准库 HTTPS | `python tools\start_excel_addin.py` |
+| [`JAVA/`](JAVA)                 | Swing 桌面程序,多 JDK 版本并行                   | Java 8/11/17/21/25 + Maven                         | `python tools\start_java.py`        |
+| [`QT/`](QT)                     | Qt Quick 桌面程序                                | Qt 5.15.2 + MinGW 8.1                              | `.\QT\run.ps1`                      |
+| [`DELPHI/`](DELPHI)             | VCL 桌面程序，表单 / 菜单 / 表格 / 拖拽          | Delphi 2010 (VCL / Win32)                          | `python tools\start_delphi.py`      |
 
 跨靶场的启动器都在 [`tools/`](tools) 下;`WIN32` / `WEBVIEW2` / `JAVA` / `QT` / `DELPHI` 另外各自带 `build.ps1` / `run.ps1`。
 
@@ -37,6 +38,10 @@ xpath/
 │  ├─ dist/
 │  ├─ build.ps1 / run.ps1
 │  └─ CMakeLists.txt
+├─ TK/                     Tk 框架桌面靶场（Python 标准库）
+│  ├─ app.py / *_page.py   主窗口、表单、表格与拖拽页
+│  ├─ models.py            员工数据与拖拽状态
+│  └─ tests/               模型与真实 Tk 控件测试
 ├─ OFFICE/excel-addin/     Excel 加载项靶场
 │  ├─ manifest.xml         Ribbon 选项卡 / 组 / 按钮 + 任务窗格入口
 │  ├─ src/                 任务窗格页面与登录交互
@@ -69,6 +74,7 @@ xpath/
 │  └─ dist/<版本>/         四个完整运行目录(已 gitignore)
 ├─ tools/                  跨靶场启动器(Python)
 │  ├─ start_win32.py
+│  ├─ start_tk.py / test_start_tk.py
 │  ├─ start_java.py / start_delphi.py
 │  ├─ start_webview2.py
 │  ├─ start_cef.py / test_start_cef.py
@@ -81,18 +87,19 @@ xpath/
 
 ## 环境准备
 
-| 靶场 | 依赖 |
-|---|---|
-| 通用启动器 | Python 3.8+(仅标准库,无需 pip 安装) |
-| WEB | Node.js 22+、pnpm 10.25 |
-| WIN32 | Visual Studio 2019+(含"使用 C++ 的桌面开发"工作负载)、CMake 3.20+ |
-| WEBVIEW2 | Windows 10/11 x64 + WebView2 Runtime;启动器默认构建,需 Python 3.8+、PowerShell、Visual Studio 2019/2022/2026 C++ + Windows SDK、匹配 VS 的 CMake;SDK 自动下载,详见下文 |
-| CEF | Windows 10/11 x64、Python 3.8+;默认构建需 Visual Studio 2022/2026 C++ + Windows SDK、匹配 VS 的 CMake,CEF SDK 自动下载;`--skip-build` 需对应版本完整运行目录 |
-| ELECTRON | Windows 10/11 x64、Python 3.8+(仅标准库);官方运行时自动下载并校验 SHA256,无需 Node.js / npm / C++ 编译工具;验收另需 Node.js 22+ |
-| OFFICE | Windows + Excel 桌面版(2016+ / Microsoft 365);**不需要**管理员权限、OpenSSL、PowerShell 7 |
-| JAVA | Amazon Corretto JDK 8/11/17/21/25,放在 `JAVA/.tools/jdks/corretto/<版本>`;Maven 由启动器自动下载 |
-| QT | Qt 5.15.2 + MinGW 8.1(本机装在 `D:\Qt`) |
-| DELPHI | Delphi 2010(仅编译需要) |
+| 靶场       | 依赖                                                                                                                                                                   |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 通用启动器 | Python 3.8+(仅标准库,无需 pip 安装)                                                                                                                                    |
+| WEB        | Node.js 22+、pnpm 10.25                                                                                                                                                |
+| WIN32      | Visual Studio 2019+(含"使用 C++ 的桌面开发"工作负载)、CMake 3.20+                                                                                                      |
+| TK         | Python 3.8+，含 Tcl/Tk（Windows 安装组件 `tcl/tk and IDLE`）；无需编译或 pip 安装                                                                                      |
+| WEBVIEW2   | Windows 10/11 x64 + WebView2 Runtime;启动器默认构建,需 Python 3.8+、PowerShell、Visual Studio 2019/2022/2026 C++ + Windows SDK、匹配 VS 的 CMake;SDK 自动下载,详见下文 |
+| CEF        | Windows 10/11 x64、Python 3.8+;默认构建需 Visual Studio 2022/2026 C++ + Windows SDK、匹配 VS 的 CMake,CEF SDK 自动下载;`--skip-build` 需对应版本完整运行目录           |
+| ELECTRON   | Windows 10/11 x64、Python 3.8+(仅标准库);官方运行时自动下载并校验 SHA256,无需 Node.js / npm / C++ 编译工具;验收另需 Node.js 22+                                        |
+| OFFICE     | Windows + Excel 桌面版(2016+ / Microsoft 365);**不需要**管理员权限、OpenSSL、PowerShell 7                                                                              |
+| JAVA       | Amazon Corretto JDK 8/11/17/21/25,放在 `JAVA/.tools/jdks/corretto/<版本>`;Maven 由启动器自动下载                                                                       |
+| QT         | Qt 5.15.2 + MinGW 8.1(本机装在 `D:\Qt`)                                                                                                                                |
+| DELPHI     | Delphi 2010(仅编译需要)                                                                                                                                                |
 
 ## 各靶场启动方式
 
@@ -116,13 +123,21 @@ pnpm dev              # http://localhost:7199, 自动打开浏览器
 
 ```powershell
 python .\tools\start_win32.py                                  # 交互式多选菜单
-python .\tools\start_win32.py --backends uia msaa canvas       # 指定版本直接启动
+python .\tools\start_win32.py --backends uia uia-no-pane uia-random msaa canvas # 指定版本直接启动
 python .\tools\start_win32.py --backends uia --skip-build      # 跳过构建,用现有 EXE
 python .\tools\start_win32.py --backends uia --no-launch       # 只构建验证,不起窗口
 python .\tools\start_win32.py --configuration Debug
 ```
 
-可用版本:`uia`、`msaa`、`canvas`、`pressure500`、`pressure1000`、`pressure2000`。
+可用版本:`uia`、`uia-no-pane`、`uia-random`、`msaa`、`canvas`、`pressure500`、`pressure1000`、`pressure2000`。
+
+所有版本也可打包成独立的 Windows x64 EXE，无需 Python 或额外的 VC++ 运行库：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\WIN32\package.ps1
+```
+
+独立 EXE 和合集 ZIP 位于 `WIN32/dist/`，完整文件清单见 [WIN32/README.md](WIN32/README.md)。
 
 也可以直接用 PowerShell:
 
@@ -135,12 +150,28 @@ cd WIN32
 产物在 `WIN32/build/Release/`:
 
 - `win32-shooting-range-uia.exe` — 标准 Win32 控件,完整 UIA 树
+- `win32-shooting-range-uia-no-pane.exe` — 标准 Win32 控件,表单字段无独立 Pane
+- `win32-shooting-range-uia-random.exe` — 标准 Win32 控件,每次启动随机排列字段、控件 ID 和 Pane 类名
 - `win32-shooting-range-msaa.exe` — 单个自绘 HWND,只暴露 MSAA `IAccessible` 树
 - `win32-shooting-range-canvas.exe` — 同样自绘但不暴露任何内部无障碍节点
 - `win32-uia-pressure.exe` — UIA 深度压力靶场,启动参数为嵌套层数(500 / 1000 / 2000)
 - `uia-no-msaa-probe.exe` — 关闭 MSAA Proxy 的 UIA 只读检测工具
 
 各版本差异、Tab 功能与拖拽字段说明见 [WIN32/README.md](WIN32/README.md)。
+
+### TK — Tk 框架靶场
+
+参考 Win32 标准版，使用 tkinter/ttk 实现十字段表单、1000 条员工数据分页、120×80 目标拖拽、顶部菜单和动态弹出菜单。
+
+```powershell
+python .\tools\start_tk.py                # 检查环境并启动
+python .\tools\start_tk.py --no-launch    # 用隐藏窗口检查环境及三个页面
+python .\tools\start_tk.py --foreground   # 前台运行，便于查看错误
+```
+
+仅需带 Tcl/Tk 的 Python 3.8+，无需构建。启动器复用当前解释器；也可在仓库根目录执行 `python -m TK`。
+控件使用 Tk/ttk 自身的实现，可访问性以本机 Python/Tk 的实际表现为准。
+功能、Tk 控件路径及验证命令见 [TK/README.md](TK/README.md)。
 
 ### WEBVIEW2 — 浏览器套壳靶场
 
@@ -149,23 +180,23 @@ cd WIN32
 
 #### WebView2 版本
 
-| 项目 | 版本与来源 |
-|---|---|
-| 编译 SDK | `Microsoft.Web.WebView2 1.0.4191.47`,固定在 [WEBVIEW2/sdk-version.txt](WEBVIEW2/sdk-version.txt);构建脚本下载官方 NuGet 包并校验 SHA256。 |
-| 浏览器 Runtime | 使用本机安装的 Evergreen WebView2 Runtime,宿主没有固定浏览器内核版本。2026-09-29 本机读取到的 Runtime 为 `151.0.4129.93`。 |
+| 项目           | 版本与来源                                                                                                                                |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 编译 SDK       | `Microsoft.Web.WebView2 1.0.4191.47`,固定在 [WEBVIEW2/sdk-version.txt](WEBVIEW2/sdk-version.txt);构建脚本下载官方 NuGet 包并校验 SHA256。 |
+| 浏览器 Runtime | 使用本机安装的 Evergreen WebView2 Runtime,宿主没有固定浏览器内核版本。2026-09-29 本机读取到的 Runtime 为 `151.0.4129.93`。                |
 
 SDK 版本与 Runtime 版本分别表示编译接口和实际浏览器运行时。Evergreen Runtime 会自动更新,其他机器或后续运行的版本可能不同;具体机制见 [微软运行时分发说明](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution#the-evergreen-runtime-distribution-mode)。
 CEF 则按下文的五套固定 SDK 分别编译,运行时随各自的产物目录一起分发。
 
 #### 启动与构建依赖
 
-| 使用方式 | 依赖 |
-|---|---|
-| 使用 Python 启动器 | Windows 10/11 x64、Python 3.8+、PowerShell、已安装的 [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/),以及下列编译工具。Python 仅使用标准库,无需 `pip install`。 |
-| 编译工具 | Visual Studio 2019 / 2022 / 2026 的“使用 C++ 的桌面开发”工作负载、MSVC x64 编译工具、Windows SDK。CMake 按 VS 版本分别要求 3.20+ / 3.21+ / 4.2+;脚本检查 PATH CMake 的兼容性,不满足时尝试 VS 自带版本。 |
-| 直接运行已有 EXE | Windows 10/11 x64、WebView2 Runtime,以及对应 MSVC 的 Visual C++ x64 运行库;无需 Python、Visual Studio 或 CMake。 |
-| 网络 | 加载默认页面需访问 GitHub Pages;首次构建下载 SDK 还需访问 `api.nuget.org`。 |
-| 自动化验收 | 另需 Node.js 22+,运行 `node .\WEBVIEW2\verify\verify-flow.mjs`;日常启动无需 Node.js 或 pnpm。 |
+| 使用方式           | 依赖                                                                                                                                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 使用 Python 启动器 | Windows 10/11 x64、Python 3.8+、PowerShell、已安装的 [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/),以及下列编译工具。Python 仅使用标准库,无需 `pip install`。            |
+| 编译工具           | Visual Studio 2019 / 2022 / 2026 的“使用 C++ 的桌面开发”工作负载、MSVC x64 编译工具、Windows SDK。CMake 按 VS 版本分别要求 3.20+ / 3.21+ / 4.2+;脚本检查 PATH CMake 的兼容性,不满足时尝试 VS 自带版本。 |
+| 直接运行已有 EXE   | Windows 10/11 x64、WebView2 Runtime,以及对应 MSVC 的 Visual C++ x64 运行库;无需 Python、Visual Studio 或 CMake。                                                                                        |
+| 网络               | 加载默认页面需访问 GitHub Pages;首次构建下载 SDK 还需访问 `api.nuget.org`。                                                                                                                             |
+| 自动化验收         | 另需 Node.js 22+,运行 `node .\WEBVIEW2\verify\verify-flow.mjs`;日常启动无需 Node.js 或 pnpm。                                                                                                           |
 
 运行前需确保已安装 WebView2 Runtime;缺失时从上面的官方入口下载 Evergreen 安装程序,本程序不会自动安装。
 默认加载线上页面,无需启动本地 WEB 开发服务。
@@ -211,10 +242,10 @@ SDK 缓存位于 `WEBVIEW2/.tools/`,浏览器用户数据默认位于 `%LOCALAPP
 左侧是原生菜单“点击测试 / 表单测试 / iframe表单”,右侧在对应版本的 CEF 中嵌入现有 WEB 页面。
 默认打开点击测试,支持刷新、键盘切换、窗口缩放和 iframe / Shadow DOM 表单。默认页面如下:
 
-| 菜单 | 页面 |
-|---|---|
-| 点击测试 | [keys-click-test](https://baobaomi900901.github.io/xpath/#/keys-click-test) |
-| 表单测试 | [form-controls](https://baobaomi900901.github.io/xpath/#/form-controls) |
+| 菜单       | 页面                                                                              |
+| ---------- | --------------------------------------------------------------------------------- |
+| 点击测试   | [keys-click-test](https://baobaomi900901.github.io/xpath/#/keys-click-test)       |
+| 表单测试   | [form-controls](https://baobaomi900901.github.io/xpath/#/form-controls)           |
 | iframe表单 | [iframe-shadow-form](https://baobaomi900901.github.io/xpath/#/iframe-shadow-form) |
 
 #### 为什么选择这五个版本
@@ -222,25 +253,25 @@ SDK 缓存位于 `WEBVIEW2/.tools/`,浏览器用户数据默认位于 `%LOCALAPP
 按本项目指定的 **109 / 125 / 128 / 133 / 154** 建立固定兼容性测试矩阵,覆盖传统嵌入方式、启动架构迁移、API 版本化和较新内核。
 五个程序复用同一套宿主源码和 WEB 页面,便于对比不同内核下的元素定位、点击、表单、iframe / Shadow DOM 和无障碍表现。
 
-| 主版本 | 固定 CEF 版本 | Chromium | 作为测试节点的原因 |
-|---|---|---|---|
-| 109 | `109.1.18+gf1c41e4` | `109.0.5414.120` | 传统 Alloy 启动方式的旧版本基线;官方 109 分支支持 Win7+ 部署,110 起转为 Win10+,适合覆盖旧内核兼容场景。[官方分支说明](https://chromiumembedded.github.io/cef/branches_and_building.html#legacy-release-branches-unsupported) |
-| 125 | `125.0.22+gc410c95` | `125.0.6422.142` | Alloy 开始拆分为 bootstrap(启动组件)与 style(浏览器样式),可以用 Chrome bootstrap 创建 Alloy style 嵌入窗口,是启动架构迁移的起点。[官方架构说明](https://chromiumembedded.github.io/cef/architecture.html#cef3) |
-| 128 | `128.4.12+g1d7a1f9` | `128.0.6613.138` | 移除 Alloy bootstrap,嵌入窗口使用 Chrome bootstrap + Alloy style,覆盖升级后的启动、窗口和交互兼容性。[官方架构说明](https://chromiumembedded.github.io/cef/architecture.html#cef3) |
-| 133 | `133.4.8+g99a2ab1` | `133.0.6943.142` | 引入 CEF API 版本化,覆盖新 API / ABI 机制下的宿主适配;本项目仍针对每套 SDK 独立编译。[官方 API 版本说明](https://chromiumembedded.github.io/cef/api_versioning.html#supported-versions) |
-| 154 | `154.0.28+g564dd6c` | `154.0.8037.58` | 作为本项目 2026-09-28 固定的较新内核对照点,用于与旧版本比较相同页面的自动化行为;后续运行复用此精确版本。 |
+| 主版本 | 固定 CEF 版本       | Chromium         | 作为测试节点的原因                                                                                                                                                                                                           |
+| ------ | ------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 109    | `109.1.18+gf1c41e4` | `109.0.5414.120` | 传统 Alloy 启动方式的旧版本基线;官方 109 分支支持 Win7+ 部署,110 起转为 Win10+,适合覆盖旧内核兼容场景。[官方分支说明](https://chromiumembedded.github.io/cef/branches_and_building.html#legacy-release-branches-unsupported) |
+| 125    | `125.0.22+gc410c95` | `125.0.6422.142` | Alloy 开始拆分为 bootstrap(启动组件)与 style(浏览器样式),可以用 Chrome bootstrap 创建 Alloy style 嵌入窗口,是启动架构迁移的起点。[官方架构说明](https://chromiumembedded.github.io/cef/architecture.html#cef3)               |
+| 128    | `128.4.12+g1d7a1f9` | `128.0.6613.138` | 移除 Alloy bootstrap,嵌入窗口使用 Chrome bootstrap + Alloy style,覆盖升级后的启动、窗口和交互兼容性。[官方架构说明](https://chromiumembedded.github.io/cef/architecture.html#cef3)                                           |
+| 133    | `133.4.8+g99a2ab1`  | `133.0.6943.142` | 引入 CEF API 版本化,覆盖新 API / ABI 机制下的宿主适配;本项目仍针对每套 SDK 独立编译。[官方 API 版本说明](https://chromiumembedded.github.io/cef/api_versioning.html#supported-versions)                                      |
+| 154    | `154.0.28+g564dd6c` | `154.0.8037.58`  | 作为本项目 2026-09-28 固定的较新内核对照点,用于与旧版本比较相同页面的自动化行为;后续运行复用此精确版本。                                                                                                                     |
 
 SDK 来自 [CEF 官方二进制分发](https://cef-builds.spotifycdn.com/),精确版本、归档大小、SHA-1 和运行文件清单固定在 [CEF/versions.json](CEF/versions.json)。
 各版本分别编译和启动独立进程,使用各自的运行库与缓存。
 
 #### 启动与构建依赖
 
-| 使用方式 | 依赖 |
-|---|---|
-| 运行已有产物(`--skip-build`) | Windows 10/11 x64、Python 3.8+、完整的 `CEF/dist/<版本>/` 目录;无需编译工具或下载 SDK。启动器仅使用 Python 标准库,无需 `pip install`。 |
-| 首次运行或重新构建 | 上述系统与 Python 环境,另需 Visual Studio 2022 / 2026 的“使用 C++ 的桌面开发”工作负载、MSVC x64 编译工具、Windows SDK。VS2022 需 CMake 3.21+,VS2026 需 CMake 4.2+;启动器优先使用 PATH 中的 CMake,找不到时使用 VS 自带版本。 |
-| 加载默认线上页面 | 能访问 GitHub Pages;首次准备 SDK 还需能访问 `cef-builds.spotifycdn.com`。 |
-| 加载本地 WEB 页面 | 另需 Node.js 22+、pnpm 10.25,并保持 WEB 开发服务运行。 |
+| 使用方式                     | 依赖                                                                                                                                                                                                                        |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 运行已有产物(`--skip-build`) | Windows 10/11 x64、Python 3.8+、完整的 `CEF/dist/<版本>/` 目录;无需编译工具或下载 SDK。启动器仅使用 Python 标准库,无需 `pip install`。                                                                                      |
+| 首次运行或重新构建           | 上述系统与 Python 环境,另需 Visual Studio 2022 / 2026 的“使用 C++ 的桌面开发”工作负载、MSVC x64 编译工具、Windows SDK。VS2022 需 CMake 3.21+,VS2026 需 CMake 4.2+;启动器优先使用 PATH 中的 CMake,找不到时使用 VS 自带版本。 |
+| 加载默认线上页面             | 能访问 GitHub Pages;首次准备 SDK 还需能访问 `cef-builds.spotifycdn.com`。                                                                                                                                                   |
+| 加载本地 WEB 页面            | 另需 Node.js 22+、pnpm 10.25,并保持 WEB 开发服务运行。                                                                                                                                                                      |
 
 CEF 运行库随靶场目录一起分发,无需安装 Chrome 或 WebView2 Runtime。分发时保留整个 `dist/<版本>/` 目录,包括 DLL、PAK、snapshot、`locales/` 和 `version.json`。
 CEF 启动器支持 `--skip-build` 直接运行完整产物目录;WebView2 启动器始终默认构建,直接运行已有 WebView2 产物请使用上文的 EXE 命令。
@@ -380,7 +411,7 @@ Release 产物为 `DELPHI/build/Release/Win32VclShootingRange.exe`，运行已�
 线上子页面使用 Hash 路由,例如 /xpath/#/form-controls,可直接打开和刷新。
 本地 pnpm dev 保留原有路由。
 
-GitHub Pages 仅托管静态页面,不能运行 SDK Cookie 观测所需的 /api/sdk-web/* 接口,
+GitHub Pages 仅托管静态页面,不能运行 SDK Cookie 观测所需的 /api/sdk-web/\* 接口,
 也不能提供本地 HTTP/HTTPS 测试域名及 Vite 插件的下载响应头。
 Cookie 服务端测试请继续使用本地靶场;fetch + Blob 下载仍可在线使用。
 

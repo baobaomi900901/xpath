@@ -14,6 +14,7 @@
 #include <atomic>
 #include <cwchar>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -56,6 +57,7 @@ enum ElementKey : int {
     NextPage = 230,
     LastPage,
     FormLabelFirst = 3000,
+    FormPaneFirst = 3050,
     SummaryLabel = 3100,
     HeaderFirst = 3200,
     PageInfoLabel = 3300,
@@ -83,6 +85,7 @@ enum ElementKey : int {
 };
 
 enum class ElementKind {
+    Pane,
     StaticText,
     Tab,
     Edit,
@@ -112,6 +115,7 @@ struct Element {
     long state;
     std::wstring defaultAction;
     ElementKind kind;
+    int parentKey{};
 };
 
 enum class ActiveMenu {
@@ -244,6 +248,34 @@ RECT MakeRect(int left, int top, int right, int bottom) {
     return RECT{left, top, right, bottom};
 }
 
+int FormPaneForKey(int key) {
+    if (key >= FormLabelFirst && key < FormLabelFirst + 10) {
+        return FormPaneFirst + key - FormLabelFirst;
+    }
+    if (key >= CityMultiFirst && key < CityMultiFirst + static_cast<int>(kCities.size())) {
+        return FormPaneFirst + 5;
+    }
+    if (key >= GenderMale && key <= GenderOther) {
+        return FormPaneFirst + 6;
+    }
+    if (key >= HobbyFirst && key < HobbyFirst + static_cast<int>(kHobbies.size())) {
+        return FormPaneFirst + 7;
+    }
+    if (key >= CityOptionFirst && key < CityOptionFirst + static_cast<int>(kCities.size())) {
+        return FormPaneFirst + 4;
+    }
+    switch (key) {
+        case NameEdit: return FormPaneFirst;
+        case PasswordEdit: return FormPaneFirst + 1;
+        case EmailEdit: return FormPaneFirst + 2;
+        case AgeSpin: return FormPaneFirst + 3;
+        case CityCombo: return FormPaneFirst + 4;
+        case RemarkEdit: return FormPaneFirst + 8;
+        case AgreeCheck: return FormPaneFirst + 9;
+        default: return 0;
+    }
+}
+
 void AddElement(
     std::vector<Element>& elements,
     int key,
@@ -289,7 +321,8 @@ void AddElement(
         role,
         state,
         std::move(defaultAction),
-        kind
+        kind,
+        FormPaneForKey(key)
     });
 }
 
@@ -438,7 +471,7 @@ std::vector<Element> BuildElements(HWND window) {
     const int width = client.right;
     const int height = client.bottom;
     std::vector<Element> elements;
-    elements.reserve(g_app.selectedTab == 1 ? 160 : 40);
+    elements.reserve(g_app.selectedTab == 1 ? 160 : 60);
 
     AddElement(
         elements,
@@ -526,6 +559,12 @@ std::vector<Element> BuildElements(HWND window) {
         elements.back().state |= g_app.activeMenu == ActiveMenu::Action
             ? STATE_SYSTEM_EXPANDED : STATE_SYSTEM_COLLAPSED;
         for (int index = 0; index < static_cast<int>(labels.size()); ++index) {
+            constexpr std::array<int, 10> fixedWidths = {0, 0, 0, 140, 250, 386, 258, 346, 0, 180};
+            const int controlWidth = fixedWidths[index] == 0 ? fieldWidth : fixedWidths[index];
+            const int paneHeight = index == 8 ? 76 : 30;
+            AddElement(elements, FormPaneFirst + index,
+                       MakeRect(labelX, rowY[index], fieldX + controlWidth, rowY[index] + paneHeight),
+                       labels[index], L"", ROLE_SYSTEM_PANE, ElementKind::Pane);
             AddElement(elements, FormLabelFirst + index, MakeRect(labelX, rowY[index], labelX + labelWidth, rowY[index] + 30),
                        labels[index], L"", ROLE_SYSTEM_STATICTEXT, ElementKind::StaticText);
         }
@@ -766,22 +805,32 @@ std::vector<Element> BuildElements(HWND window) {
     return elements;
 }
 
-int ChildIdForKey(const std::vector<Element>& elements, int key) {
-    for (int index = 0; index < static_cast<int>(elements.size()); ++index) {
-        if (elements[index].key == key) {
-            return index + 1;
-        }
-    }
-    return CHILDID_SELF;
+const Element* FindElementByKey(const std::vector<Element>& elements, int key) {
+    const auto found = std::find_if(elements.begin(), elements.end(), [key](const Element& element) {
+        return element.key == key;
+    });
+    return found == elements.end() ? nullptr : &*found;
 }
 
-int ChildIdForKey(int key) {
-    return ChildIdForKey(BuildElements(g_app.window), key);
+bool IsDescendantOf(const Element& element, int ancestorKey, const std::vector<Element>& elements) {
+    int parentKey = element.parentKey;
+    for (size_t depth = 0; depth <= elements.size(); ++depth) {
+        if (parentKey == ancestorKey) {
+            return true;
+        }
+        const Element* parent = FindElementByKey(elements, parentKey);
+        if (!parent) {
+            return false;
+        }
+        parentKey = parent->parentKey;
+    }
+    return false;
 }
 
 void NotifyElement(long eventId, int key) {
 #if WIN32_SHOOTING_RANGE_ENABLE_MSAA
-    NotifyWinEvent(eventId, g_app.window, OBJID_CLIENT, ChildIdForKey(key));
+    // Stable custom object IDs identify nested nodes independently of sibling indices.
+    NotifyWinEvent(eventId, g_app.window, key, CHILDID_SELF);
 #else
     static_cast<void>(eventId);
     static_cast<void>(key);
@@ -818,7 +867,7 @@ void SetCityComboExpanded(bool expanded) {
     g_app.cityComboExpanded = expanded;
     g_app.hoveredCityOption = -1;
     NotifyElement(EVENT_OBJECT_STATECHANGE, CityCombo);
-    NotifyRoot(EVENT_OBJECT_REORDER);
+    NotifyElement(EVENT_OBJECT_REORDER, FormPaneForKey(CityCombo));
     InvalidateRect(g_app.window, nullptr, FALSE);
 }
 
@@ -1141,7 +1190,24 @@ HRESULT CopyBstr(const std::wstring& value, BSTR* output) {
 
 class MsaaAccessible final : public IAccessible {
 public:
-    explicit MsaaAccessible(HWND window) : window_(window) {}
+    explicit MsaaAccessible(HWND window, int key = 0) : window_(window), key_(key) {}
+
+    static IAccessible* ForKey(HWND window, int key) {
+        auto* root = static_cast<MsaaAccessible*>(g_app.accessible);
+        if (!root || root->window_ != window) {
+            return new MsaaAccessible(window, key);
+        }
+        if (key == 0) {
+            root->AddRef();
+            return root;
+        }
+        auto& object = root->objects_[key];
+        if (!object) {
+            object = new MsaaAccessible(window, key);
+        }
+        object->AddRef();
+        return object;
+    }
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID interfaceId, void** object) override {
         if (!object) {
@@ -1193,6 +1259,15 @@ public:
             return E_INVALIDARG;
         }
         *parent = nullptr;
+        if (key_ != 0) {
+            const auto elements = BuildElements(window_);
+            const Element* element = FindElementByKey(elements, key_);
+            if (!element) {
+                return E_INVALIDARG;
+            }
+            *parent = ObjectForKey(element->parentKey);
+            return S_OK;
+        }
         IAccessible* accessible = nullptr;
         const HRESULT result = AccessibleObjectFromWindow(
             window_, OBJID_WINDOW, IID_IAccessible, reinterpret_cast<void**>(&accessible)
@@ -1207,21 +1282,30 @@ public:
         if (!count) {
             return E_INVALIDARG;
         }
-        *count = static_cast<long>(BuildElements(window_).size());
+        const auto elements = BuildElements(window_);
+        *count = static_cast<long>(std::count_if(elements.begin(), elements.end(), [this](const Element& element) {
+            return element.parentKey == key_;
+        }));
         return S_OK;
     }
 
-    HRESULT STDMETHODCALLTYPE get_accChild(VARIANT, IDispatch** child) override {
+    HRESULT STDMETHODCALLTYPE get_accChild(VARIANT childId, IDispatch** child) override {
         if (!child) {
             return E_INVALIDARG;
         }
         *child = nullptr;
-        return S_FALSE;
+        const auto elements = BuildElements(window_);
+        const Element* element = Resolve(childId, elements);
+        if (!element || IsSelf(childId)) {
+            return E_INVALIDARG;
+        }
+        *child = ObjectForKey(element->key);
+        return S_OK;
     }
 
     HRESULT STDMETHODCALLTYPE get_accName(VARIANT child, BSTR* name) override {
-        if (IsSelf(child)) {
-            return CopyBstr(L"Win32 靶场 - MSAA Only", name);
+        if (IsRoot(child)) {
+            return CopyBstr(kWindowTitle, name);
         }
         const auto elements = BuildElements(window_);
         const Element* element = Resolve(child, elements);
@@ -1233,7 +1317,7 @@ public:
             return E_INVALIDARG;
         }
         *value = nullptr;
-        if (IsSelf(child)) {
+        if (IsRoot(child)) {
             return S_FALSE;
         }
         const auto elements = BuildElements(window_);
@@ -1249,7 +1333,7 @@ public:
             return E_INVALIDARG;
         }
         *description = nullptr;
-        if (IsSelf(child)) {
+        if (IsRoot(child)) {
             return CopyBstr(L"仅实现 IAccessible 的 Win32 靶场", description);
         }
         const auto elements = BuildElements(window_);
@@ -1266,7 +1350,7 @@ public:
         }
         VariantInit(role);
         role->vt = VT_I4;
-        if (IsSelf(child)) {
+        if (IsRoot(child)) {
             role->lVal = ROLE_SYSTEM_CLIENT;
             return S_OK;
         }
@@ -1285,7 +1369,7 @@ public:
         }
         VariantInit(state);
         state->vt = VT_I4;
-        if (IsSelf(child)) {
+        if (IsRoot(child)) {
             state->lVal = 0;
             return S_OK;
         }
@@ -1328,8 +1412,17 @@ public:
             return E_INVALIDARG;
         }
         VariantInit(focus);
-        focus->vt = VT_I4;
-        focus->lVal = ChildIdForKey(BuildElements(window_), g_app.focusedKey);
+        if (g_app.focusedKey == key_) {
+            focus->vt = VT_I4;
+            focus->lVal = CHILDID_SELF;
+            return S_OK;
+        }
+        const auto elements = BuildElements(window_);
+        const Element* element = FindElementByKey(elements, g_app.focusedKey);
+        if (!element || !IsDescendantOf(*element, key_, elements)) {
+            return S_FALSE;
+        }
+        ReturnObject(element->key, focus);
         return S_OK;
     }
 
@@ -1346,7 +1439,7 @@ public:
             return E_INVALIDARG;
         }
         *action = nullptr;
-        if (IsSelf(child)) {
+        if (IsRoot(child)) {
             return S_FALSE;
         }
         const auto elements = BuildElements(window_);
@@ -1375,7 +1468,7 @@ public:
             return E_INVALIDARG;
         }
         RECT bounds{};
-        if (IsSelf(child)) {
+        if (IsRoot(child)) {
             GetClientRect(window_, &bounds);
         } else {
             const auto elements = BuildElements(window_);
@@ -1400,20 +1493,41 @@ public:
         }
         VariantInit(destination);
         const auto elements = BuildElements(window_);
-        long childId = 0;
-        if (IsSelf(start) && direction == NAVDIR_FIRSTCHILD && !elements.empty()) {
-            childId = 1;
-        } else if (IsSelf(start) && direction == NAVDIR_LASTCHILD && !elements.empty()) {
-            childId = static_cast<long>(elements.size());
-        } else if (start.vt == VT_I4 && direction == NAVDIR_NEXT && start.lVal < static_cast<long>(elements.size())) {
-            childId = start.lVal + 1;
-        } else if (start.vt == VT_I4 && direction == NAVDIR_PREVIOUS && start.lVal > 1) {
-            childId = start.lVal - 1;
-        } else {
+        const Element* source = Resolve(start, elements);
+        const bool childNavigation = direction == NAVDIR_FIRSTCHILD || direction == NAVDIR_LASTCHILD;
+        if ((childNavigation && !IsSelf(start)) || (!childNavigation && !source)) {
             return S_FALSE;
         }
-        destination->vt = VT_I4;
-        destination->lVal = childId;
+        const int parentKey = childNavigation ? key_ : source->parentKey;
+        std::vector<const Element*> siblings;
+        for (const Element& element : elements) {
+            if (element.parentKey == parentKey) {
+                siblings.push_back(&element);
+            }
+        }
+        if (siblings.empty()) {
+            return S_FALSE;
+        }
+        const Element* target = nullptr;
+        if (direction == NAVDIR_FIRSTCHILD) {
+            target = siblings.front();
+        } else if (direction == NAVDIR_LASTCHILD) {
+            target = siblings.back();
+        } else if (direction == NAVDIR_NEXT || direction == NAVDIR_PREVIOUS) {
+            const auto current = std::find(siblings.begin(), siblings.end(), source);
+            if (current == siblings.end()) {
+                return S_FALSE;
+            }
+            if (direction == NAVDIR_NEXT && current + 1 != siblings.end()) {
+                target = *(current + 1);
+            } else if (direction == NAVDIR_PREVIOUS && current != siblings.begin()) {
+                target = *(current - 1);
+            }
+        }
+        if (!target) {
+            return S_FALSE;
+        }
+        ReturnObject(target->key, destination);
         return S_OK;
     }
 
@@ -1426,11 +1540,23 @@ public:
         ScreenToClient(window_, &point);
         const auto elements = BuildElements(window_);
         for (int index = static_cast<int>(elements.size()) - 1; index >= 0; --index) {
-            if (PtInRect(&elements[index].bounds, point)) {
-                child->vt = VT_I4;
-                child->lVal = index + 1;
+            if (IsDescendantOf(elements[index], key_, elements) && PtInRect(&elements[index].bounds, point)) {
+                ReturnObject(elements[index].key, child);
                 return S_OK;
             }
+        }
+        RECT bounds{};
+        if (key_ == 0) {
+            GetClientRect(window_, &bounds);
+        } else {
+            const Element* element = FindElementByKey(elements, key_);
+            if (!element) {
+                return S_FALSE;
+            }
+            bounds = element->bounds;
+        }
+        if (!PtInRect(&bounds, point)) {
+            return S_FALSE;
         }
         child->vt = VT_I4;
         child->lVal = CHILDID_SELF;
@@ -1464,19 +1590,49 @@ public:
     }
 
 private:
+    ~MsaaAccessible() {
+        for (const auto& entry : objects_) {
+            entry.second->Release();
+        }
+    }
+
     static bool IsSelf(const VARIANT& child) {
         return child.vt == VT_I4 && child.lVal == CHILDID_SELF;
     }
 
-    static const Element* Resolve(const VARIANT& child, const std::vector<Element>& elements) {
-        if (child.vt != VT_I4 || child.lVal < 1 || child.lVal > static_cast<long>(elements.size())) {
+    bool IsRoot(const VARIANT& child) const {
+        return key_ == 0 && IsSelf(child);
+    }
+
+    const Element* Resolve(const VARIANT& child, const std::vector<Element>& elements) const {
+        if (child.vt != VT_I4 || child.lVal < CHILDID_SELF) {
             return nullptr;
         }
-        return &elements[child.lVal - 1];
+        if (IsSelf(child)) {
+            return FindElementByKey(elements, key_);
+        }
+        long index = 0;
+        for (const Element& element : elements) {
+            if (element.parentKey == key_ && ++index == child.lVal) {
+                return &element;
+            }
+        }
+        return nullptr;
+    }
+
+    IDispatch* ObjectForKey(int key) const {
+        return ForKey(window_, key);
+    }
+
+    void ReturnObject(int key, VARIANT* result) const {
+        result->vt = VT_DISPATCH;
+        result->pdispVal = ObjectForKey(key);
     }
 
     std::atomic<ULONG> references_{1};
     HWND window_;
+    int key_;
+    std::unordered_map<int, MsaaAccessible*> objects_;
 };
 #endif
 
@@ -1496,6 +1652,8 @@ void DrawElement(HDC context, const Element& element) {
     const bool unavailable = (element.state & STATE_SYSTEM_UNAVAILABLE) != 0;
 
     switch (element.kind) {
+        case ElementKind::Pane:
+            break;
         case ElementKind::StaticText:
             if (element.key == DragInstructions || element.key == DragPositionLabel
                 || element.key == DragAnchorLabel || element.key == DragResultLabel) {
@@ -1751,13 +1909,6 @@ void PaintWindow(HWND window) {
     EndPaint(window, &paint);
 }
 
-const Element* FindElementByKey(const std::vector<Element>& elements, int key) {
-    const auto found = std::find_if(elements.begin(), elements.end(), [key](const Element& element) {
-        return element.key == key;
-    });
-    return found == elements.end() ? nullptr : &*found;
-}
-
 void UpdateCityComboHover(HWND window, int x, int y) {
     int hoveredOption = -1;
     if (g_app.cityComboExpanded) {
@@ -1918,11 +2069,20 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
 #endif
             return 0;
 #if WIN32_SHOOTING_RANGE_ENABLE_MSAA
-        case WM_GETOBJECT:
-            if (static_cast<DWORD>(lParam) == static_cast<DWORD>(OBJID_CLIENT)) {
+        case WM_GETOBJECT: {
+            const LONG objectId = static_cast<LONG>(lParam);
+            if (objectId == OBJID_CLIENT) {
                 return LresultFromObject(IID_IAccessible, wParam, g_app.accessible);
             }
+            const auto elements = BuildElements(window);
+            if (objectId > 0 && FindElementByKey(elements, objectId)) {
+                IAccessible* accessible = MsaaAccessible::ForKey(window, objectId);
+                const LRESULT result = LresultFromObject(IID_IAccessible, wParam, accessible);
+                accessible->Release();
+                return result;
+            }
             break;
+        }
 #endif
         case WM_PAINT:
             PaintWindow(window);

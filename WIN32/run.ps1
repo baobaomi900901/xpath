@@ -1,7 +1,7 @@
 param(
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Release",
-    [ValidateSet("uia", "msaa", "canvas")]
+    [ValidateSet("uia", "uia-no-pane", "uia-random", "msaa", "canvas")]
     [string]$Backend = "uia",
     [switch]$SkipBuild
 )

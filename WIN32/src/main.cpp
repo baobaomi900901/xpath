@@ -1,3 +1,10 @@
+#ifndef WIN32_SHOOTING_RANGE_FORM_PANES
+#define WIN32_SHOOTING_RANGE_FORM_PANES 1
+#endif
+#ifndef WIN32_SHOOTING_RANGE_RANDOM_FORM
+#define WIN32_SHOOTING_RANGE_RANDOM_FORM 0
+#endif
+
 #include <windows.h>
 #include <windowsx.h>
 #include <commctrl.h>
@@ -7,12 +14,24 @@
 #include <string>
 #include <vector>
 
+#include "uia_form_run.h"
+
 #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 namespace {
 
+#if WIN32_SHOOTING_RANGE_RANDOM_FORM
+constexpr wchar_t kMainWindowClass[] = L"XPathWin32ShootingRangeRandomForm";
+constexpr wchar_t kWindowTitle[] = L"Win32 靶场 - UIA (随机表单)";
+#elif WIN32_SHOOTING_RANGE_FORM_PANES
 constexpr wchar_t kMainWindowClass[] = L"XPathWin32ShootingRange";
-constexpr wchar_t kPanelWindowClass[] = L"XPathWin32Panel";
+constexpr wchar_t kWindowTitle[] = L"Win32 靶场 - UIA";
+#else
+constexpr wchar_t kMainWindowClass[] = L"XPathWin32ShootingRangeNoFormPane";
+constexpr wchar_t kWindowTitle[] = L"Win32 靶场 - UIA (表单item 无 Pane)";
+#endif
+constexpr bool kFormPanesEnabled = WIN32_SHOOTING_RANGE_FORM_PANES != 0;
+constexpr bool kRandomFormEnabled = WIN32_SHOOTING_RANGE_RANDOM_FORM != 0;
 constexpr int kPageSize = 20;
 constexpr int kDragTargetWidth = 120;
 constexpr int kDragTargetHeight = 80;
@@ -90,6 +109,7 @@ struct AppState {
     HWND ageEdit{};
     HWND ageSpin{};
     HWND cityCombo{};
+    std::array<HWND, 10> formItems{};
     std::array<HWND, 11> formLabels{};
     std::array<HWND, 5> cityChecks{};
     std::array<HWND, 3> genderRadios{};
@@ -144,12 +164,27 @@ struct AppState {
 
 AppState g_app;
 int g_controlIdOffset{};
+win32_form::FormRun g_formRun = [] {
+    if (!kRandomFormEnabled) {
+        return win32_form::FormRun{};
+    }
+    std::random_device entropy;
+    std::seed_seq seed{entropy(), entropy(), entropy(), entropy()};
+    std::mt19937_64 engine(seed);
+    return win32_form::FormRun::Random(engine);
+}();
 
 int RuntimeControlId(int logicalId) {
+    if (kRandomFormEnabled) {
+        return g_formRun.ControlId(logicalId);
+    }
     return logicalId == 0 ? 0 : logicalId + g_controlIdOffset;
 }
 
 int LogicalControlId(int runtimeId) {
+    if (kRandomFormEnabled) {
+        return g_formRun.LogicalId(runtimeId);
+    }
     return runtimeId == 0 ? 0 : runtimeId - g_controlIdOffset;
 }
 
@@ -574,44 +609,77 @@ void BuildEmployees() {
     }
 }
 
+constexpr std::array<const wchar_t*, 10> kFormLabels = {
+    L"姓名", L"密码", L"邮箱", L"年龄", L"城市（单选）", L"城市（多选）",
+    L"性别（单选）", L"兴趣爱好（多选）", L"备注", L"协议"
+};
+
+HWND CreateFormItem(int index) {
+    const wchar_t* label = kFormLabels[index];
+    if (!kFormPanesEnabled) {
+        g_app.formLabels[index + 1] = CreateLabel(g_app.formPanel, label);
+        return g_app.formPanel;
+    }
+    if (g_app.formItems[index]) {
+        return g_app.formItems[index];
+    }
+    HWND item = CreateControl(
+        WS_EX_CONTROLPARENT,
+        g_formRun.panelClassName.c_str(),
+        label,
+        WS_CLIPCHILDREN,
+        g_app.formPanel,
+        0
+    );
+    g_app.formItems[index] = item;
+    g_app.formLabels[index + 1] = CreateLabel(item, label);
+    return item;
+}
+
 void CreateFormControls() {
     HWND panel = g_app.formPanel;
     g_app.formLabels[0] = CreateLabel(panel, L"用户信息表单");
-    g_app.formLabels[1] = CreateLabel(panel, L"姓名");
-    g_app.nameEdit = CreateControl(WS_EX_CLIENTEDGE, WC_EDITW, L"", ES_AUTOHSCROLL | WS_TABSTOP, panel, NameEdit);
-    g_app.formLabels[2] = CreateLabel(panel, L"密码");
-    g_app.passwordEdit = CreateControl(WS_EX_CLIENTEDGE, WC_EDITW, L"", ES_PASSWORD | ES_AUTOHSCROLL | WS_TABSTOP, panel, PasswordEdit);
-    g_app.formLabels[3] = CreateLabel(panel, L"邮箱");
-    g_app.emailEdit = CreateControl(WS_EX_CLIENTEDGE, WC_EDITW, L"", ES_AUTOHSCROLL | WS_TABSTOP, panel, EmailEdit);
-    g_app.formLabels[4] = CreateLabel(panel, L"年龄");
-    g_app.ageEdit = CreateControl(WS_EX_CLIENTEDGE, WC_EDITW, L"25", ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP, panel, AgeEdit);
-    g_app.ageSpin = CreateControl(0, UPDOWN_CLASSW, L"", UDS_ALIGNRIGHT | UDS_ARROWKEYS | UDS_SETBUDDYINT, panel, AgeSpin);
+    if (kRandomFormEnabled) {
+        // HWND creation order also controls UIA sibling order and keyboard traversal.
+        for (int index : g_formRun.order) {
+            CreateFormItem(index);
+        }
+    }
+    HWND item = CreateFormItem(0);
+    g_app.nameEdit = CreateControl(WS_EX_CLIENTEDGE, WC_EDITW, L"", ES_AUTOHSCROLL | WS_TABSTOP, item, NameEdit);
+    item = CreateFormItem(1);
+    g_app.passwordEdit = CreateControl(WS_EX_CLIENTEDGE, WC_EDITW, L"", ES_PASSWORD | ES_AUTOHSCROLL | WS_TABSTOP, item, PasswordEdit);
+    item = CreateFormItem(2);
+    g_app.emailEdit = CreateControl(WS_EX_CLIENTEDGE, WC_EDITW, L"", ES_AUTOHSCROLL | WS_TABSTOP, item, EmailEdit);
+    item = CreateFormItem(3);
+    g_app.ageEdit = CreateControl(WS_EX_CLIENTEDGE, WC_EDITW, L"25", ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP, item, AgeEdit);
+    g_app.ageSpin = CreateControl(0, UPDOWN_CLASSW, L"", UDS_ALIGNRIGHT | UDS_ARROWKEYS | UDS_SETBUDDYINT, item, AgeSpin);
     SendMessageW(g_app.ageSpin, UDM_SETBUDDY, reinterpret_cast<WPARAM>(g_app.ageEdit), 0);
     SendMessageW(g_app.ageSpin, UDM_SETRANGE32, 18, 80);
     SendMessageW(g_app.ageSpin, UDM_SETPOS32, 0, 25);
 
     constexpr std::array<const wchar_t*, 5> cities = {L"北京", L"上海", L"广州", L"深圳", L"杭州"};
-    g_app.formLabels[5] = CreateLabel(panel, L"城市（单选）");
-    g_app.cityCombo = CreateControl(0, WC_COMBOBOXW, L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, panel, CityCombo);
+    item = CreateFormItem(4);
+    g_app.cityCombo = CreateControl(0, WC_COMBOBOXW, L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, item, CityCombo);
     for (const wchar_t* city : cities) {
         SendMessageW(g_app.cityCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(city));
     }
     SendMessageW(g_app.cityCombo, CB_SETCURSEL, 0, 0);
 
-    g_app.formLabels[6] = CreateLabel(panel, L"城市（多选）");
+    item = CreateFormItem(5);
     for (size_t index = 0; index < cities.size(); ++index) {
         g_app.cityChecks[index] = CreateControl(
             0,
             WC_BUTTONW,
             cities[index],
             BS_AUTOCHECKBOX | WS_TABSTOP,
-            panel,
+            item,
             CityMultiFirst + static_cast<int>(index)
         );
     }
 
     constexpr std::array<const wchar_t*, 3> genders = {L"男", L"女", L"其他"};
-    g_app.formLabels[7] = CreateLabel(panel, L"性别（单选）");
+    item = CreateFormItem(6);
     for (size_t index = 0; index < genders.size(); ++index) {
         DWORD style = BS_AUTORADIOBUTTON | WS_TABSTOP;
         if (index == 0) {
@@ -622,36 +690,36 @@ void CreateFormControls() {
             WC_BUTTONW,
             genders[index],
             style,
-            panel,
+            item,
             GenderMale + static_cast<int>(index)
         );
     }
     SendMessageW(g_app.genderRadios[0], BM_SETCHECK, BST_CHECKED, 0);
 
     constexpr std::array<const wchar_t*, 4> hobbies = {L"阅读", L"运动", L"音乐", L"旅行"};
-    g_app.formLabels[8] = CreateLabel(panel, L"兴趣爱好（多选）");
+    item = CreateFormItem(7);
     for (size_t index = 0; index < hobbies.size(); ++index) {
         g_app.hobbyChecks[index] = CreateControl(
             0,
             WC_BUTTONW,
             hobbies[index],
             BS_AUTOCHECKBOX | WS_TABSTOP,
-            panel,
+            item,
             HobbyFirst + static_cast<int>(index)
         );
     }
 
-    g_app.formLabels[9] = CreateLabel(panel, L"备注");
+    item = CreateFormItem(8);
     g_app.remarkEdit = CreateControl(
         WS_EX_CLIENTEDGE,
         WC_EDITW,
         L"",
         ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL | WS_TABSTOP,
-        panel,
+        item,
         RemarkEdit
     );
-    g_app.formLabels[10] = CreateLabel(panel, L"协议");
-    g_app.agreeCheck = CreateControl(0, WC_BUTTONW, L"同意用户协议", BS_AUTOCHECKBOX | WS_TABSTOP, panel, AgreeCheck);
+    item = CreateFormItem(9);
+    g_app.agreeCheck = CreateControl(0, WC_BUTTONW, L"同意用户协议", BS_AUTOCHECKBOX | WS_TABSTOP, item, AgreeCheck);
     g_app.saveButton = CreateControl(0, WC_BUTTONW, L"保存", BS_PUSHBUTTON | WS_TABSTOP, panel, SaveButton);
     g_app.resetButton = CreateControl(0, WC_BUTTONW, L"重置", BS_PUSHBUTTON | WS_TABSTOP, panel, ResetButton);
     g_app.popupMenuButton = CreateControl(
@@ -663,6 +731,14 @@ void CreateFormControls() {
         PopupMenuButton
     );
     g_app.popupMenuStatus = CreateLabel(panel, L"菜单测试: 尚未选择菜单项");
+    if (kRandomFormEnabled) {
+        HWND previous = g_app.formLabels[0];
+        for (int index : g_formRun.order) {
+            SetWindowPos(g_app.formItems[index], previous, 0, 0, 0, 0,
+                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            previous = g_app.formItems[index];
+        }
+    }
 }
 
 void CreateTableControls() {
@@ -748,7 +824,7 @@ void CreateDragControls() {
     );
     g_app.dragArena = CreateControl(
         WS_EX_CLIENTEDGE | WS_EX_CONTROLPARENT,
-        kPanelWindowClass,
+        g_formRun.panelClassName.c_str(),
         L"拖拽区域",
         WS_BORDER | WS_CLIPCHILDREN,
         panel,
@@ -762,32 +838,43 @@ void LayoutFormPanel(int width, int height) {
     constexpr int fieldX = 172;
     constexpr int labelWidth = 135;
     constexpr int rowHeight = 30;
+    const int itemWidth = width - labelX - 30;
     const int fieldWidth = std::max(220, std::min(430, width - fieldX - 30));
 
     MoveControl(g_app.formLabels[0], labelX, 8, 260, 28);
-    const std::array<int, 10> rowY = {42, 84, 126, 168, 210, 252, 294, 336, 378, 470};
-    for (int index = 0; index < 10; ++index) {
-        MoveControl(g_app.formLabels[index + 1], labelX, rowY[index], labelWidth, rowHeight);
+    const auto& rowY = g_formRun.rowY;
+    for (int index = 0; index < static_cast<int>(g_app.formItems.size()); ++index) {
+        if (kFormPanesEnabled) {
+            const int itemHeight = win32_form::FormRun::ItemHeight(index);
+            MoveControl(g_app.formItems[index], labelX, rowY[index], itemWidth, itemHeight);
+            MoveControl(g_app.formLabels[index + 1], 0, 0, labelWidth, rowHeight);
+        } else {
+            MoveControl(g_app.formLabels[index + 1], labelX, rowY[index], labelWidth, rowHeight);
+        }
     }
 
-    MoveControl(g_app.nameEdit, fieldX, rowY[0], fieldWidth, rowHeight);
-    MoveControl(g_app.passwordEdit, fieldX, rowY[1], fieldWidth, rowHeight);
-    MoveControl(g_app.emailEdit, fieldX, rowY[2], fieldWidth, rowHeight);
-    MoveControl(g_app.ageEdit, fieldX, rowY[3], 140, rowHeight);
-    MoveControl(g_app.ageSpin, fieldX + 116, rowY[3], 24, rowHeight);
-    MoveControl(g_app.cityCombo, fieldX, rowY[4], 250, 250);
+    const auto moveField = [&](HWND control, int row, int x, int controlWidth, int controlHeight) {
+        MoveControl(control, kFormPanesEnabled ? x - labelX : x,
+                    kFormPanesEnabled ? 0 : rowY[row], controlWidth, controlHeight);
+    };
+    moveField(g_app.nameEdit, 0, fieldX, fieldWidth, rowHeight);
+    moveField(g_app.passwordEdit, 1, fieldX, fieldWidth, rowHeight);
+    moveField(g_app.emailEdit, 2, fieldX, fieldWidth, rowHeight);
+    moveField(g_app.ageEdit, 3, fieldX, 140, rowHeight);
+    moveField(g_app.ageSpin, 3, fieldX + 116, 24, rowHeight);
+    moveField(g_app.cityCombo, 4, fieldX, 250, 250);
 
     for (int index = 0; index < static_cast<int>(g_app.cityChecks.size()); ++index) {
-        MoveControl(g_app.cityChecks[index], fieldX + index * 78, rowY[5], 74, rowHeight);
+        moveField(g_app.cityChecks[index], 5, fieldX + index * 78, 74, rowHeight);
     }
     for (int index = 0; index < static_cast<int>(g_app.genderRadios.size()); ++index) {
-        MoveControl(g_app.genderRadios[index], fieldX + index * 88, rowY[6], 82, rowHeight);
+        moveField(g_app.genderRadios[index], 6, fieldX + index * 88, 82, rowHeight);
     }
     for (int index = 0; index < static_cast<int>(g_app.hobbyChecks.size()); ++index) {
-        MoveControl(g_app.hobbyChecks[index], fieldX + index * 88, rowY[7], 82, rowHeight);
+        moveField(g_app.hobbyChecks[index], 7, fieldX + index * 88, 82, rowHeight);
     }
-    MoveControl(g_app.remarkEdit, fieldX, rowY[8], fieldWidth, 76);
-    MoveControl(g_app.agreeCheck, fieldX, rowY[9], 180, rowHeight);
+    moveField(g_app.remarkEdit, 8, fieldX, fieldWidth, 76);
+    moveField(g_app.agreeCheck, 9, fieldX, 180, rowHeight);
 
     const int actionY = std::max(515, height - 48);
     MoveControl(g_app.saveButton, width / 2 - 104, actionY, 92, 32);
@@ -1015,9 +1102,9 @@ LRESULT CALLBACK MainWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM
             tabItem.pszText = const_cast<wchar_t*>(L"拖拽测试");
             TabCtrl_InsertItem(g_app.tab, 2, &tabItem);
 
-            g_app.formPanel = CreateControl(WS_EX_CONTROLPARENT, kPanelWindowClass, L"表单控件页", WS_CLIPCHILDREN, g_app.tab, 0);
-            g_app.tablePanel = CreateControl(WS_EX_CONTROLPARENT, kPanelWindowClass, L"表格数据页", WS_CLIPCHILDREN, g_app.tab, 0);
-            g_app.dragPanel = CreateControl(WS_EX_CONTROLPARENT, kPanelWindowClass, L"拖拽测试页", WS_CLIPCHILDREN, g_app.tab, 0);
+            g_app.formPanel = CreateControl(WS_EX_CONTROLPARENT, g_formRun.panelClassName.c_str(), L"表单控件页", WS_CLIPCHILDREN, g_app.tab, 0);
+            g_app.tablePanel = CreateControl(WS_EX_CONTROLPARENT, g_formRun.panelClassName.c_str(), L"表格数据页", WS_CLIPCHILDREN, g_app.tab, 0);
+            g_app.dragPanel = CreateControl(WS_EX_CONTROLPARENT, g_formRun.panelClassName.c_str(), L"拖拽测试页", WS_CLIPCHILDREN, g_app.tab, 0);
             CreateFormControls();
             CreateTableControls();
             CreateDragControls();
@@ -1132,7 +1219,7 @@ bool RegisterWindowClasses(HINSTANCE instance) {
     panelClass.hInstance = instance;
     panelClass.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     panelClass.hbrBackground = GetSysColorBrush(COLOR_WINDOW);
-    panelClass.lpszClassName = kPanelWindowClass;
+    panelClass.lpszClassName = g_formRun.panelClassName.c_str();
     return RegisterClassExW(&panelClass) != 0;
 }
 
@@ -1187,7 +1274,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
     HWND window = CreateWindowExW(
         0,
         kMainWindowClass,
-        L"Win32 靶场 - UIA",
+        kWindowTitle,
         WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
         CW_USEDEFAULT,
         CW_USEDEFAULT,

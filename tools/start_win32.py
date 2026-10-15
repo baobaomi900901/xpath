@@ -12,9 +12,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WIN32_ROOT = REPO_ROOT / "WIN32"
 BUILD_SCRIPT = WIN32_ROOT / "build.ps1"
-BACKENDS = ("uia", "msaa", "canvas", "pressure500", "pressure1000", "pressure2000")
+BACKENDS = ("uia", "uia-no-pane", "uia-random", "msaa", "canvas", "pressure500", "pressure1000", "pressure2000")
 BACKEND_LABELS = {
     "uia": "UIA 版（标准 Win32 控件）",
+    "uia-no-pane": "UIA 版（标准 Win32 控件_表单item 无 Pane 版本）",
+    "uia-random": "UIA 版（标准 Win32 控件_随机表单）",
     "msaa": "MSAA 版（仅 IAccessible）",
     "canvas": "自绘版（无内部无障碍树）",
     "pressure500": "UIA 压力靶场（500 层）",
@@ -58,7 +60,7 @@ def parse_args() -> argparse.Namespace:
         "backend",
         nargs="?",
         choices=BACKENDS,
-        help="直接指定并启动单个版本（uia、msaa 或 canvas）；不指定时显示交互菜单。",
+        help="直接指定并启动单个版本（uia、uia-no-pane、uia-random、msaa、canvas 或压力靶场）；不指定时显示交互菜单。",
     )
     parser.add_argument(
         "--configuration",

@@ -10,9 +10,16 @@ HWND g_tree{};
 int g_depth{};
 
 int ParseDepth(LPWSTR text) {
+#ifdef WIN32_UIA_PRESSURE_FIXED_DEPTH
+    static_assert(WIN32_UIA_PRESSURE_FIXED_DEPTH == 500 || WIN32_UIA_PRESSURE_FIXED_DEPTH == 1000
+                  || WIN32_UIA_PRESSURE_FIXED_DEPTH == 2000, "Unsupported standalone pressure depth");
+    static_cast<void>(text);
+    return WIN32_UIA_PRESSURE_FIXED_DEPTH;
+#else
     wchar_t* end = nullptr;
     const long value = text ? wcstol(text, &end, 10) : 500;
     return (end != text && (value == 500 || value == 1000 || value == 2000)) ? static_cast<int>(value) : 500;
+#endif
 }
 
 HTREEITEM InsertLevel(HTREEITEM parent, int level) {
