@@ -6,6 +6,7 @@ from tkinter import font, ttk
 from .drag_page import DragPage
 from .form_page import FormPage
 from .table_page import TablePage
+from .advanced_page import WidgetPage, MenuTextPage
 
 
 class ShootingRange:
@@ -42,7 +43,10 @@ class ShootingRange:
         self.form = FormPage(self.notebook, self.menu_status)
         self.table = TablePage(self.notebook)
         self.drag = DragPage(self.notebook)
-        for page, title in ((self.form, "表单控件"), (self.table, "表格数据"), (self.drag, "拖拽测试")):
+        self.widgets = WidgetPage(self.notebook)
+        self.semantics = MenuTextPage(self.notebook)
+        for page, title in ((self.form, "表单控件"), (self.table, "表格数据"), (self.drag, "拖拽测试"),
+                            (self.widgets, "控件与图元"), (self.semantics, "菜单与文本")):
             self.notebook.add(page, text=title, padding=(14, 6))
         self.notebook.enable_traversal()
         self.notebook.bind("<<NotebookTabChanged>>", self.tab_changed)
@@ -71,7 +75,7 @@ def main(argv=None):
     if args.check:
         try:
             app.root.update_idletasks()
-            print("Tk 环境检查通过: Tcl/Tk {}，表单 / 表格 / 拖拽页已初始化。".format(
+            print("Tk 环境检查通过: Tcl/Tk {}，表单 / 表格 / 拖拽 / 控件与图元 / 菜单与文本页已初始化。".format(
                 app.root.tk.call("info", "patchlevel")))
         finally:
             app.close()
