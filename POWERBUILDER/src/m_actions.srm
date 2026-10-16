@@ -1,0 +1,59 @@
+$PBExportHeader$m_actions.srm
+forward
+global type m_actions from menu
+end type
+type m_popup from menu within m_actions
+end type
+type m_open from menu within m_popup
+end type
+type m_copy from menu within m_popup
+end type
+type m_more from menu within m_popup
+end type
+end forward
+global type m_actions from menu
+m_popup m_popup
+end type
+global m_actions m_actions
+on m_actions.create
+this.m_popup=create m_popup
+this.Item[]={this.m_popup}
+end on
+on m_actions.destroy
+destroy(this.m_popup)
+end on
+type m_popup from menu within m_actions
+string text = "操作"
+m_open m_open
+m_copy m_copy
+m_more m_more
+end type
+on m_popup.create
+this.m_open=create m_open
+this.m_copy=create m_copy
+this.m_more=create m_more
+this.Item[]={this.m_open,this.m_copy,this.m_more}
+end on
+on m_popup.destroy
+destroy(this.m_open)
+destroy(this.m_copy)
+destroy(this.m_more)
+end on
+type m_open from menu within m_popup
+string text = "打开"
+end type
+event m_open.clicked;
+w_main.of_menu("操作 > 打开")
+end event
+type m_copy from menu within m_popup
+string text = "复制"
+end type
+event m_copy.clicked;
+w_main.of_menu("操作 > 复制")
+end event
+type m_more from menu within m_popup
+string text = "更多"
+end type
+event m_more.clicked;
+w_main.of_menu("操作 > 更多")
+end event

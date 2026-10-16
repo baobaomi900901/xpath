@@ -1,0 +1,8 @@
+build/
+dist/
+*.pbl
+*.pbd
+*.exe
+*.log
+*.bak
+*.pbl.bak

@@ -20,6 +20,7 @@
 | [`JAVA/`](JAVA)                 | Swing 桌面程序,多 JDK 版本并行                   | Java 8/11/17/21/25 + Maven                         | `python tools\start_java.py`        |
 | [`QT/`](QT)                     | Qt Quick 桌面程序                                | Qt 5.15.2 + MinGW 8.1                              | `.\QT\run.ps1`                      |
 | [`DELPHI/`](DELPHI)             | VCL 桌面程序，表单 / 菜单 / 表格 / 拖拽          | Delphi 2010 (VCL / Win32)                          | `python tools\start_delphi.py`      |
+| [`POWERBUILDER/`](POWERBUILDER) | PB 原生表单 / DataWindow / 菜单 / 拖拽          | PowerBuilder 2025 GA Utilities + Runtime            | `python tools\start_powerbuilder.py` |
 
 跨靶场的启动器都在 [`tools/`](tools) 下;`WIN32` / `WEBVIEW2` / `JAVA` / `QT` / `DELPHI` 另外各自带 `build.ps1` / `run.ps1`。
 
@@ -58,6 +59,10 @@ xpath/
 │  ├─ build/               构建产物
 │  └─ run.ps1 / build.ps1
 ├─ DELPHI/                 Delphi VCL 靶场工程、build.ps1 / run.ps1
+├─ POWERBUILDER/           PowerBuilder 原生控件和 DataWindow 靶场
+│  ├─ src/                 PowerScript 导出对象（UTF-8）
+│  ├─ build/Release/       EXE、PBD、Runtime XML 和验证日志（已忽略）
+│  └─ dist/                含运行时的单文件 EXE（已忽略）
 ├─ WEBVIEW2/               WebView2 浏览器套壳靶场
 │  ├─ src/                 原生菜单与 WebView2 宿主
 │  ├─ verify/              实际程序的原生控件与 CDP 验收
@@ -76,6 +81,7 @@ xpath/
 │  ├─ start_win32.py
 │  ├─ start_tk.py / test_start_tk.py
 │  ├─ start_java.py / start_delphi.py
+│  ├─ start_powerbuilder.py / test_start_powerbuilder.py
 │  ├─ start_webview2.py
 │  ├─ start_cef.py / test_start_cef.py
 │  ├─ start_electron.py / test_start_electron.py
@@ -100,6 +106,7 @@ xpath/
 | JAVA       | Amazon Corretto JDK 8/11/17/21/25,放在 `JAVA/.tools/jdks/corretto/<版本>`;Maven 由启动器自动下载                                                                       |
 | QT         | Qt 5.15.2 + MinGW 8.1(本机装在 `D:\Qt`)                                                                                                                                |
 | DELPHI     | Delphi 2010(仅编译需要)                                                                                                                                                |
+| POWERBUILDER | Windows 10/11 + PowerBuilder Utilities / Runtime 2025 GA 25.0.0.3683；编译工具无需 IDE 许可证                                                                              |
 
 ## 各靶场启动方式
 
@@ -392,6 +399,22 @@ PowerShell 入口为 `.\DELPHI\build.ps1` / `.\DELPHI\run.ps1`。
 Release 产物为 `DELPHI/build/Release/Win32VclShootingRange.exe`，运行已有 EXE 无需 Delphi。
 包含 MDI 层级、每个表单 item 的独立具名 Pane、原生菜单、10 页表格（共 1000 条，每页 100 条，5 个动态页码）和拖拽测试，构建参数与验收方式见 [DELPHI/README.md](DELPHI/README.md)。
 
+### POWERBUILDER — PowerBuilder 桌面靶场
+
+```powershell
+python .\tools\start_powerbuilder.py                         # 方向键菜单：启动 EXE / 开发模式
+python .\tools\start_powerbuilder.py --mode exe              # 直接启动单文件 EXE
+python .\tools\start_powerbuilder.py --mode dev              # 从源码编译并启动
+python .\tools\start_powerbuilder.py --skip-build            # 运行已有程序
+python .\tools\start_powerbuilder.py --no-launch             # 仅构建检查
+python .\tools\start_powerbuilder.py --skip-build --self-test # PB 内部自检后关闭
+python .\tools\package_powerbuilder.py                      # 打包为含运行时的单个 EXE
+```
+
+三个页签包含十字段表单、七列原生 DataWindow（1000 条、每页 20 条、50 页）和拖拽测试，另有原生菜单。默认从注册表发现已安装的 Utilities 和匹配 Runtime，支持 `--tools-path` / `--runtime-path`；不需要数据库。
+产物为 `POWERBUILDER/build/Release/PowerBuilderShootingRange.exe`，运行时保留同目录的 PBD、XML 和 pb.ini。安装要求、可访问性设置及人工测试步骤见 [POWERBUILDER/README.md](POWERBUILDER/README.md)。
+单文件版为 `POWERBUILDER/dist/PowerBuilder靶场.exe`，可复制到其他 Windows 10 / 11 电脑双击运行，无需另装 Python、PowerBuilder 或 VC++ Runtime。
+
 ## 启动器通用约定
 
 `tools/start_win32.py`、`tools/start_java.py`、`tools/start_cef.py` 与 `tools/start_electron.py` 的交互菜单行为一致:
@@ -400,6 +423,8 @@ Release 产物为 `DELPHI/build/Release/Win32VclShootingRange.exe`，运行已�
 - `Enter` 或空格勾选 / 取消勾选
 - 在 `[ 已完成选择 ]` 上按 `Enter` 后统一构建并同时启动所选版本
 - `Esc` 取消
+
+PowerBuilder 启动器复用 Win32 的按键读取、颜色和终端配置，按同样方式操作；其“启动 EXE / 开发模式”为单选。
 
 ## WEB 在线部署(GitHub Pages)
 

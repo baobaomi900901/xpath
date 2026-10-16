@@ -1,0 +1,256 @@
+$PBExportHeader$f_self_test.srf
+global type f_self_test from function_object
+end type
+forward prototypes
+global function integer f_self_test ()
+end prototypes
+global function integer f_self_test ();
+long ll_page, ll_row, ll_id, ll_checks, ll_fail
+integer li_file, li_drag_fail
+string ls_pass, ls_report
+string ls_failed_checks
+m_main lm_main
+m_actions lm_popup
+environment lenv
+open(w_main)
+w_main.Hide()
+GetEnvironment(lenv)
+ll_checks ++
+if UnitsToPixels(w_main.Width, XUnitsToPixels!) > Min(1180, lenv.ScreenWidth - 80) then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if UnitsToPixels(w_main.Height, YUnitsToPixels!) > Min(800, lenv.ScreenHeight - 100) then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.st_menu.Y + w_main.st_menu.Height > w_main.WorkSpaceHeight() then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.X + w_main.tab_main.Width > w_main.WorkSpaceWidth() then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_form.em_age.text <> "25" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_form.ddlb_city.Text <> "北京" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if not w_main.tab_main.tabpage_form.rb_male.Checked then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_form.cb_agree.Checked then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+w_main.tab_main.tabpage_form.sle_name.Text = "测试用户"
+w_main.tab_main.tabpage_form.cb_city1.Checked = true
+w_main.tab_main.tabpage_form.cb_hobby1.Checked = true
+w_main.tab_main.tabpage_form.of_reset()
+ll_checks ++
+if w_main.tab_main.tabpage_form.sle_name.Text <> "" or w_main.tab_main.tabpage_form.cb_city1.Checked or w_main.tab_main.tabpage_form.cb_hobby1.Checked then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_form.sle_password.Text <> "" or w_main.tab_main.tabpage_form.sle_email.Text <> "" or w_main.tab_main.tabpage_form.mle_remark.Text <> "" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+w_main.tab_main.tabpage_form.rb_female.Event Clicked()
+ll_checks ++
+if w_main.tab_main.tabpage_form.rb_male.Checked or not w_main.tab_main.tabpage_form.rb_female.Checked or w_main.tab_main.tabpage_form.rb_other.Checked then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+w_main.tab_main.tabpage_form.rb_other.Event Clicked()
+ll_checks ++
+if w_main.tab_main.tabpage_form.rb_male.Checked or w_main.tab_main.tabpage_form.rb_female.Checked or not w_main.tab_main.tabpage_form.rb_other.Checked then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+lm_main = w_main.MenuID
+lm_main.m_file.m_reset.Event Clicked()
+ll_checks ++
+if not w_main.tab_main.tabpage_form.rb_male.Checked or w_main.st_menu.Text <> "菜单状态：文件 > 重置表单" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+lm_popup = create m_actions
+lm_popup.m_popup.m_open.Event Clicked()
+ll_checks ++
+if w_main.st_menu.Text <> "菜单状态：操作 > 打开" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+destroy lm_popup
+ll_checks ++
+if w_main.tab_main.tabpage_table.is_error <> "" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_table.dw_employees.Describe("DataWindow.Column.Count") <> "7" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+for ll_page = 1 to 50
+    w_main.tab_main.tabpage_table.of_showpage(ll_page)
+    ll_checks ++
+    if w_main.tab_main.tabpage_table.dw_employees.RowCount() <> 20 then
+        ll_fail ++
+        if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+    end if
+    for ll_row = 1 to 20
+        ll_id = (ll_page - 1) * 20 + ll_row
+        ll_checks ++
+        if w_main.tab_main.tabpage_table.dw_employees.GetItemNumber(ll_row, "employee_id") <> ll_id then
+            ll_fail ++
+            if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+        end if
+        ll_checks ++
+        if w_main.tab_main.tabpage_table.dw_employees.GetItemString(ll_row, "employee_name") <> "用户" + String(ll_id) then
+            ll_fail ++
+            if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+        end if
+        ll_checks ++
+        if w_main.tab_main.tabpage_table.dw_employees.GetItemString(ll_row, "email") <> "user" + String(ll_id) + "@example.com" then
+            ll_fail ++
+            if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+        end if
+    next
+next
+w_main.tab_main.tabpage_table.of_showpage(1)
+ll_checks ++
+if w_main.tab_main.tabpage_table.dw_employees.GetItemString(1, "department") <> "产品部" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_table.dw_employees.GetItemString(1, "city") <> "上海" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_table.dw_employees.GetItemString(1, "status") <> "离职" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_table.dw_employees.GetItemString(1, "hire_date") <> "2024-02-02" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+w_main.tab_main.tabpage_table.of_showpage(50)
+ll_checks ++
+if w_main.tab_main.tabpage_table.dw_employees.GetItemString(20, "department") <> "研发部" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_table.dw_employees.GetItemString(20, "city") <> "北京" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_table.dw_employees.GetItemString(20, "status") <> "离职" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_table.dw_employees.GetItemString(20, "hire_date") <> "2024-05-21" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+w_main.tab_main.SelectTab(2)
+w_main.tab_main.SelectTab(1)
+w_main.tab_main.SelectTab(2)
+ll_checks ++
+if w_main.tab_main.tabpage_table.il_page <> 50 then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+w_main.tab_main.tabpage_table.of_showpage(-5)
+ll_checks ++
+if w_main.tab_main.tabpage_table.il_page <> 1 or w_main.tab_main.tabpage_table.cb_first.Enabled or w_main.tab_main.tabpage_table.cb_previous.Enabled then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+w_main.tab_main.tabpage_table.of_showpage(999)
+ll_checks ++
+if w_main.tab_main.tabpage_table.il_page <> 50 or w_main.tab_main.tabpage_table.cb_next.Enabled or w_main.tab_main.tabpage_table.cb_last.Enabled then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_table.cb_page1.Text <> "46" or w_main.tab_main.tabpage_table.cb_page5.Text <> "50" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_table.cb_page1.AccessibleName <> "46" or w_main.tab_main.tabpage_table.cb_page5.AccessibleName <> "50" then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_table.st_page.AccessibleName <> w_main.tab_main.tabpage_table.st_page.Text then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+w_main.tab_main.tabpage_drag.uo_arena.of_move(-100, -100)
+ll_checks ++
+if w_main.tab_main.tabpage_drag.uo_arena.cb_target.X <> 0 or w_main.tab_main.tabpage_drag.uo_arena.cb_target.Y <> 0 then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+w_main.tab_main.tabpage_drag.uo_arena.of_move(30000, 30000)
+ll_checks ++
+if w_main.tab_main.tabpage_drag.uo_arena.cb_target.X + w_main.tab_main.tabpage_drag.uo_arena.cb_target.Width > w_main.tab_main.tabpage_drag.uo_arena.Width then
+    ll_fail ++
+    ls_failed_checks += "drag_right(" + String(w_main.tab_main.tabpage_drag.uo_arena.cb_target.X) + "+" + String(w_main.tab_main.tabpage_drag.uo_arena.cb_target.Width) + ">" + String(w_main.tab_main.tabpage_drag.uo_arena.Width) + ");"
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+ll_checks ++
+if w_main.tab_main.tabpage_drag.uo_arena.cb_target.Y + w_main.tab_main.tabpage_drag.uo_arena.cb_target.Height > w_main.tab_main.tabpage_drag.uo_arena.Height then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+w_main.tab_main.tabpage_drag.uo_arena.cb_target.Hide()
+ll_checks ++
+if w_main.tab_main.tabpage_drag.uo_arena.cb_target.Visible then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+w_main.tab_main.tabpage_drag.uo_arena.of_reset()
+ll_checks ++
+if not w_main.tab_main.tabpage_drag.uo_arena.cb_target.Visible then
+    ll_fail ++
+    if Len(ls_failed_checks) < 1000 then ls_failed_checks += String(ll_checks) + ","
+end if
+li_drag_fail = f_drag_self_test(w_main.tab_main.tabpage_drag.uo_arena)
+ll_checks += 8
+ll_fail += li_drag_fail
+if li_drag_fail > 0 then ls_failed_checks += "drag_capture,"
+ls_pass = "false"
+if ll_fail = 0 then ls_pass = "true"
+ls_report = '{"passed":' + ls_pass + ',"checks":' + String(ll_checks) + ',"failed":' + String(ll_fail) + ',"failed_checks":"' + ls_failed_checks + '","pages":50,"records":1000,"runtime":"25.0.0.3683","drag":' + w_main.tab_main.tabpage_drag.uo_arena.of_json() + '}'
+li_file = FileOpen("self-test.json", LineMode!, Write!, LockWrite!, Replace!, EncodingUTF8!)
+if li_file > 0 then
+    FileWrite(li_file, ls_report)
+    FileClose(li_file)
+end if
+close(w_main)
+return ll_fail
+end function

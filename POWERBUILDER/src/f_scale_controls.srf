@@ -1,0 +1,16 @@
+$PBExportHeader$f_scale_controls.srf
+global type f_scale_controls from function_object
+end type
+forward prototypes
+global function integer f_scale_controls (windowobject ao_controls[], double ad_scale)
+end prototypes
+global function integer f_scale_controls (windowobject ao_controls[], double ad_scale);
+long ll_index
+dragobject ldo_control
+for ll_index = 1 to UpperBound(ao_controls)
+    ldo_control = ao_controls[ll_index]
+    ldo_control.Move(Long(ldo_control.X * ad_scale), Long(ldo_control.Y * ad_scale))
+    ldo_control.Resize(Long(ldo_control.Width * ad_scale), Long(ldo_control.Height * ad_scale))
+next
+return 1
+end function

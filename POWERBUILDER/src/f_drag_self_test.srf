@@ -1,0 +1,40 @@
+$PBExportHeader$f_drag_self_test.srf
+global type f_drag_self_test from function_object
+end type
+forward prototypes
+global function integer f_drag_self_test (u_arena au_arena)
+end prototypes
+global function integer f_drag_self_test (u_arena au_arena);
+integer li_fail
+long ll_x, ll_y
+try
+    au_arena.of_reset()
+    au_arena.DYNAMIC of_begin_drag(PixelsToUnits(17, XPixelsToUnits!), PixelsToUnits(13, YPixelsToUnits!))
+    if au_arena.il_moves <> 0 or UnitsToPixels(au_arena.il_anchor_x, XUnitsToPixels!) <> 17 then li_fail ++
+    // This pointer position is outside the original centered target rectangle.
+    au_arena.DYNAMIC of_drag_to(PixelsToUnits(60, XPixelsToUnits!), PixelsToUnits(50, YPixelsToUnits!))
+    if Abs(UnitsToPixels(au_arena.cb_target.X, XUnitsToPixels!) - 43) > 1 or Abs(UnitsToPixels(au_arena.cb_target.Y, YUnitsToPixels!) - 37) > 1 then li_fail ++
+    if au_arena.il_moves <> 0 then li_fail ++
+    au_arena.DYNAMIC of_finish_drag(true)
+    if au_arena.il_moves <> 1 then li_fail ++
+    au_arena.DYNAMIC of_finish_drag(true)
+    if au_arena.il_moves <> 1 then li_fail ++
+    au_arena.DYNAMIC of_begin_drag(10, 10)
+    au_arena.DYNAMIC of_drag_to(30000, 30000)
+    au_arena.DYNAMIC of_finish_drag(true)
+    if au_arena.il_moves <> 2 or au_arena.cb_target.X + au_arena.cb_target.Width > au_arena.Width or au_arena.cb_target.Y + au_arena.cb_target.Height > au_arena.Height then li_fail ++
+    au_arena.DYNAMIC of_begin_drag(10, 10)
+    au_arena.DYNAMIC of_drag_to(-100, -100)
+    au_arena.DYNAMIC of_finish_drag(false)
+    if au_arena.il_moves <> 2 or au_arena.cb_target.X <> 0 or au_arena.cb_target.Y <> 0 then li_fail ++
+    ll_x = au_arena.cb_target.X
+    ll_y = au_arena.cb_target.Y
+    au_arena.DYNAMIC of_drag_to(500, 500)
+    if au_arena.cb_target.X <> ll_x or au_arena.cb_target.Y <> ll_y then li_fail ++
+catch (runtimeerror le_error)
+    // Missing drag-state handlers must fail the build's self-test gate.
+    li_fail = 8
+end try
+au_arena.of_reset()
+return li_fail
+end function
