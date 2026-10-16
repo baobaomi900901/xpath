@@ -8,6 +8,14 @@
 
 ## 靶场一览
 
+可通过统一桌面界面勾选多个靶场、设置版本和启动方式，再点击启动：
+
+```powershell
+uv run .\tools\start.py
+```
+
+启动中心使用 Python 标准库 Tk，支持搜索、分类、运行日志和配置维护。点击“维护靶场与选项”可补充靶场和参数，也可直接编辑 [tools/ranges.json](tools/ranges.json)；操作与扩展说明见 [启动中心指南](tools/RANGE_LAUNCHER.md)。
+
 | 目录                            | 形态                                             | 技术栈                                             | 一键启动                            |
 | ------------------------------- | ------------------------------------------------ | -------------------------------------------------- | ----------------------------------- |
 | [`WEB/`](WEB)                   | 浏览器页面,19 条路由                             | React 19 + antd 5 + Vite 6                         | `cd WEB; pnpm dev`                  |
@@ -78,6 +86,9 @@ xpath/
 │  ├─ verify/              CDP 与 Windows UIA 实际进程验收
 │  └─ dist/<版本>/         四个完整运行目录(已 gitignore)
 ├─ tools/                  跨靶场启动器(Python)
+│  ├─ start.py             可视化启动中心（Tk / 标准库）
+│  ├─ ranges.json          可维护的靶场、启动方式及参数
+│  ├─ range_launcher/     界面、配置校验及进程日志模块
 │  ├─ start_win32.py
 │  ├─ start_tk.py / test_start_tk.py
 │  ├─ start_java.py / start_delphi.py

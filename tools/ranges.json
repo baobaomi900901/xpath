@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "ranges": [
+    {
+      "id": "win32",
+      "label": "Win32",
+      "category": "原生桌面",
+      "description": "标准 UIA、无 Pane、随机表单、MSAA、自绘和深度压力靶场；可同时选择多个版本。",
+      "command": ["{python}", "{root}/tools/start_win32.py"],
+      "cwd": ".",
+      "profiles": [
+        {"id": "run", "label": "运行已有 EXE", "args": ["--skip-build"]},
+        {"id": "build", "label": "构建并启动", "args": []},
+        {"id": "check", "label": "检查已有产物（不启动）", "args": ["--skip-build", "--no-launch"]}
+      ],
+      "default_profile": "run",
+      "options": [
+        {
+          "id": "backends", "label": "运行版本", "type": "multi", "flag": "--backends", "default": ["uia"], "required": true,
+          "choices": [
+            {"value": "uia", "label": "UIA 标准控件"},
+            {"value": "uia-no-pane", "label": "UIA 表单无 Pane"},
+            {"value": "uia-random", "label": "UIA 随机表单"},
+            {"value": "msaa", "label": "MSAA（IAccessible）"},
+            {"value": "canvas", "label": "自绘（无内部无障碍树）"},
+            {"value": "pressure500", "label": "UIA 压力 500 层"},
+            {"value": "pressure1000", "label": "UIA 压力 1000 层"},
+            {"value": "pressure2000", "label": "UIA 压力 2000 层"}
+          ]
+        },
+        {
+          "id": "configuration", "label": "构建配置 / 产物目录", "type": "choice", "flag": "--configuration", "default": "Release",
+          "choices": [{"value": "Release", "label": "Release"}, {"value": "Debug", "label": "Debug"}]
+        }
+      ]
+    },
+    {
+      "id": "tk",
+      "label": "Tk / ttk",
+      "category": "原生桌面",
+      "description": "Python 标准库桌面靶场，含表单、表格、拖拽和菜单；解释器需要 Tcl/Tk。",
+      "command": ["{python}", "{root}/tools/start_tk.py"],
+      "cwd": ".",
+      "profiles": [
+        {"id": "run", "label": "启动独立窗口", "args": []},
+        {"id": "foreground", "label": "前台运行（关闭窗口后结束任务）", "args": ["--foreground"]},
+        {"id": "check", "label": "隐藏窗口检查（随后关闭）", "args": ["--no-launch"]}
+      ],
+      "default_profile": "run",
+      "options": []
+    },
+    {
+      "id": "java",
+      "label": "Java Swing",
+      "category": "原生桌面",
+      "description": "Java Swing 多 JDK 桌面靶场；构建模式会按需准备 JDK 和 Maven。",
+      "command": ["{python}", "{root}/tools/start_java.py"],
+      "cwd": ".",
+      "profiles": [
+        {"id": "run", "label": "运行已有 JAR", "args": ["--skip-build"]},
+        {"id": "build", "label": "构建并启动", "args": []},
+        {"id": "check", "label": "检查已有产物（不启动）", "args": ["--skip-build", "--no-launch"]}
+      ],
+      "default_profile": "run",
+      "options": [
+        {
+          "id": "versions", "label": "JDK 版本", "type": "multi", "flag": "--versions", "default": ["17"], "required": true,
+          "choices": [
+            {"value": "8", "label": "JDK 8"},
+            {"value": "11", "label": "JDK 11"},
+            {"value": "17", "label": "JDK 17"},
+            {"value": "21", "label": "JDK 21"},
+            {"value": "25", "label": "JDK 25"}
+          ]
+        },
+        {"id": "force_build", "label": "强制重新构建", "type": "bool", "flag": "--force-build", "default": false, "profiles": ["build"]}
+      ]
+    },
+    {
+      "id": "cef",
+      "label": "CEF",
+      "category": "浏览器嵌入",
+      "description": "五个固定 CEF 版本的浏览器嵌入靶场；原脚本会清理所选版本在本仓库中的旧进程。",
+      "command": ["{python}", "{root}/tools/start_cef.py"],
+      "cwd": ".",
+      "profiles": [
+        {"id": "run", "label": "运行已有产物", "args": ["--skip-build"]},
+        {"id": "build", "label": "下载 / 构建并启动", "args": []},
+        {"id": "check", "label": "检查已有产物（不启动）", "args": ["--skip-build", "--no-launch"]}
+      ],
+      "default_profile": "run",
+      "options": [
+        {
+          "id": "versions", "label": "CEF 主版本", "type": "multi", "flag": "--versions", "default": ["133"], "required": true,
+          "choices": [
+            {"value": "109", "label": "CEF 109"},
+            {"value": "125", "label": "CEF 125"},
+            {"value": "128", "label": "CEF 128"},
+            {"value": "133", "label": "CEF 133"},
+            {"value": "154", "label": "CEF 154"}
+          ]
+        },
+        {"id": "base_url", "label": "WEB 路由根地址", "type": "text", "flag": "--base-url", "default": "https://baobaomi900901.github.io/xpath/#/", "profiles": ["run", "build"]},
+        {"id": "force_build", "label": "干净重新构建", "type": "bool", "flag": "--force-build", "default": false, "profiles": ["build"]}
+      ]
+    },
+    {
+      "id": "electron",
+      "label": "Electron",
+      "category": "浏览器嵌入",
+      "description": "四个固定 Electron 版本的浏览器嵌入靶场；运行时与网页宿主随各版本产物保存。",
+      "command": ["{python}", "{root}/tools/start_electron.py"],
+      "cwd": ".",
+      "profiles": [
+        {"id": "run", "label": "运行已有产物", "args": ["--skip-build"]},
+        {"id": "build", "label": "下载 / 打包并启动", "args": []},
+        {"id": "check", "label": "检查已有产物（不启动）", "args": ["--skip-build", "--no-launch"]}
+      ],
+      "default_profile": "run",
+      "options": [
+        {
+          "id": "versions", "label": "Electron 主版本", "type": "multi", "flag": "--versions", "default": ["38"], "required": true,
+          "choices": [
+            {"value": "22", "label": "Electron 22"},
+            {"value": "29", "label": "Electron 29"},
+            {"value": "38", "label": "Electron 38"},
+            {"value": "44", "label": "Electron 44"}
+          ]
+        },
+        {"id": "base_url", "label": "WEB 路由根地址", "type": "text", "flag": "--base-url", "default": "https://baobaomi900901.github.io/xpath/#/", "profiles": ["run", "build"]},
+        {"id": "force_build", "label": "从归档重新解压并打包", "type": "bool", "flag": "--force-build", "default": false, "profiles": ["build"]}
+      ]
+    },
+    {
+      "id": "delphi",
+      "label": "Delphi VCL",
+      "category": "原生桌面",
+      "description": "Delphi VCL 表单、菜单、表格和拖拽靶场；运行已有 EXE 无需 Delphi 编译器。",
+      "command": ["{python}", "{root}/tools/start_delphi.py"],
+      "cwd": ".",
+      "profiles": [
+        {"id": "run", "label": "运行已有 EXE", "args": ["--skip-build"]},
+        {"id": "build", "label": "构建并启动", "args": []},
+        {"id": "check", "label": "检查已有产物（不启动）", "args": ["--skip-build", "--no-launch"]}
+      ],
+      "default_profile": "run",
+      "options": [
+        {
+          "id": "configuration", "label": "构建配置 / 产物目录", "type": "choice", "flag": "--configuration", "default": "Release",
+          "choices": [{"value": "Release", "label": "Release"}, {"value": "Debug", "label": "Debug"}]
+        },
+        {"id": "compiler_path", "label": "dcc32.exe 路径（留空自动查找）", "type": "text", "flag": "--compiler-path", "default": "", "profiles": ["build"]}
+      ]
+    },
+    {
+      "id": "powerbuilder",
+      "label": "PowerBuilder",
+      "category": "原生桌面",
+      "description": "PowerBuilder 原生表单和 DataWindow 靶场；默认启动单文件包，开发模式使用本机 Utilities / Runtime。",
+      "command": ["{python}", "{root}/tools/start_powerbuilder.py"],
+      "cwd": ".",
+      "profiles": [
+        {"id": "exe", "label": "运行单文件 EXE", "args": ["--mode", "exe"]},
+        {"id": "dev", "label": "开发模式（构建并启动）", "args": ["--mode", "dev"]}
+      ],
+      "default_profile": "exe",
+      "options": [
+        {"id": "tools_path", "label": "Utilities 目录或 orcascr250.exe（可留空）", "type": "text", "flag": "--tools-path", "default": "", "profiles": ["dev"]},
+        {"id": "runtime_path", "label": "Runtime 25.0.0.3683 目录（可留空）", "type": "text", "flag": "--runtime-path", "default": "", "profiles": ["dev"]},
+        {"id": "skip_build", "label": "跳过开发模式构建，运行已有产物", "type": "bool", "flag": "--skip-build", "default": false, "profiles": ["dev"]},
+        {"id": "no_launch", "label": "仅检查 / 构建产物，不打开窗口", "type": "bool", "flag": "--no-launch", "default": false}
+      ]
+    },
+    {
+      "id": "webview2",
+      "label": "WebView2",
+      "category": "浏览器嵌入",
+      "description": "原生菜单与 WebView2 网页视图；此启动脚本每次都会执行构建，需要构建工具和 WebView2 Runtime。",
+      "command": ["{python}", "{root}/tools/start_webview2.py"],
+      "cwd": ".",
+      "profiles": [
+        {"id": "build", "label": "构建并启动（脚本始终构建）", "args": []},
+        {"id": "check", "label": "构建并验证（不启动）", "args": ["--no-launch"]}
+      ],
+      "default_profile": "build",
+      "options": [
+        {
+          "id": "configuration", "label": "构建配置", "type": "choice", "flag": "--configuration", "default": "Release",
+          "choices": [{"value": "Release", "label": "Release"}, {"value": "Debug", "label": "Debug"}]
+        }
+      ]
+    },
+    {
+      "id": "excel",
+      "label": "Excel 加载项",
+      "category": "Office",
+      "description": "准备 localhost 证书和加载项，持续运行 HTTPS 服务；默认打开生成的靶场工作簿。",
+      "command": ["{python}", "{root}/tools/start_excel_addin.py"],
+      "cwd": ".",
+      "profiles": [
+        {"id": "run", "label": "启动服务并打开工作簿", "args": []},
+        {"id": "no_launch", "label": "启动服务（手动打开工作簿）", "args": ["--no-launch"]}
+      ],
+      "default_profile": "run",
+      "options": [
+        {"id": "port", "label": "本机 HTTPS 端口", "type": "integer", "flag": "--port", "default": 7300, "min": 1, "max": 65535},
+        {"id": "renew_cert", "label": "重新生成 localhost 证书", "type": "bool", "flag": "--renew-cert", "default": false},
+        {"id": "skip_sideload", "label": "跳过加载项注册与工作簿生成", "type": "bool", "flag": "--skip-sideload", "default": false}
+      ]
+    }
+  ]
+}
