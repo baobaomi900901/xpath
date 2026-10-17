@@ -6,7 +6,6 @@ const CHART_DATA = [
   { label: '数据二', value: 200, color: '#52c41a' },
   { label: '数据三', value: 150, color: '#faad14' },
 ];
-const CHART_DESCRIPTION = CHART_DATA.map(({ label, value }) => `${label}：${value}`).join('，');
 
 export default function CanvasTestPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -95,11 +94,8 @@ export default function CanvasTestPage() {
           id="canvas-bar-chart"
           ref={canvasRef}
           role="img"
-          aria-label={`柱状图，${CHART_DESCRIPTION}`}
           style={{ display: 'block', width: '100%', height: 360 }}
-        >
-          {CHART_DESCRIPTION}
-        </canvas>
+        />
       </div>
     </PageLayout>
   );
