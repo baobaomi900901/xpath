@@ -85,6 +85,12 @@ const menuItems = [
     description: '纯 div 实现，7 列 1000 行，内容与 Ant Design Table 一致',
   },
   {
+    id: 'menu-canvas-test',
+    href: '/canvas-test',
+    title: 'Canvas 柱状图',
+    description: '原生 Canvas 绘制 3 个数据列，包含名称、数值与坐标刻度',
+  },
+  {
     id: 'menu-iframe-nested-test',
     href: '/iframe-nested-test',
     title: 'iframe 嵌套测试',

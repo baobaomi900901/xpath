@@ -17,6 +17,7 @@ import ShadowNestedTestPage from './pages/ShadowNestedTestPage';
 import KeysClickTestPage from './pages/KeysClickTestPage';
 import DragToTestPage from './pages/DragToTestPage';
 import CookieTestPage from './pages/CookieTestPage';
+import CanvasTestPage from './pages/CanvasTestPage';
 
 export default function App() {
   const Router = import.meta.env.VITE_GITHUB_PAGES === 'true' ? HashRouter : BrowserRouter;
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/web-dialog-test" element={<WebDialogTestPage />} />
         <Route path="/table-test" element={<TableTestPage />} />
         <Route path="/table-div-test" element={<TableDivTestPage />} />
+        <Route path="/canvas-test" element={<CanvasTestPage />} />
         <Route path="/iframe-nested-test" element={<IframeNestedTestPage />} />
         <Route path="/shadow-nested-test" element={<ShadowNestedTestPage />} />
         <Route path="/keys-click-test" element={<KeysClickTestPage />} />

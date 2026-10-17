@@ -6,6 +6,14 @@
 uv run .\tools\start.py
 ```
 
+默认在独立进程中打开界面，检查约 1 秒后归还终端；关闭终端后界面继续运行。启动中心自身的输出保存在 `.private/range-launcher/logs/launcher-*.log`，命令会打印本次日志路径。
+
+需要在终端查看调试输出、等窗口关闭后再返回时，执行：
+
+```powershell
+uv run .\tools\start.py --foreground
+```
+
 启动中心使用 Python 3.8+ 标准库，不需要安装第三方 Python 包。图形界面需要当前 Python 含有 Tcl/Tk；Windows Python 安装程序中的组件名通常为 `tcl/tk and IDLE`。各靶场原有的编译工具、运行时和 Excel 等宿主要求仍然适用，详见各靶场 README。
 
 ## 使用流程

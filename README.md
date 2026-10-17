@@ -14,11 +14,13 @@
 uv run .\tools\start.py
 ```
 
+默认在独立进程中打开界面，约 1 秒后归还终端，关闭终端后界面继续运行。需要在终端查看调试输出时，使用 `uv run .\tools\start.py --foreground`。
+
 启动中心使用 Python 标准库 Tk，支持搜索、分类、运行日志和配置维护。点击“维护靶场与选项”可补充靶场和参数，也可直接编辑 [tools/ranges.json](tools/ranges.json)；操作与扩展说明见 [启动中心指南](tools/RANGE_LAUNCHER.md)。
 
 | 目录                            | 形态                                             | 技术栈                                             | 一键启动                            |
 | ------------------------------- | ------------------------------------------------ | -------------------------------------------------- | ----------------------------------- |
-| [`WEB/`](WEB)                   | 浏览器页面,19 条路由                             | React 19 + antd 5 + Vite 6                         | `cd WEB; pnpm dev`                  |
+| [`WEB/`](WEB)                   | 浏览器页面,20 条路由                             | React 19 + antd 5 + Vite 6                         | `cd WEB; pnpm dev`                  |
 | [`WIN32/`](WIN32)               | 原生桌面程序 5 个 + UIA 压力程序 + 检测工具      | C++ / Win32 / CMake                                | `python tools\start_win32.py`       |
 | [`TK/`](TK)                     | Tk 桌面程序，表单 / 表格 / 拖拽 / 菜单           | Python / tkinter / ttk                             | `python tools\start_tk.py`          |
 | [`WEBVIEW2/`](WEBVIEW2)         | 浏览器套壳桌面程序,原生菜单 + 3 个线上测试页面   | C++ / Win32 / WebView2 SDK 1.0.4191.47 / CMake     | `python tools\start_webview2.py`    |
@@ -133,7 +135,7 @@ pnpm dev              # http://localhost:7199, 自动打开浏览器
 - 主要路由:`/`、`/form-controls`、`/table-test`、`/table-div-test`、`/anchor-test`、
   `/geometry-test`、`/element-html-test`、`/iframe-shadow-form`、`/iframe-nested-test`、
   `/shadow-nested-test`、`/download-dialog-test`、`/upload-dialog-test`、`/web-dialog-test`、
-  `/keys-click-test`、`/drag-to-test`、`/cookie-test`——完整清单见 `WEB/src/App.tsx`
+  `/keys-click-test`、`/drag-to-test`、`/cookie-test`、`/canvas-test`——完整清单见 `WEB/src/App.tsx`
 - **SDK Cookie 观测模式**:设置 `UIPILOT_SDK_WEB_*` 系列环境变量后,`pnpm dev` 会切换为 HTTPS +
   固定端口 + `/api/sdk-web/*` 接口 + 下载响应头;该模式只能在本地跑,线上 Pages 不支持
 
