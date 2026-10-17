@@ -15,7 +15,7 @@ def main(argv=None):
             stream.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description="启动 tkinter/ttk 桌面靶场（仅需 Python 标准库）。")
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--no-launch", action="store_true", help="创建并销毁隐藏窗口，检查 Tk 环境与三个测试页")
+    mode.add_argument("--no-launch", action="store_true", help="创建并销毁隐藏窗口，检查 Tk 环境与全部测试页")
     mode.add_argument("--foreground", action="store_true", help="前台运行，关闭窗口后返回退出码")
     args = parser.parse_args(argv)
     command = [sys.executable, "-m", "TK"]

@@ -50,7 +50,7 @@ xpath/
 │  ├─ build.ps1 / run.ps1
 │  └─ CMakeLists.txt
 ├─ TK/                     Tk 框架桌面靶场（Python 标准库）
-│  ├─ app.py / *_page.py   主窗口、表单、表格与拖拽页
+│  ├─ app.py / *_page.py   主窗口、表单、表格、拖拽、图元与文本菜单页
 │  ├─ models.py            员工数据与拖拽状态
 │  └─ tests/               模型与真实 Tk 控件测试
 ├─ OFFICE/excel-addin/     Excel 加载项靶场
@@ -185,7 +185,7 @@ cd WIN32
 
 ```powershell
 python .\tools\start_tk.py                # 检查环境并启动
-python .\tools\start_tk.py --no-launch    # 用隐藏窗口检查环境及三个页面
+python .\tools\start_tk.py --no-launch    # 用隐藏窗口检查环境及全部页面
 python .\tools\start_tk.py --foreground   # 前台运行，便于查看错误
 ```
 

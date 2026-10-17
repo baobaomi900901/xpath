@@ -10,7 +10,7 @@
 
 ```powershell
 python .\tools\start_tk.py                 # 检查环境后启动窗口，返回 PID
-python .\tools\start_tk.py --no-launch     # 初始化并销毁隐藏窗口，验证三个测试页
+python .\tools\start_tk.py --no-launch     # 初始化并销毁隐藏窗口，验证全部测试页
 python .\tools\start_tk.py --foreground    # 前台运行，关闭窗口后返回，便于查看错误
 python .\tools\start_tk.py --help
 ```
@@ -65,6 +65,23 @@ python D:\code\xpath\tools\start_tk.py
 `left/top` 相对拖拽区域，采用 Tk 坐标单位；与其他坐标工具对比时注意本机 DPI 缩放。
 `delay_after` 是自动化调用方的等待时间，靶场无法直接观测。
 
+### 控件与图元
+
+- 可编辑 Combobox、经典 Spinbox、只读和禁用输入框。
+- 含重复名称的 Listbox、父/子/孙三级 Treeview、可见/禁用/隐藏的 Notebook 标签。
+- Canvas 文字与背景矩形重叠、圆形、隐藏图元、滚动后出现的文字；点击图元更新结果。
+- Scale 和 Progressbar 值，以及 Canvas 滚动/恢复按钮。
+
+### 菜单与文本
+
+- 经典按钮右键打开独立菜单，包含二级子菜单；经典和 ttk Menubutton、OptionMenu。
+- Text 包含两个单行链接、换行链接、普通格式标签、重叠样式、隐藏文字、非连续同名标签和 emoji。
+- 所有命令和链接仅更新页面下方结果，不访问网站或修改外部文件。
+- 用 Ctrl+End / Ctrl+Home 验证滚出视口后恢复；跨屏移动同一窗口后重新观察、捕获和点击，
+  可核对是否错误沿用旧坐标。不同 DPI 测试应记录 Windows 显示缩放，而非只改 `tk scaling`。
+
+这两页把 UIAutoma 自建验收靶场中的公共场景纳入维护靶场；不添加自动化产品依赖或自定义 Provider。
+
 ## 元素定位
 
 采用 Tk/ttk 自身控件和菜单，不添加 UIA/MSAA Provider。
@@ -82,6 +99,9 @@ Windows UIA/MSAA 可见节点与 Pattern 由本机 Python/Tk 和探测器决定�
 | 操作菜单按钮 / 动态菜单 | `.tabs.form.heading.popup` / `.tabs.form.action_menu` |
 | 员工表格 / 翻页栏 | `.tabs.table.employees` / `.tabs.table.pagination` |
 | 拖拽区域 / 目标 | `.tabs.drag.arena` / `.tabs.drag.arena.drag-target` |
+| 扩展列表 / 层级树 / Canvas | `.tabs.widgets.items.list` / `.tabs.widgets.items.tree` / `.tabs.widgets.items.canvas` |
+| 经典 / 主题菜单按钮 | `.tabs.semantics.menus.classic` / `.tabs.semantics.menus.themed` |
+| 右键按钮 / 菜单 / Text | `.tabs.semantics.menus.context` / `.tabs.semantics.context_menu` / `.tabs.semantics.text` |
 
 组内控件依次命名为 `option0`、`option1` 等。表格行 ID 为 `employee-1` 到 `employee-1000`，仅当前页行存在。
 
