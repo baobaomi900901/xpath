@@ -33,6 +33,52 @@ class LauncherInterfaceTests(unittest.TestCase):
             self.root.update_idletasks()
             self.application.close()
 
+    def test_clicking_range_checkbox_preserves_list_widgets_and_scroll_position(self):
+        app = self.application
+        self.root.update_idletasks()
+        cards = tuple(app.list_panel.body.winfo_children())
+        checkboxes = {card.winfo_children()[0].cget("text"): card.winfo_children()[0] for card in cards}
+        win32 = checkboxes[app.items["win32"]["label"]]
+        powerbuilder = checkboxes[app.items["powerbuilder"]["label"]]
+        app.list_panel.canvas.yview_moveto(0.5)
+        before_scroll = app.list_panel.canvas.yview()
+        self.assertGreater(before_scroll[0], 0)
+        for widget, item_id in ((powerbuilder, "powerbuilder"), (powerbuilder, "powerbuilder"), (win32, "win32")):
+            widget.invoke()
+            self.root.update_idletasks()
+            self.assertEqual(tuple(app.list_panel.body.winfo_children()), cards)
+            self.assertEqual(app.list_panel.canvas.yview(), before_scroll)
+            self.assertEqual(app.current_id, item_id)
+            for card in cards:
+                expected = "Focus.TFrame" if card.winfo_children()[0] is widget else "Card.TFrame"
+                self.assertEqual(card.cget("style"), expected)
+        self.assertFalse(app.checked["powerbuilder"].get())
+        self.assertTrue(app.checked["win32"].get())
+        self.assertEqual(app.start_button.cget("text"), "启动所选（1）")
+
+    def test_clicking_range_description_keeps_list_widgets_and_shows_options(self):
+        app = self.application
+        cards = tuple(app.list_panel.body.winfo_children())
+        target = next(card for card in cards if card.winfo_children()[0].cget("text") == app.items["powerbuilder"]["label"])
+        target.winfo_children()[1].event_generate("<Button-1>")
+        self.root.update_idletasks()
+        self.assertEqual(tuple(app.list_panel.body.winfo_children()), cards)
+        self.assertEqual(app.current_id, "powerbuilder")
+        self.assertIn("--mode exe", app.preview.get("1.0", "end"))
+        self.assertFalse(app.checked["powerbuilder"].get())
+        self.assertEqual(target.cget("style"), "Focus.TFrame")
+
+    def test_switching_start_profile_keeps_list_widgets_and_refreshes_options(self):
+        app = self.application
+        app._show_item("powerbuilder")
+        cards = tuple(app.list_panel.body.winfo_children())
+        app.profile.set("开发模式（构建并启动）")
+        app.profile_box.event_generate("<<ComboboxSelected>>")
+        self.root.update_idletasks()
+        self.assertEqual(tuple(app.list_panel.body.winfo_children()), cards)
+        self.assertIn("tools_path", app.option_vars)
+        self.assertIn("--mode dev", app.preview.get("1.0", "end"))
+
     def test_switching_to_exe_omits_saved_development_arguments(self):
         app = self.application
         app._show_item("powerbuilder")

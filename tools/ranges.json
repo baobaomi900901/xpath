@@ -29,7 +29,7 @@
           ]
         },
         {
-          "id": "configuration", "label": "构建配置 / 产物目录", "type": "choice", "flag": "--configuration", "default": "Release",
+          "id": "configuration", "label": "构建配置 / 产物目录", "type": "choice", "flag": "--configuration", "default": "Release", "clearable": false,
           "choices": [{"value": "Release", "label": "Release"}, {"value": "Debug", "label": "Debug"}]
         }
       ]
@@ -100,7 +100,7 @@
             {"value": "154", "label": "CEF 154"}
           ]
         },
-        {"id": "base_url", "label": "WEB 路由根地址", "type": "text", "flag": "--base-url", "default": "https://baobaomi900901.github.io/xpath/#/", "profiles": ["run", "build"]},
+        {"id": "base_url", "label": "WEB 路由根地址", "type": "text", "flag": "--base-url", "default": "https://baobaomi900901.github.io/xpath/#/", "clearable": false, "profiles": ["run", "build"]},
         {"id": "force_build", "label": "干净重新构建", "type": "bool", "flag": "--force-build", "default": false, "profiles": ["build"]}
       ]
     },
@@ -127,7 +127,7 @@
             {"value": "44", "label": "Electron 44"}
           ]
         },
-        {"id": "base_url", "label": "WEB 路由根地址", "type": "text", "flag": "--base-url", "default": "https://baobaomi900901.github.io/xpath/#/", "profiles": ["run", "build"]},
+        {"id": "base_url", "label": "WEB 路由根地址", "type": "text", "flag": "--base-url", "default": "https://baobaomi900901.github.io/xpath/#/", "clearable": false, "profiles": ["run", "build"]},
         {"id": "force_build", "label": "从归档重新解压并打包", "type": "bool", "flag": "--force-build", "default": false, "profiles": ["build"]}
       ]
     },
@@ -146,10 +146,10 @@
       "default_profile": "run",
       "options": [
         {
-          "id": "configuration", "label": "构建配置 / 产物目录", "type": "choice", "flag": "--configuration", "default": "Release",
+          "id": "configuration", "label": "构建配置 / 产物目录", "type": "choice", "flag": "--configuration", "default": "Release", "clearable": false,
           "choices": [{"value": "Release", "label": "Release"}, {"value": "Debug", "label": "Debug"}]
         },
-        {"id": "compiler_path", "label": "dcc32.exe 路径（留空自动查找）", "type": "text", "flag": "--compiler-path", "default": "", "profiles": ["build"]}
+        {"id": "compiler_path", "label": "dcc32.exe 路径（留空自动查找）", "type": "text", "flag": "--compiler-path", "default": "", "clearable": false, "profiles": ["build"]}
       ]
     },
     {
@@ -165,8 +165,8 @@
       ],
       "default_profile": "exe",
       "options": [
-        {"id": "tools_path", "label": "Utilities 目录或 orcascr250.exe（可留空）", "type": "text", "flag": "--tools-path", "default": "", "profiles": ["dev"]},
-        {"id": "runtime_path", "label": "Runtime 25.0.0.3683 目录（可留空）", "type": "text", "flag": "--runtime-path", "default": "", "profiles": ["dev"]},
+        {"id": "tools_path", "label": "Utilities 目录或 orcascr250.exe（可留空）", "type": "text", "flag": "--tools-path", "default": "", "clearable": false, "profiles": ["dev"]},
+        {"id": "runtime_path", "label": "Runtime 25.0.0.3683 目录（可留空）", "type": "text", "flag": "--runtime-path", "default": "", "clearable": false, "profiles": ["dev"]},
         {"id": "skip_build", "label": "跳过开发模式构建，运行已有产物", "type": "bool", "flag": "--skip-build", "default": false, "profiles": ["dev"]},
         {"id": "no_launch", "label": "仅检查 / 构建产物，不打开窗口", "type": "bool", "flag": "--no-launch", "default": false}
       ]
@@ -185,7 +185,7 @@
       "default_profile": "build",
       "options": [
         {
-          "id": "configuration", "label": "构建配置", "type": "choice", "flag": "--configuration", "default": "Release",
+          "id": "configuration", "label": "构建配置", "type": "choice", "flag": "--configuration", "default": "Release", "clearable": false,
           "choices": [{"value": "Release", "label": "Release"}, {"value": "Debug", "label": "Debug"}]
         }
       ]
@@ -203,7 +203,7 @@
       ],
       "default_profile": "run",
       "options": [
-        {"id": "port", "label": "本机 HTTPS 端口", "type": "integer", "flag": "--port", "default": 7300, "min": 1, "max": 65535},
+        {"id": "port", "label": "本机 HTTPS 端口", "type": "integer", "flag": "--port", "default": 7300, "clearable": false, "min": 1, "max": 65535},
         {"id": "renew_cert", "label": "重新生成 localhost 证书", "type": "bool", "flag": "--renew-cert", "default": false},
         {"id": "skip_sideload", "label": "跳过加载项注册与工作簿生成", "type": "bool", "flag": "--skip-sideload", "default": false}
       ]

@@ -123,6 +123,8 @@ def _validate_range(item: Dict[str, Any], where: str) -> None:
         _string(option.get("flag"), location + ".flag")
         if "required" in option and not isinstance(option["required"], bool):
             _error(location + ".required", "expected true or false")
+        if "clearable" in option and not isinstance(option["clearable"], bool):
+            _error(location + ".clearable", "expected true or false")
         if "profiles" in option:
             _strings(option["profiles"], location + ".profiles")
             for profile_id in option["profiles"]:
@@ -203,6 +205,37 @@ def save_catalog(path: Path, data: Dict[str, Any]) -> None:
 def default_values(item: Dict[str, Any]) -> Dict[str, Any]:
     """Give each UI a separate copy of mutable option defaults."""
     return {option["id"]: copy.deepcopy(option["default"]) for option in item["options"]}
+
+
+def option_is_clearable(option: Dict[str, Any]) -> bool:
+    """Clear selections by default, while keeping the user's environment setup."""
+    return option.get("clearable", option["type"] in ("bool", "multi"))
+
+
+def restore_values(item: Dict[str, Any], saved: Any = None) -> Dict[str, Any]:
+    """Restore known values, repairing empty or obsolete protected choices."""
+    values = default_values(item)
+    if isinstance(saved, dict):
+        values.update({key: copy.deepcopy(value) for key, value in saved.items() if key in values})
+    for option in item["options"]:
+        if option_is_clearable(option):
+            continue
+        value = values[option["id"]]
+        empty = value is None or isinstance(value, str) and not value.strip()
+        obsolete_choice = option["type"] == "choice" and value not in [choice["value"] for choice in option["choices"]]
+        if empty or obsolete_choice:
+            values[option["id"]] = copy.deepcopy(option["default"])
+    return values
+
+
+def clear_values(item: Dict[str, Any], saved: Dict[str, Any]) -> Dict[str, Any]:
+    """Clear every selectable field, including fields in inactive profiles."""
+    values = restore_values(item, saved)
+    for option in item["options"]:
+        if option_is_clearable(option):
+            kind = option["type"]
+            values[option["id"]] = False if kind == "bool" else [] if kind == "multi" else ""
+    return values
 
 
 def build_command(item: Dict[str, Any], profile_id: str, values: Dict[str, Any],

@@ -9,7 +9,7 @@ import subprocess
 import tkinter as tk
 from tkinter import ttk
 
-from .config import build_command, default_values, load_catalog
+from .config import build_command, clear_values, default_values, load_catalog, restore_values
 from .editor import CatalogEditor
 from .runner import Runner
 
@@ -49,6 +49,7 @@ class Launcher:
         self.runner = Runner(self.log_dir)
         self.closed = False
         self.items, self.checked, self.settings, self.status_vars = {}, {}, {}, {}
+        self.list_cards = {}
         self.current_id, self.option_vars = None, {}
         self.queue, self.pending = [], set()
         self.queue_scheduled = False
@@ -114,7 +115,7 @@ class Launcher:
         selection = ttk.Frame(left, style="Panel.TFrame")
         selection.pack(fill="x", pady=(0, 10))
         ttk.Button(selection, text="全选可见", command=self.select_visible).pack(side="left")
-        ttk.Button(selection, text="清空选择", command=self.clear_selection).pack(side="left", padx=6)
+        ttk.Button(selection, text="清空选项", command=self.clear_selection).pack(side="left", padx=6)
         self.list_panel = ScrollPanel(left)
         self.list_panel.pack(fill="both", expand=True)
         self.detail_title = tk.StringVar(value="选择一个靶场")
@@ -207,9 +208,7 @@ class Launcher:
             old = old if isinstance(old, dict) else {}
             profiles = {profile["id"] for profile in item["profiles"]}
             profile = old.get("profile", item["default_profile"])
-            values = default_values(item)
-            if isinstance(old.get("values"), dict):
-                values.update({key: value for key, value in old["values"].items() if key in values})
+            values = restore_values(item, old.get("values"))
             self.settings[item_id] = {"profile": profile if profile in profiles else item["default_profile"], "values": values}
             self.checked[item_id] = tk.BooleanVar(value=item_id in old_checked)
             self.status_vars.setdefault(item_id, tk.StringVar(value="待启动"))
@@ -241,10 +240,12 @@ class Launcher:
     def _render_list(self):
         for child in self.list_panel.body.winfo_children():
             child.destroy()
+        self.list_cards.clear()
         visible = self._filtered_items()
         for item in visible:
             item_id = item["id"]
             card = ttk.Frame(self.list_panel.body, style="Focus.TFrame" if item_id == self.current_id else "Card.TFrame", padding=10)
+            self.list_cards[item_id] = card
             card.pack(fill="x", padx=(0, 6), pady=(0, 8))
             ttk.Checkbutton(card, text=item["label"], variable=self.checked[item_id], style="Card.TCheckbutton",
                             command=lambda key=item_id: self._selection_changed(key)).pack(anchor="w", fill="x")
@@ -274,13 +275,22 @@ class Launcher:
         self._selection_count()
 
     def clear_selection(self):
+        self._store_form()
         for variable in self.checked.values():
             variable.set(False)
+        for item_id, item in self.items.items():
+            self.settings[item_id]["values"] = clear_values(item, self.settings[item_id]["values"])
+        if self.current_id:
+            # Do not copy the old on-screen values back over the cleared data.
+            self._show_item(self.current_id, save_current=False)
         self._selection_count()
+        self._save_state()
+        self.hint.set("已清空全部靶场、版本和附加开关的勾选；启动方式、构建配置、地址、端口及工具路径已保留。")
 
     def _show_item(self, item_id, save_current=True):
         if save_current:
             self._store_form()
+        previous_id = self.current_id
         self.current_id = item_id
         item, setting = self.items[item_id], self.settings[item_id]
         self.detail_title.set(item["label"])
@@ -297,7 +307,12 @@ class Launcher:
         if not self.option_vars:
             ttk.Label(self.options_panel.body, text="此启动方式无需额外选项。", style="Panel.TLabel").pack(anchor="w", pady=10)
         self.options_panel.bind_wheel()
-        self._render_list()
+        # Selection only changes card styles; rebuilding the list loses its
+        # widgets, keyboard focus and scroll position on every click.
+        for key in {previous_id, item_id}:
+            card = self.list_cards.get(key)
+            if card is not None:
+                card.configure(style="Focus.TFrame" if key == item_id else "Card.TFrame")
         self._update_preview()
 
     def _option_widget(self, option, value):
