@@ -29,6 +29,10 @@ TMainForm
 - 输入框右键菜单（撤销、剪切、复制、粘贴、全选）
 - 表格页 `TListView`：1000 条数据，每页 100 条，共 10 页，显示 5 个动态页码，支持首页 / 上一页 / 页码 / 下一页 / 末页
 - 拖拽测试、复制状态、销毁/重建 `drag-target`
+- 原生 `TStringGrid`：100 行、7 列，固定 ID 列，支持编辑、键盘导航、调整列宽和恢复数据
+- 原生 `TDBGrid`：1000 条内存数据，支持编辑 / 提交 / 取消、导航、姓名 / 城市 / 邮箱筛选、点击列头升序排序及恢复数据
+- 真实 `TVirtualStringTree` 5.5.3：10 个部门、1000 名员工，按需创建子节点，支持展开 / 折叠、勾选、F2 编辑员工姓名及恢复数据
+- `TcxGrid` / `TcxTreeList` 接入代码通过 `WITH_DEVEXPRESS` 条件编译；默认构建缺少实际库，这两个页签明确显示“待接入”
 
 `THs08ComboBox`、`TRzPanel` 是兼容类。没有安装 Raize Components 时，工程仍可使用标准 VCL 控件编译；它们的真实第三方 Provider 行为不等同于生产程序。
 
@@ -77,22 +81,47 @@ python .\tools\start_delphi.py --no-launch --compiler-path 'C:\Program Files (x8
 - DCU：各配置输出目录的 `dcu/` 子目录
 
 命令行构建静态链接 VCL，不使用 Runtime Packages。运行已有 EXE 无需安装 Delphi。
+`TDBGrid` 的内存数据集通过 `MidasLib` 静态链接，无需另装数据库或分发 `midas.dll`；修改不会写入外部数据库。
+Virtual TreeView 的运行时源码和许可证保存在 `vendor/VirtualTreeView/`，版本来源及下载校验值见该目录说明。
 允许提交 `build/Release/Win32VclShootingRange.exe`，方便直接运行；其余构建产物和 IDE 临时文件仍忽略。更新发布程序时，重新构建 Release 并提交对应 EXE。
+
+## DevExpress 控件接入状态
+
+2026-10-19 构建环境为 Delphi 2010 / Delphi 10.3，未安装 DevExpress VCL。
+[官方当前试用下载页](https://www.devexpress.com/products/vcl/download-trial.xml)列出的最低版本为 RAD Studio 10.4；本次未取得与本机编译器匹配的 `cxGrid` / `cxTL` 编译库。
+因此默认 EXE 的 `TcxGrid（待接入）`、`TcxTreeList（待接入）` 只展示依赖说明，并没有创建对应控件。
+工程没有以标准 VCL 控件改名来代替 DevExpress 控件。
+
+取得与编译器版本匹配、支持静态链接的 DevExpress VCL 库后，指定各依赖单元所在目录：
+
+```powershell
+.\DELPHI\build.ps1 -DevExpressPaths 'D:\DevExpress\Library\Delphi2010', 'D:\DevExpress\Sources'
+```
+
+参数是单元搜索目录列表，不会递归搜索安装目录。也可将路径以分号分隔写入 `DELPHI_DEVEXPRESS_PATHS` 环境变量，再使用现有 Python 启动器。
+构建脚本检查 `cxGrid.pas/.dcu` 和 `cxTL.pas/.dcu` 后启用 `WITH_DEVEXPRESS`；控件及其传递依赖都必须在指定路径内可见。
+启用后分别创建真正的 `TcxGrid` 表格视图及 `TcxTreeList` 部门 / 员工树。此条件分支尚未在本机编译验证；默认三个复杂控件不依赖 DevExpress。
+试用库所需的 Runtime Packages 不属于当前静态构建配置，不能直接用试用安装包替代上述源码 / DCU。
 
 ## Delphi IDE 编译
 
 1. 用 Delphi 打开 `Win32VclShootingRange.dpr`。
 2. 目标平台选 Win32，关闭 Runtime Packages。
-3. Build Project，然后运行；IDE 输出目录由本地工程配置决定。
+3. 将 `vendor/VirtualTreeView` 加入项目的 Unit / Resource 搜索路径。
+4. Build Project，然后运行；IDE 输出目录由本地工程配置决定。
 
 ## GUI / UIA 验收
 
-启动后检查三个页面：
+启动后检查原有功能与新增复杂控件页面：
 
 1. **表单控件**：检查 10 个具名 Pane，各自包含字段标签和所属控件；年龄 Pane 包含输入框及微调按钮，城市多选和兴趣多选分属不同 Pane。输入与勾选后点击保存，应弹出“提交成功！”；重置后输入清空、年龄为 25、城市单选为北京、性别为男，所有城市 / 兴趣 / 协议复选框取消勾选。
 2. **菜单**：顶部“文件 / 编辑”、表单“展开菜单”、输入框右键菜单均应弹出；选择后更新菜单状态文本。顶部菜单和自定义右键菜单用于菜单定位、点击及状态回显，当前不会打开文件或执行剪贴板编辑命令。
 3. **表格数据**：7 列、1000 条员工样例数据，每页 100 条，共 10 页。程序启动默认第 1 页，底部显示当前页、总页数和记录范围；可点击首页、上一页、5 个动态页码、下一页、末页切换实际表格数据。第一页的首页 / 上一页禁用，最后一页的下一页 / 末页禁用，当前页的页码按钮禁用。页码初始为 1–5，选中第 3 页后更新为 2–6，第 4 页为 3–7，第 7–10 页固定为 6–10；按钮显示数字与跳转目标同步更新。第 1 页为 ID 1–100，第 10 页为 ID 901–1000，切换其他页签后保留当前表格页码。
 4. **拖拽测试**：拖动 `drag-target`，位置及移动次数更新，目标保持在区域内；“隐藏”会销毁目标，“重置位置”会重新创建；“复制当前结果”将坐标和移动次数 JSON 写入剪贴板。
+5. **TStringGrid**：第 1–100 行 ID 连续，ID 列固定且不可编辑；编辑姓名后状态栏回显，恢复数据后撤销编辑。
+6. **TDBGrid**：初始为 1000 条；输入 `北京` 应筛出 200 条，输入不存在的关键字应为 0 条；清空恢复全部记录。可编辑姓名并通过导航器提交 / 取消；点击 ID 列头按数值排序，末条 ID 为 1000；恢复数据重新生成默认内容。
+7. **TVirtualStringTree**：初始显示 10 个部门，展开每个部门得到 100 名员工；第一部门 ID 1–100，最后部门 ID 901–1000。选中姓名列按 F2 编辑，勾选及展开状态在底部回显；恢复数据清空修改与勾选，回到折叠状态。
+8. **TcxGrid / TcxTreeList**：默认构建应明确显示待接入说明；仅带实际 DevExpress 库的构建才用于测试对应控件行为。
 
 用 Inspect 或自己的 UIA / RPA 工具检查标准 VCL 控件和 MDI 层级。控件创建后赋予 Win32 control ID，供系统无障碍代理识别；实际 UIA 树和支持的 Pattern 由 Windows / VCL 代理决定，本工程没有自定义 UIA Provider。
 
@@ -116,6 +145,10 @@ python .\tools\start_delphi.py --no-launch --compiler-path 'C:\Program Files (x8
 | 员工表格 / 分页栏 / 页码与记录范围 | 3001 / 3002 / 3003 |
 | 首页 / 上一页 / 下一页 / 末页 | 3004 / 3005 / 3006 / 3007 |
 | 5 个页码槽位（从左到右，显示数字和跳转目标随当前页更新） | 3101–3105 |
+| `TStringGrid` / 恢复 / 状态 | 6010 / 6011 / 6003 |
+| `TDBGrid` / 筛选输入 / 恢复 / 导航器 / 状态 | 6110 / 6111 / 6112 / 6113 / 6103 |
+| `TVirtualStringTree` / 全部展开 / 全部折叠 / 恢复 / 状态 | 6210 / 6211 / 6212 / 6213 / 6203 |
+| DevExpress 可选页 / 表格或依赖说明 / 状态 | 6300、6400 / 6310、6410 / 6303、6403 |
 
 2026-10-15 本机验证：Delphi 2010 的 Release / Debug、Delphi 10.3 的 Debug 编译通过；
 Windows 桌面实际检查了主窗口、MDI / 表单 UIA ID、输入与重置、顶部菜单和动态菜单、表格页，以及拖拽、销毁和重建目标。
@@ -127,3 +160,7 @@ Windows 桌面实际检查了主窗口、MDI / 表单 UIA ID、输入与重置�
 每页 100 条版本已在实际 Release 程序中验证：第一页读取到连续且唯一的 ID 1–100，第二页显示范围 101–200，末页显示范围 901–1000，并确认第 1000 条记录的 7 列字段齐全；总数为 1000，首尾翻页按钮禁用状态正确。
 表单分组已通过实际 UIA 树检查：10 个具名 Pane 的直接子节点均精确匹配各自的标签和控件；
 城市与兴趣复选框可分别勾选，性别单选、年龄微调以及保存成功模态提示已实测。
+
+2026-10-19 新增复杂控件构建验证：Delphi 2010 的 Release / Debug、Delphi 10.3 的 Debug 均编译通过。
+Release 程序启动成功，已检查新增页签、DevExpress 待接入说明、TStringGrid 布局及其原生单元格编辑器。
+界面自动化被用户按 Esc 停止，TStringGrid 编辑提交 / 恢复、TDBGrid 筛选 / 编辑以及虚拟树展开 / 勾选的实际交互验收尚未完成。
