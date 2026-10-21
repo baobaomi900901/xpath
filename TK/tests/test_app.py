@@ -44,6 +44,41 @@ class AppTests(unittest.TestCase):
         self.assertTrue(form.password_entry.cget("show"))
         self.assertEqual("readonly", str(form.city_combo.cget("state")))
 
+    def test_advanced_controls_keep_duplicate_items_and_nested_nodes(self):
+        page = self.app.widgets
+        self.select(page)
+        self.assertEqual(2, page.listbox.get(0, "end").count("重复项"))
+        self.assertEqual(("grandchild",), page.tree.get_children("child"))
+        self.assertFalse(self.root.getboolean(page.tree.item("child", "open")))
+        self.assertEqual("hidden", str(page.tabs.tab(page.tabs.tabs()[-1], "state")))
+        self.assertEqual("hidden", page.canvas.itemcget("hidden", "state"))
+        self.assertEqual("readonly", str(page.readonly.cget("state")))
+        self.assertEqual("disabled", str(page.disabled.cget("state")))
+        self.assertEqual(30, page.scale.get())
+        self.assertEqual(60, page.progress.cget("value"))
+
+    def test_independent_menu_callbacks_report_real_results(self):
+        page = self.app.semantics
+        self.select(page)
+        page.context_menu.invoke(0)
+        self.assertEqual("已执行右键命令", page.status.get())
+        page.context_menu.children["nested"].invoke(0)
+        self.assertEqual("已执行二级命令", page.status.get())
+        for name, label in (("classic", "经典菜单"), ("themed", "主题菜单")):
+            menu = page.children["menus"].children[name].children["menu"]
+            menu.invoke(0)
+            self.assertEqual("已执行" + label, page.status.get())
+            self.assertEqual("disabled", menu.entrycget(1, "state"))
+
+    def test_text_tags_have_click_bindings_ranges_and_hidden_content(self):
+        page = self.app.semantics
+        self.select(page)
+        self.assertEqual(4, len(page.text.tag_ranges("repeated")))
+        self.assertTrue(self.root.getboolean(page.text.tag_cget("hidden", "elide")))
+        self.assertTrue(page.text.tk.call(str(page.text), "tag", "bind", "first_link", "<Button-1>"))
+        self.assertFalse(page.text.tk.call(str(page.text), "tag", "bind", "style", "<Button-1>"))
+        self.assertEqual("第一个链接", page.text.get("first_link.first", "first_link.last"))
+
     def test_save_opens_modal_success_message(self):
         with patch("TK.form_page.messagebox.showinfo") as showinfo:
             self.app.form.save_button.invoke()
