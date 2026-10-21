@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, ExtCtrls, ComCtrls, Menus, Clipbrd, CommCtrl;
+  StdCtrls, ExtCtrls, ComCtrls, Menus, Clipbrd, CommCtrl, ComplexControls;
 
 const
   EMPLOYEE_PAGE_SIZE = 100;
@@ -37,6 +37,7 @@ type
   private
     FLayoutPanel: TLayoutPanel;
     FPageControl: TPageControl;
+    FComplexControls: TComplexControlPages;
     FFormTab: TTabSheet;
     FTableTab: TTabSheet;
     FDragTab: TTabSheet;
@@ -350,6 +351,7 @@ begin
   FPageControl := TPageControl.Create(FLayoutPanel);
   FPageControl.Parent := FLayoutPanel;
   FPageControl.Align := alClient;
+  FPageControl.MultiLine := True;
   FPageControl.OnChange := FormTabChanged;
   SetAutomationId(FPageControl, ID_PAGE_CONTROL);
 
@@ -369,6 +371,7 @@ begin
   BuildFormPage;
   BuildTablePage;
   BuildDragPage;
+  FComplexControls := TComplexControlPages.Create(Self, FPageControl);
   FPageControl.ActivePage := FFormTab;
   OnResize := LayoutControls;
   LayoutControls(Self);

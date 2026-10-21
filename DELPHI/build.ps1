@@ -1,7 +1,8 @@
 param(
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Release",
-    [string]$CompilerPath = $env:DELPHI_DCC32
+    [string]$CompilerPath = $env:DELPHI_DCC32,
+    [string[]]$DevExpressPaths = @($env:DELPHI_DEVEXPRESS_PATHS -split ';' | Where-Object { $_ })
 )
 
 $ErrorActionPreference = "Stop"
@@ -47,12 +48,34 @@ $compilerArguments = @(
     '-B', '-Q', '-CG', '--no-config', '--codepage:65001',
     "-E$buildDir"
 )
+$unitPaths = @(Join-Path $PSScriptRoot 'vendor\VirtualTreeView')
+if ($DevExpressPaths.Count -gt 0) {
+    foreach ($unitPath in $DevExpressPaths) {
+        if (-not (Test-Path -LiteralPath $unitPath -PathType Container)) {
+            throw "DevExpress library directory not found: $unitPath"
+        }
+        $unitPaths += (Resolve-Path -LiteralPath $unitPath).Path
+    }
+    foreach ($unitName in @('cxGrid', 'cxTL')) {
+        $found = $false
+        foreach ($unitPath in $unitPaths) {
+            if ((Test-Path -LiteralPath (Join-Path $unitPath "$unitName.pas")) -or
+                (Test-Path -LiteralPath (Join-Path $unitPath "$unitName.dcu"))) { $found = $true }
+        }
+        if (-not $found) { throw "DevExpress unit $unitName.pas/.dcu not found in -DevExpressPaths." }
+    }
+    $compilerArguments += '-DWITH_DEVEXPRESS'
+    Write-Host 'DevExpress: enabled (matching static-link VCL libraries required).'
+} else {
+    Write-Host 'DevExpress: unavailable; TcxGrid/TcxTreeList pages will show dependency notices.'
+}
+$compilerArguments += @("-I$($unitPaths -join ';')", "-R$($unitPaths -join ';')")
 $legacyLibrary = Join-Path $delphiRoot 'lib'
 $modernLibrary = Join-Path $delphiRoot 'lib\win32\release'
 if (Test-Path -LiteralPath (Join-Path $legacyLibrary 'Forms.dcu')) {
-    $compilerArguments += @("-U$legacyLibrary", "-N0$dcuDir")
+    $compilerArguments += @("-U$((@($legacyLibrary) + $unitPaths) -join ';')", "-N0$dcuDir")
 } elseif (Test-Path -LiteralPath (Join-Path $modernLibrary 'Vcl.Forms.dcu')) {
-    $compilerArguments += @("-U$modernLibrary", "-NU$dcuDir", '-NSSystem;Winapi;Vcl;System.Win;Vcl.Win')
+    $compilerArguments += @("-U$((@($modernLibrary) + $unitPaths) -join ';')", "-NU$dcuDir", '-NSSystem;Winapi;Vcl;Data;Datasnap;System.Win;Vcl.Win')
 } else {
     throw "VCL Win32 libraries not found under $delphiRoot"
 }

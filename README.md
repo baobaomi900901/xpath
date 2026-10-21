@@ -411,6 +411,7 @@ python .\tools\start_delphi.py --configuration Debug
 PowerShell 入口为 `.\DELPHI\build.ps1` / `.\DELPHI\run.ps1`。
 Release 产物为 `DELPHI/build/Release/Win32VclShootingRange.exe`，运行已有 EXE 无需 Delphi。
 包含 MDI 层级、每个表单 item 的独立具名 Pane、原生菜单、10 页表格（共 1000 条，每页 100 条，5 个动态页码）和拖拽测试，构建参数与验收方式见 [DELPHI/README.md](DELPHI/README.md)。
+新增原生 `TStringGrid`、`TDBGrid` 和真实 `TVirtualStringTree` 复杂控件测试页；`TcxGrid` / `TcxTreeList` 的可选构建需要匹配的 DevExpress VCL 库，默认 EXE 的这两个页签显示待接入说明。
 
 ### POWERBUILDER — PowerBuilder 桌面靶场
 
