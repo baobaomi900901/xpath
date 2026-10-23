@@ -19,9 +19,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="构建并启动 Delphi VCL GUI 自动化靶场。")
     parser.add_argument("--configuration", choices=("Debug", "Release"), default="Release")
     parser.add_argument("--compiler-path", help="dcc32.exe 完整路径；默认优先使用 Delphi 2010。")
+    parser.add_argument("--devexpress-trial-library", default=os.environ.get("DELPHI_DEVEXPRESS_TRIAL_LIBRARY"),
+                        help="Delphi 11 DevExpress 试用版 Library/RS28 目录，仅用于本机评估。")
     parser.add_argument("--skip-build", action="store_true", help="使用已有 EXE，无需 Delphi 编译器。")
     parser.add_argument("--no-launch", action="store_true", help="仅构建或检查产物，不打开窗口。")
     args = parser.parse_args()
+    if args.devexpress_trial_library:
+        args.devexpress_trial_library = str(Path(args.devexpress_trial_library).expanduser().resolve())
     if os.name != "nt":
         raise RuntimeError("Delphi VCL 靶场只能在 Windows 上运行。")
     if not args.skip_build:
@@ -34,8 +38,12 @@ def main() -> int:
         ]
         if args.compiler_path:
             command.extend(["-CompilerPath", args.compiler_path])
+        if args.devexpress_trial_library:
+            command.extend(["-DevExpressTrialLibrary", args.devexpress_trial_library])
         subprocess.run(command, cwd=DELPHI_ROOT, check=True)
     executable = DELPHI_ROOT / "build" / args.configuration / "Win32VclShootingRange.exe"
+    if args.devexpress_trial_library:
+        executable = DELPHI_ROOT / "build" / "DevExpressTrial" / args.configuration / "Win32VclShootingRange.exe"
     if not executable.is_file():
         raise FileNotFoundError(f"程序不存在：{executable}。请先构建。")
     if args.no_launch:

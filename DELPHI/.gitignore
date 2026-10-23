@@ -2,6 +2,11 @@
 !/build/Release/
 /build/Release/*
 !/build/Release/Win32VclShootingRange.exe
+!/build/DevExpressTrial/
+/build/DevExpressTrial/*
+!/build/DevExpressTrial/Release/
+/build/DevExpressTrial/Release/*
+!/build/DevExpressTrial/Release/Win32VclShootingRange.exe
 *.dcu
 *.dproj.local
 *.identcache
