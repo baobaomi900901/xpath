@@ -1,0 +1,18 @@
+{
+  "5.15.2": {
+    "major": 5,
+    "arch": "win64_mingw81",
+    "kit": "mingw81_64",
+    "tool": "tools_mingw",
+    "tool_package": "qt.tools.win64_mingw810",
+    "compiler": "mingw810_64"
+  },
+  "6.8.3": {
+    "major": 6,
+    "arch": "win64_mingw",
+    "kit": "mingw_64",
+    "tool": "tools_mingw1310",
+    "tool_package": "qt.tools.win64_mingw1310",
+    "compiler": "mingw1310_64"
+  }
+}

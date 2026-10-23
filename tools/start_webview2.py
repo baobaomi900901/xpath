@@ -20,6 +20,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="构建并启动 WebView2 浏览器套壳靶场。")
     parser.add_argument("--configuration", choices=("Debug", "Release"), default="Release")
     parser.add_argument("--no-launch", action="store_true", help="仅构建并验证产物，不打开窗口。")
+    # Compatibility only: CDP configuration is ignored and never forwarded.
+    parser.add_argument("--remote-debugging-port", nargs="?", help=argparse.SUPPRESS)
+    parser.add_argument("--remote-debugging-address", nargs="?", help=argparse.SUPPRESS)
+    parser.add_argument("--remote-debugging-pipe", nargs="?", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if os.name != "nt":
         raise RuntimeError("WebView2 靶场只能在 Windows 上运行。")

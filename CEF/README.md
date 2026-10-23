@@ -51,9 +51,10 @@ python .\tools\start_cef.py --versions 109 125 128 133 154 --skip-build
 | `--no-launch` | 只构建/验证，不打开窗口；可与 `--skip-build` 组合 |
 | `--force-build` | 清理后重新编译；与 `--skip-build` 互斥 |
 | `--base-url http://localhost:7199/` | 切换为本地 WEB 路由 |
-| `--remote-debugging-port 9222` | 显式开启 CDP 调试；仅允许单版本，端口范围 1024–65535 |
 
 多版本模式先准备全部产物，再启动各窗口。标题显示 CEF 主版本和完整 Chromium 版本。
+
+宿主在初始化 CEF 前禁用 Chromium 命令行配置，CDP 端口保持关闭。直接给 EXE 添加 `--remote-debugging-port`、`--remote-debugging-pipe` 等参数也不会开启调试通道，窗口仍正常启动。Python 启动器兼容并忽略旧调试参数，不再转发给宿主；`--base-url` 仍独立解析并生效。
 
 构建或启动前自动清理当前仓库 `dist/<版本>/` 下所选版本的旧进程，并等待退出，避免旧进程占用 EXE / DLL 导致构建复制失败。清理包含使用同一 EXE 的渲染器、GPU 等 CEF 子进程，也会关闭所选版本已打开的窗口；未选中版本和其他目录的同名程序不受影响。清理失败或等待超过 10 秒时会报错并停止后续构建/启动。
 
@@ -133,34 +134,23 @@ python .\tools\start_cef.py --versions 109 125 128 133 154 --no-launch
 python -m unittest tools.test_start_cef tools.test_cef_processes -v
 ```
 
-实际五版本程序验收使用 Node.js 22+ 的内置 WebSocket，无需额外 npm 包。先启动本地 WEB，再运行：
+实际五版本程序验收使用 Python 标准库与 Windows 原生 API，直接启动 EXE 并使用内置线上地址：
 
 ```powershell
-node .\CEF\verify\verify-flow.mjs
-node .\CEF\verify\verify-flow.mjs 109 154
+python .\tools\verify_no_cdp.py --kind cef --output .\CEF\verify\artifacts\no-cdp-results.json
+python .\tools\verify_no_cdp.py --kind cef --versions 109 154
+node .\tools\verify_cdp_pipe.mjs --kind cef
 ```
 
-默认连接 `http://localhost:7199/`。验收检查实际 Chromium 版本、原生菜单与路由、可信点击、表单输入、iframe 内 Shadow DOM 表单、尺寸同步、刷新、渲染器无障碍树、弹窗阻止和正常退出。CDP 无障碍检查证明渲染器 AX 可用；原生 UIA 的完整表现可继续用项目现有的 UIA 工具比较。
+验收覆盖普通启动、端口参数的等号及分离形式、重复端口参数、端口 0 和 pipe 参数。检查进程存活、原生窗口及浏览器子窗口、刷新按钮可用、没有 TCP 监听，pipe 场景提供可继承的真实管道并检查没有 CDP 响应。验收程序只关闭自己创建的靶场进程。原 `node .\CEF\verify\verify-flow.mjs [版本...]` 命令保留为兼容入口，转调同一 Python 验收。
 
-截图和结果写入 `verify/artifacts/`。验收程序只控制自己创建的靶场进程，结束时关闭它们。
+发布产物不再提供 CDP，因此旧验收中的 DOM、可信点击、表单、iframe/Shadow DOM、渲染器 AX 和弹窗深度检查已经撤除，不能将下面的历史结果视为当前产物的覆盖范围。原生 UIA 与页面交互需要另行验收。
+
+Node 命令补充检查 fd 3/4 管道无响应。CEF 未构建对应的未禁用管道阳性对照，因此此结果仅作为源码策略、窗口与端口验收之外的补充证据。
 
 2026-09-28 验证结果：29 项 CEF 启动器测试通过；五个版本在本地 WEB 和内置线上默认地址下各通过 45 项实际验收，共 90 项。统一命令同时创建五个版本窗口的检查也通过。结果分别保存为 `results.json` 和 `results-hosted.json`。
 
 2026-09-29 自动清理验收：47 项启动器测试和 18 项进程清理测试通过。已用实际残留的 133 进程复现 DLL 占用，清理后重建成功；实际重启 133 时，旧主进程与 worker 退出、新窗口正常打开，未选中 109 和其他目录的同名程序保持运行。`--skip-build --no-launch` 保留全部旧进程。另覆盖了 Windows 在 worker 退出途中返回拒绝访问、稍后才完成退出的竞态。
-
-直接验证 EXE 内置的线上默认地址：
-
-```powershell
-$env:XPATH_CEF_DEFAULT = '1'
-node .\CEF\verify\verify-flow.mjs
-Remove-Item Env:XPATH_CEF_DEFAULT
-```
-
-也可以用 `XPATH_CEF_BASE` 指定其他 WEB 部署地址。需要手动接入 CDP 时：
-
-```powershell
-python .\tools\start_cef.py --version 154 --skip-build --remote-debugging-port 9222
-```
 
 ## 排查
 

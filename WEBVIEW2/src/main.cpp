@@ -3,6 +3,7 @@
 #include <shlobj.h>
 #include <wrl.h>
 #include <WebView2.h>
+#include "startup_policy.h"
 
 #include <algorithm>
 #include <array>
@@ -120,7 +121,7 @@ public:
         SetStatus(L"正在初始化 WebView2…");
         SetWindowTextW(placeholder_, L"正在初始化 WebView2…");
         ShowWindow(placeholder_, SW_SHOW);
-        // The official environment-variable overrides are available for verification.
+        // Startup policy fixes browser arguments before the loader is called.
         PWSTR localAppData = nullptr;
         HRESULT hr = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &localAppData);
         if (FAILED(hr)) { FailInitialization(L"无法读取用户数据目录", hr); return; }
@@ -377,6 +378,12 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
 } // namespace
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
+    if (!startup_policy::DisableRemoteDebugging()) {
+        MessageBoxW(nullptr, L"无法应用浏览器启动配置。", L"WebView2 浏览器靶场", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    int forwardedExitCode = 0;
+    if (startup_policy::RunWithoutArguments(showCommand, forwardedExitCode)) return forwardedExitCode;
     const HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (FAILED(hr)) {
         MessageBoxW(nullptr, (L"COM 初始化失败：" + ErrorCode(hr)).c_str(), L"WebView2 浏览器靶场", MB_OK | MB_ICONERROR);

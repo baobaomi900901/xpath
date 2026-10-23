@@ -148,16 +148,6 @@ def validate_base_url(value: str) -> str:
     return value
 
 
-def debugging_port(value: str) -> int:
-    try:
-        port = int(value)
-    except ValueError:
-        raise argparse.ArgumentTypeError("调试端口必须是 1024..65535 的整数。") from None
-    if not 1024 <= port <= 65535:
-        raise argparse.ArgumentTypeError("调试端口必须位于 1024..65535。")
-    return port
-
-
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="下载、构建并启动 Windows x64 CEF 多版本靶场。",
@@ -172,13 +162,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--no-launch", action="store_true", help="准备和验证全部产物后退出。")
     parser.add_argument("--base-url", type=validate_base_url, default=DEFAULT_BASE_URL,
                         help="WEB 路由根地址，可使用本地 BrowserRouter 或以 #/ 结尾的 HashRouter。")
-    parser.add_argument("--remote-debugging-port", type=debugging_port,
-                        help="单版本调试端口（1024..65535）。")
+    # Retain old invocations without forwarding any Chromium debugging options.
+    for name in ("--remote-debugging-port", "--remote-debugging-address", "--remote-debugging-pipe"):
+        parser.add_argument(name, nargs="?", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     requested = args.versions or ([args.version] if args.version else None)
     args.versions = normalize_versions(requested) if requested else None
-    if args.remote_debugging_port is not None and args.versions is not None and len(args.versions) != 1:
-        parser.error("--remote-debugging-port 只能与单个版本一起使用。")
     return args
 
 
@@ -468,14 +457,12 @@ def build_version(version: str, entry: dict, force: bool = False) -> Path:
     return executable
 
 
-def launch_versions(versions: list[str], executables: dict[str, Path], base_url: str, port: int | None) -> None:
+def launch_versions(versions: list[str], executables: dict[str, Path], base_url: str) -> None:
     launched: list[tuple[str, subprocess.Popen]] = []
     try:
         for version in versions:
             executable = executables[version]
             command = [str(executable), f"--base-url={base_url}"]
-            if port is not None:
-                command.append(f"--remote-debugging-port={port}")
             process = subprocess.Popen(command, cwd=executable.parent, close_fds=True)
             launched.append((version, process))
             time.sleep(0.2)
@@ -493,8 +480,6 @@ def main(argv: list[str] | None = None) -> int:
     if not versions:
         print("已取消。")
         return 0
-    if args.remote_debugging_port is not None and len(versions) != 1:
-        raise ValueError("--remote-debugging-port 只能与单个版本一起使用。")
     manifest = load_manifest()
     if not (args.skip_build and args.no_launch):
         cleanup_existing_processes(versions)
@@ -506,7 +491,7 @@ def main(argv: list[str] | None = None) -> int:
         for version in versions:
             print(f"已验证 CEF {version}: {executables[version]}")
         return 0
-    launch_versions(versions, executables, args.base_url, args.remote_debugging_port)
+    launch_versions(versions, executables, args.base_url)
     return 0
 
 

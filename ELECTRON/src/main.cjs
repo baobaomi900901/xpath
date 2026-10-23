@@ -1,5 +1,9 @@
 'use strict';
 const { app, BrowserWindow, BrowserView, WebContentsView, ipcMain, Menu, dialog } = require('electron');
+// Remove Chromium's startup switches before app readiness starts a CDP transport.
+app.commandLine.removeSwitch('remote-debugging-port');
+app.commandLine.removeSwitch('remote-debugging-pipe');
+app.commandLine.removeSwitch('remote-debugging-address');
 const fs = require('node:fs');
 const path = require('node:path');
 const { randomBytes } = require('node:crypto');
@@ -21,10 +25,6 @@ try {
 }
 
 if (options) {
-  if (options.debuggingPort) {
-    app.commandLine.appendSwitch('remote-debugging-address', '127.0.0.1');
-    app.commandLine.appendSwitch('remote-debugging-port', String(options.debuggingPort));
-  }
   const exeDirectory = path.dirname(process.execPath);
   const rangeRoot = path.basename(path.dirname(exeDirectory)) === 'dist' ? path.resolve(exeDirectory, '../..') : exeDirectory;
   const profile = path.join(rangeRoot, '.cache', 'profiles', String(runtime.major), `${process.pid}-${randomBytes(6).toString('hex')}`);

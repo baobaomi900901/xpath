@@ -1,4 +1,7 @@
 build/
+dist/
+.tools/
+verify/artifacts/
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake

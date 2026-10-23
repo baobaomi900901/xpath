@@ -94,16 +94,37 @@ class LauncherTests(unittest.TestCase):
 
     def test_invalid_cli_fails_before_any_work(self) -> None:
         cases = (["--version", "23"], ["--version", "22", "--versions", "29"],
-                 ["--skip-build", "--force-build"], ["--remote-debugging-port", "1023"],
-                 ["--remote-debugging-port", "65536"], ["--remote-debugging-port", "abc"],
-                 ["--remote-debugging-port", "+9222"], ["--remote-debugging-port", " 9222"],
-                 ["--remote-debugging-port", "9_222"],
-                 ["--versions", "22", "29", "--remote-debugging-port", "9222"])
+                 ["--skip-build", "--force-build"])
         for arguments in cases:
             with self.subTest(arguments=arguments), redirect_stderr(io.StringIO()):
                 with self.assertRaises(SystemExit) as error:
                     start_electron.parse_args(arguments)
                 self.assertEqual(2, error.exception.code)
+
+    def test_legacy_debugging_arguments_are_silently_ignored_for_multiple_versions(self) -> None:
+        cases = (["--remote-debugging-port", value] for value in
+                 ("9222", "0", "1023", "65536", "abc", "+9222", " 9222", "9_222", "-1"))
+        cases = [*cases, ["--remote-debugging-port"], ["--remote-debugging-port="],
+                 ["--remote-debugging-port=9222", "--remote-debugging-port", "bad"],
+                 ["--remote-debugging-address", "0.0.0.0"], ["--remote-debugging-address"],
+                 ["--remote-debugging-address=", "--remote-debugging-address", "bad address"],
+                 ["--remote-debugging-pipe"], ["--remote-debugging-pipe=bad", "--remote-debugging-pipe"],
+                 ["--remote-debugging-port", "--remote-debugging-address", "--remote-debugging-pipe"]]
+        for arguments in cases:
+            output = io.StringIO()
+            with self.subTest(arguments=arguments), redirect_stdout(output), redirect_stderr(output):
+                args = start_electron.parse_args(["--versions", "22", "29", *arguments,
+                                                  "--base-url", "http://localhost:7199/"])
+                self.assertEqual(["22", "29"], args.versions)
+                self.assertEqual("http://localhost:7199/", args.base_url)
+                self.assertEqual("", output.getvalue())
+
+    def test_help_does_not_advertise_debugging_arguments(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output), self.assertRaises(SystemExit) as error:
+            start_electron.parse_args(["--help"])
+        self.assertEqual(0, error.exception.code)
+        self.assertNotIn("remote-debugging", output.getvalue())
 
     def test_base_url_accepts_router_roots_and_rejects_malformed_values(self) -> None:
         for url in ("http://localhost:7199/", "https://example.com/xpath/#/"):
@@ -361,7 +382,7 @@ class LauncherTests(unittest.TestCase):
             start_electron.build_version("22", ENTRY)
         self.assertEqual([], list(outside.iterdir()))
 
-    def test_launch_passes_loopback_arguments_and_removes_node_mode_from_environment(self) -> None:
+    def test_launch_omits_debugging_arguments_and_removes_node_mode_from_environment(self) -> None:
         executable = self.root / "dist/22/electron-shooting-range-22.exe"
         process = subprocess.CompletedProcess([], 0)
         process.pid = 123
@@ -369,9 +390,11 @@ class LauncherTests(unittest.TestCase):
         with patch.dict(os.environ, {"ELECTRON_RUN_AS_NODE": "1"}):
             with patch.object(start_electron.subprocess, "Popen", return_value=process) as launch:
                 with redirect_stdout(io.StringIO()):
-                    start_electron.launch_versions(["22"], {"22": executable}, "http://localhost:7199/", 9222)
-        self.assertEqual([str(executable), "--base-url=http://localhost:7199/", "--remote-debugging-port=9222",
-                          "--remote-debugging-address=127.0.0.1"], launch.call_args.args[0])
+                    with patch.object(start_electron, "validate_artifact", return_value=executable):
+                        start_electron.main(["--version", "22", "--skip-build", "--base-url", "http://localhost:7199/",
+                                             "--remote-debugging-port=9222", "--remote-debugging-address=0.0.0.0",
+                                             "--remote-debugging-pipe"])
+        self.assertEqual([str(executable), "--base-url=http://localhost:7199/"], launch.call_args.args[0])
         self.assertEqual(executable.parent, launch.call_args.kwargs["cwd"])
         self.assertNotIn("ELECTRON_RUN_AS_NODE", launch.call_args.kwargs["env"])
 
@@ -383,7 +406,7 @@ class LauncherTests(unittest.TestCase):
         with patch.object(start_electron.subprocess, "Popen", side_effect=[process, OSError("launch denied")]):
             with redirect_stdout(io.StringIO()), self.assertRaisesRegex(RuntimeError, "321"):
                 start_electron.launch_versions(["22", "29"], {"22": Path('22.exe'), "29": Path('29.exe')},
-                                               "https://example.com/#/", None)
+                                               "https://example.com/#/")
 
     def test_main_builds_all_versions_before_launch(self) -> None:
         events = []
@@ -423,11 +446,13 @@ class SelectorTests(unittest.TestCase):
             with patch.object(start_electron, "load_manifest", side_effect=AssertionError("manifest")):
                 self.assertEqual(0, start_electron.main([]))
 
-    def test_interactive_multiple_versions_reject_shared_debug_port(self) -> None:
+    def test_interactive_multiple_versions_ignore_legacy_debugging_arguments(self) -> None:
         with patch.object(start_electron, "select_versions", return_value=["22", "29"]):
-            with patch.object(start_electron, "load_manifest", side_effect=AssertionError("manifest")):
-                with self.assertRaisesRegex(ValueError, "单个版本"):
-                    start_electron.main(["--remote-debugging-port", "9222"])
+            with patch.object(start_electron, "build_version", side_effect=lambda version, *args: Path(version + ".exe")):
+                with patch.object(start_electron, "launch_versions") as launch:
+                    self.assertEqual(0, start_electron.main(["--remote-debugging-port", "9222"]))
+        launch.assert_called_once_with(["22", "29"], {"22": Path("22.exe"), "29": Path("29.exe")},
+                                       start_electron.DEFAULT_BASE_URL)
 
     def test_noninteractive_input_requires_explicit_versions(self) -> None:
         with patch.object(start_electron.sys.stdin, "isatty", return_value=False):

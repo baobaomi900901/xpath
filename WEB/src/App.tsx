@@ -18,6 +18,8 @@ import KeysClickTestPage from './pages/KeysClickTestPage';
 import DragToTestPage from './pages/DragToTestPage';
 import CookieTestPage from './pages/CookieTestPage';
 import CanvasTestPage from './pages/CanvasTestPage';
+import LoginTestPage from './pages/LoginTestPage';
+import RegistrationPage, { RegistrationFormContent } from './pages/RegistrationPage';
 
 export default function App() {
   const Router = import.meta.env.VITE_GITHUB_PAGES === 'true' ? HashRouter : BrowserRouter;
@@ -25,6 +27,9 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/login-test" element={<LoginTestPage />} />
+        <Route path="/registration-test" element={<RegistrationPage />} />
+        <Route path="/registration-form-content" element={<RegistrationFormContent />} />
         <Route path="/anchor-test" element={<AnchorTestPage />} />
         <Route path="/form-controls" element={<FormControlsPage />} />
         <Route path="/geometry-test" element={<GeometryTestPage />} />

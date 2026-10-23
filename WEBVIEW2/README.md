@@ -20,7 +20,7 @@ Windows x64 桌面程序，左侧为标准 Win32 菜单，右侧为真实 Micros
 - 构建：Visual Studio 2019+ 的“使用 C++ 的桌面开发”工作负载和 Windows SDK。CMake 最低版本按 VS 区分：VS2019 为 3.20+、VS2022 为 3.21+、VS2026 为 4.2+。脚本会检查 PATH 中的 CMake 是否支持对应生成器，不满足时尝试 Visual Studio 自带版本。
 - 运行：[Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)。只有 Edge 浏览器并不代表已安装 Runtime。
 - Python 3.8+：仅使用 `tools/start_webview2.py` 时需要。
-- Node.js 22+：仅运行验收脚本时需要。
+- Python 3.8+：运行禁用 CDP 的验收脚本时需要。
 - 网络能够访问三个 GitHub Pages 页面；首次构建还需要访问 `api.nuget.org`。
 
 SDK 固定为 `Microsoft.Web.WebView2 1.0.4191.47`，首次构建由 `build.ps1` 下载官方 NuGet 包、校验 SHA256 并解压到 `.tools/`，后续复用缓存。Loader 静态链接到 EXE。
@@ -67,26 +67,21 @@ Release 产物：`WEBVIEW2/build/Release/webview2-shooting-range.exe`。已装�
 
 WebView2 子树由运行时提供无障碍信息，页面的 DOM、iframe 和 Shadow DOM 由原有 WEB 页面定义。可以使用 Inspect 或自己的自动化工具观察原生菜单与浏览器内容在同一个桌面窗口下的结构。
 
-## 验收
+## 禁用 CDP 与验收
 
-构建后运行：
+程序忽略外部启动参数并正常打开窗口，包括 `--remote-debugging-port`、`--remote-debugging-pipe` 及嵌套的 `--edge-webview-switches`。宿主目前没有业务命令行选项；带参数直接启动 EXE 时会创建不带参数的同一程序，原进程等待窗口关闭后返回。
+
+在创建浏览器环境前，程序为自身设置固定的附加浏览器参数（无效端口 `-1`），覆盖外部 `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` 并阻止注册表附加参数回退，同时清除 `WEBVIEW2_WAIT_FOR_SCRIPT_DEBUGGER` 与 `WEBVIEW2_PIPE_FOR_SCRIPT_DEBUGGER`。这些设置仅影响当前进程及子进程，不改系统环境变量或注册表。端口 `0` 表示申请动态端口，不能用于禁用 CDP。
+
+构建后从仓库根目录运行：
 
 ```powershell
-node .\WEBVIEW2\verify\verify-flow.mjs
+python .\tools\verify_no_cdp.py --kind webview2 --output WEBVIEW2/verify/artifacts/no-cdp-results.json
 ```
 
-验收会启动一个独立测试实例，通过 Win32 消息操作实际菜单和刷新按钮，通过本机 CDP 检查实际 WebView2 页面：
+验收覆盖正常启动、端口等号/分离/重复形式、动态端口、pipe、环境变量及嵌套参数。检查实际窗口和浏览器初始化状态，并检查整个测试进程树的 IPv4/IPv6 TCP 监听；仅关闭测试自己启动的实例。需要可运行桌面程序的 Windows 会话。
 
-1. 默认点击测试页面及三个菜单文案。
-2. 点击页面按钮并确认交互日志。
-3. 方向键切换菜单并在普通表单输入。
-4. 菜单选择 iframe 页面并在 iframe → Open Shadow DOM 表单输入。
-5. 调整窗口大小、最小化及恢复。
-6. 原生刷新按钮重载当前页面。
-7. 模拟断网时显示加载失败，恢复网络后刷新恢复页面。
-8. 原生关闭窗口，宿主进程正常退出。
-
-验收无需安装 npm 包；使用 Node.js 自带 WebSocket。结果和页面截图保存在 `verify/artifacts/`，该目录已 gitignore。测试实例使用独立用户数据目录，调试端口只在验收启动时设置；正常启动不会主动开启远程调试。
+`node .\WEBVIEW2\verify\verify-flow.mjs` 保留为调用新 Python 验收的兼容入口。旧 CDP 网页输入、截图和网络模拟验收已移除；当前结果不代表这些页面内部交互已重新验证。页面与 UIA 功能仍可使用独立的原生自动化工具检查。
 
 ## 故障排查
 
@@ -94,6 +89,6 @@ node .\WEBVIEW2\verify\verify-flow.mjs
 - **页面加载失败**：确认网络或代理能访问 GitHub Pages，恢复后点“刷新”。错误状态中包含 WebView2 的 `WebErrorStatus`。
 - **SDK 下载失败**：检查 `api.nuget.org` 的访问与代理配置，重新运行构建脚本；无需重新安装 Visual Studio。
 - **浏览器进程退出**：底部提示后点“刷新”重新创建 WebView2。
-- **验收连接失败**：运行环境需允许启动 WebView2 子进程及访问本机调试端口，限制网络的沙箱可能阻止这些操作。
+- **验收启动失败**：运行环境需允许显示桌面窗口及启动 WebView2 子进程；受限沙箱可能阻止浏览器初始化。CDP 端口不可连接是预期行为。
 
 源码基于微软的 [Win32 WebView2 接入方式](https://learn.microsoft.com/en-us/microsoft-edge/webview2/get-started/win32)，运行时分发方式见 [官方文档](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution)。

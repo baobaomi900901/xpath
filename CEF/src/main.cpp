@@ -313,6 +313,9 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR, int showCommand) {
     std::wstring base = command->HasSwitch("base-url") ? command->GetSwitchValue("base-url").ToWString() : kDefaultBase;
     CefSettings settings;
     settings.no_sandbox = true;
+    // Application options were parsed above; never accept Chromium debug switches.
+    settings.command_line_args_disabled = true;
+    settings.remote_debugging_port = 0;
 #if CEF_VERSION_MAJOR >= 125 && CEF_VERSION_MAJOR < 128
     settings.chrome_runtime = true;
 #endif
@@ -332,13 +335,6 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR, int showCommand) {
     CefString(&settings.resources_dir_path) = directory.wstring();
     CefString(&settings.locales_dir_path) = (directory / L"locales").wstring();
     CefString(&settings.locale) = "zh-CN";
-    if (command->HasSwitch("remote-debugging-port")) {
-        const auto value = command->GetSwitchValue("remote-debugging-port").ToWString();
-        wchar_t* end = nullptr;
-        const long port = wcstol(value.c_str(), &end, 10);
-        if (end == value.c_str() || *end || port < 1024 || port > 65535) return 2;
-        settings.remote_debugging_port = static_cast<int>(port);
-    }
     command = nullptr;
     if (!CefInitialize(args, settings, nullptr, nullptr)) {
 #if CEF_VERSION_MAJOR >= 120

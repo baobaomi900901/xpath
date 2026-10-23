@@ -24,21 +24,17 @@ function pageUrl(baseUrl, index) {
 }
 
 function parseOptions(argv) {
-  const options = { baseUrl: DEFAULT_BASE_URL, debuggingPort: null };
+  const options = { baseUrl: DEFAULT_BASE_URL };
   const seen = new Set();
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const name = arg.split('=')[0];
-    if (!['--base-url', '--remote-debugging-port'].includes(name)) continue;
+    if (name !== '--base-url') continue;
     if (seen.has(name)) throw new Error(`重复参数 ${name}`);
     seen.add(name);
     const value = arg.includes('=') ? arg.slice(name.length + 1) : argv[++i];
     if (!value || value.startsWith('--')) throw new Error(`${name} 缺少值`);
-    if (name === '--base-url') options.baseUrl = validateBaseUrl(value);
-    else {
-      if (!/^\d+$/.test(value) || Number(value) < 1024 || Number(value) > 65535) throw new Error('调试端口必须为 1024–65535');
-      options.debuggingPort = Number(value);
-    }
+    options.baseUrl = validateBaseUrl(value);
   }
   return options;
 }

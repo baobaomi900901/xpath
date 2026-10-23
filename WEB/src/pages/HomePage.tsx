@@ -7,6 +7,18 @@ const { Paragraph } = Typography;
 
 const menuItems = [
   {
+    id: 'menu-registration-test',
+    href: '/registration-test',
+    title: '登记',
+    description: 'iframe 内填写转账确认信息，校验共享密钥签名的流水号与金额',
+  },
+  {
+    id: 'menu-login-test',
+    href: '/login-test',
+    title: '登录测试',
+    description: '账号 / 手机验证码登录，网银转账表单随机特征、顺序与嵌套层级',
+  },
+  {
     id: 'menu-stop-load-test',
     href: '/stop-load-test/index.html',
     title: '停止网络加载测试',

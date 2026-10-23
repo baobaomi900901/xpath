@@ -160,15 +160,6 @@ def validate_base_url(value: str) -> str:
     return value
 
 
-def debugging_port(value: str) -> int:
-    if re.fullmatch(r"[0-9]+", value) is None:
-        raise argparse.ArgumentTypeError("调试端口必须是 1024..65535 的整数。") from None
-    port = int(value)
-    if not 1024 <= port <= 65535:
-        raise argparse.ArgumentTypeError("调试端口必须位于 1024..65535。")
-    return port
-
-
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="下载、打包并启动 Windows x64 Electron 多版本靶场。")
     selection = parser.add_mutually_exclusive_group()
@@ -180,13 +171,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--no-launch", action="store_true", help="准备和验证全部产物后退出。")
     parser.add_argument("--base-url", type=validate_base_url, default=DEFAULT_BASE_URL,
                         help="WEB 路由根地址，可使用本地 BrowserRouter 或以 #/ 结尾的 HashRouter。")
-    parser.add_argument("--remote-debugging-port", type=debugging_port,
-                        help="单版本 loopback 调试端口（1024..65535）。")
+    # Keep old launch commands compatible, but never forward debugging switches.
+    for name in ("--remote-debugging-port", "--remote-debugging-address", "--remote-debugging-pipe"):
+        parser.add_argument(name, nargs="?", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     requested = args.versions or ([args.version] if args.version else None)
     args.versions = normalize_versions(requested) if requested else None
-    if args.remote_debugging_port is not None and args.versions is not None and len(args.versions) != 1:
-        parser.error("--remote-debugging-port 只能与单个版本一起使用。")
     return args
 
 
@@ -465,15 +455,13 @@ def build_version(version: str, entry: dict, force: bool = False) -> Path:
     return executable
 
 
-def launch_versions(versions: list[str], executables: dict[str, Path], base_url: str, port: int | None) -> None:
+def launch_versions(versions: list[str], executables: dict[str, Path], base_url: str) -> None:
     launched: list[tuple[str, subprocess.Popen]] = []
     environment = {key: value for key, value in os.environ.items() if key.upper() != "ELECTRON_RUN_AS_NODE"}
     try:
         for version in versions:
             executable = executables[version]
             command = [str(executable), f"--base-url={base_url}"]
-            if port is not None:
-                command.extend((f"--remote-debugging-port={port}", "--remote-debugging-address=127.0.0.1"))
             process = subprocess.Popen(command, cwd=executable.parent, close_fds=True, env=environment)
             launched.append((version, process))
             time.sleep(0.2)
@@ -491,8 +479,6 @@ def main(argv: list[str] | None = None) -> int:
     if not versions:
         print("已取消。")
         return 0
-    if args.remote_debugging_port is not None and len(versions) != 1:
-        raise ValueError("--remote-debugging-port 只能与单个版本一起使用。")
     manifest = load_manifest()
     executables = {}
     for version in versions:
@@ -500,7 +486,7 @@ def main(argv: list[str] | None = None) -> int:
         executables[version] = (validate_artifact(version, entry) if args.skip_build
                                 else build_version(version, entry, args.force_build))
     if not args.no_launch:
-        launch_versions(versions, executables, args.base_url, args.remote_debugging_port)
+        launch_versions(versions, executables, args.base_url)
     return 0
 
 

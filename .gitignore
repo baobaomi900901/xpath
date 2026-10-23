@@ -1,3 +1,4 @@
 .private/
 __pycache__/
 tools/ranges.json.bak
+/artifacts/

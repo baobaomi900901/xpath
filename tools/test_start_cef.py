@@ -80,12 +80,9 @@ class LauncherTests(unittest.TestCase):
         ).versions)
         self.assertEqual(["125"], start_cef.parse_args(["--version", "125"]).versions)
 
-    def test_cli_rejects_invalid_versions_options_and_ports(self) -> None:
+    def test_cli_rejects_invalid_versions_and_options(self) -> None:
         cases = (
             ["--version", "110"], ["--version", "109", "--versions", "125"],
-            ["--remote-debugging-port", "1023"], ["--remote-debugging-port", "65536"],
-            ["--remote-debugging-port", "abc"],
-            ["--versions", "109", "125", "--remote-debugging-port", "9222"],
             ["--skip-build", "--force-build"],
         )
         for args in cases:
@@ -93,6 +90,35 @@ class LauncherTests(unittest.TestCase):
                 with self.assertRaises(SystemExit) as error:
                     start_cef.parse_args(args)
                 self.assertEqual(2, error.exception.code)
+
+    def test_legacy_debugging_arguments_are_ignored_for_multiple_versions(self) -> None:
+        cases = [
+            ["--remote-debugging-port", value]
+            for value in ("9222", "0", "1023", "65536", "abc")
+        ] + [
+            ["--remote-debugging-port"], ["--remote-debugging-port="],
+            ["--remote-debugging-port=9222", "--remote-debugging-port", "bad"],
+            ["--remote-debugging-address", "0.0.0.0"], ["--remote-debugging-address"],
+            ["--remote-debugging-pipe"], ["--remote-debugging-pipe=bad"],
+            ["--remote-debugging-port", "--remote-debugging-address", "--remote-debugging-pipe"],
+        ]
+        for debugging_args in cases:
+            with self.subTest(args=debugging_args), redirect_stderr(io.StringIO()):
+                try:
+                    args = start_cef.parse_args([
+                        "--versions", "109", "125", *debugging_args,
+                        "--base-url", "http://localhost:7199/",
+                    ])
+                except SystemExit as error:
+                    self.fail(f"Legacy debugging arguments must be ignored, not rejected: {error}")
+                self.assertEqual(["109", "125"], args.versions)
+                self.assertEqual("http://localhost:7199/", args.base_url)
+
+    def test_help_does_not_advertise_debugging_arguments(self) -> None:
+        with redirect_stdout(io.StringIO()) as output, self.assertRaises(SystemExit) as error:
+            start_cef.parse_args(["--help"])
+        self.assertEqual(0, error.exception.code)
+        self.assertNotIn("remote-debugging", output.getvalue())
 
     def test_cli_rejects_nonabsolute_credentials_query_and_malformed_urls(self) -> None:
         for url in (
@@ -399,15 +425,21 @@ class LauncherTests(unittest.TestCase):
         self.assertIn("Release", build)
         self.assertIn("cef-shooting-range-109", build)
 
-    def test_launch_passes_arguments_and_uses_matching_dist_directory(self) -> None:
+    def test_launch_omits_debugging_arguments_and_uses_matching_dist_directory(self) -> None:
         executable = write_artifact(self.root, "109", ENTRY)
         process = subprocess.CompletedProcess([], 0)
         process.pid = 123
         process.poll = lambda: None
-        with patch.object(start_cef.subprocess, "Popen", return_value=process) as launch:
-            with redirect_stdout(io.StringIO()):
-                start_cef.launch_versions(["109"], {"109": executable}, "http://localhost:7199/", 9222)
-        self.assertEqual([str(executable), "--base-url=http://localhost:7199/", "--remote-debugging-port=9222"],
+        with (
+            patch.object(start_cef.subprocess, "Popen", return_value=process) as launch,
+            patch.object(start_cef, "validate_artifact", return_value=executable),
+            redirect_stdout(io.StringIO()),
+        ):
+            self.assertEqual(0, start_cef.main([
+                "--version", "109", "--skip-build", "--base-url", "http://localhost:7199/",
+                "--remote-debugging-port=9222",
+            ]))
+        self.assertEqual([str(executable), "--base-url=http://localhost:7199/"],
                          launch.call_args.args[0])
         self.assertEqual(executable.parent, launch.call_args.kwargs["cwd"])
 
@@ -419,7 +451,7 @@ class LauncherTests(unittest.TestCase):
         paths = {version: self.root / version / "range.exe" for version in ("109", "125")}
         with patch.object(start_cef.subprocess, "Popen", side_effect=[process, OSError("launch denied")]):
             with redirect_stdout(io.StringIO()), self.assertRaisesRegex(RuntimeError, "321"):
-                start_cef.launch_versions(["109", "125"], paths, "https://example.com/#/", None)
+                start_cef.launch_versions(["109", "125"], paths, "https://example.com/#/")
 
     def test_launch_detects_a_real_process_that_exited_before_startup_check(self) -> None:
         real_popen = subprocess.Popen
@@ -429,7 +461,7 @@ class LauncherTests(unittest.TestCase):
             process.wait(timeout=10)
             with patch.object(start_cef.subprocess, "Popen", return_value=process), redirect_stdout(io.StringIO()):
                 with self.assertRaisesRegex(RuntimeError, "7"):
-                    start_cef.launch_versions(["109"], {"109": self.root / "range.exe"}, "https://example.com/#/", None)
+                    start_cef.launch_versions(["109"], {"109": self.root / "range.exe"}, "https://example.com/#/")
         finally:
             process.wait(timeout=10)
 
@@ -507,14 +539,15 @@ class VersionSelectorTests(unittest.TestCase):
         build.assert_not_called()
         launch.assert_not_called()
 
-    def test_interactive_multiple_versions_reject_shared_debug_port(self) -> None:
+    def test_interactive_multiple_versions_ignore_legacy_debugging_arguments(self) -> None:
         with (
             patch.object(start_cef, "select_versions", return_value=["109", "125"]),
-            patch.object(start_cef, "load_manifest") as manifest,
+            patch.object(start_cef, "build_version", side_effect=lambda v, e, f: Path(v + '.exe')),
+            patch.object(start_cef, "launch_versions") as launch,
         ):
-            with self.assertRaisesRegex(ValueError, "单个版本"):
-                start_cef.main(["--remote-debugging-port", "9222"])
-        manifest.assert_not_called()
+            self.assertEqual(0, start_cef.main(["--remote-debugging-port", "9222"]))
+        self.assertEqual(["109", "125"], launch.call_args.args[0])
+        self.assertEqual(3, len(launch.call_args.args))
 
     def test_explicit_versions_skip_interactive_menu(self) -> None:
         with (

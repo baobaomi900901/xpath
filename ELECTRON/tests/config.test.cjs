@@ -17,14 +17,34 @@ test('reject ambiguous or unsafe base URLs even when launching EXE directly', ()
   for (const url of ['https://x/', 'http://127.0.0.1:7199/', 'https://x/path/#/']) assert.equal(validateBaseUrl(url), url);
 });
 
-test('direct launch arguments validate base URL and debugging port', () => {
-  assert.deepEqual(parseOptions([]), { baseUrl: DEFAULT_BASE_URL, debuggingPort: null });
-  assert.deepEqual(parseOptions(['--base-url', 'http://localhost:7199/', '--remote-debugging-port=9222']), { baseUrl: 'http://localhost:7199/', debuggingPort: 9222 });
+test('direct launch arguments only configure a validated base URL', () => {
+  assert.deepEqual(parseOptions([]), { baseUrl: DEFAULT_BASE_URL });
+  assert.deepEqual(parseOptions(['--base-url', 'http://localhost:7199/']), { baseUrl: 'http://localhost:7199/' });
   assert.throws(() => parseOptions(['--base-url']));
-  assert.throws(() => parseOptions(['--remote-debugging-port=1023']));
-  assert.throws(() => parseOptions(['--remote-debugging-port=65536']));
-  assert.throws(() => parseOptions(['--remote-debugging-port=9222x']));
   assert.throws(() => parseOptions(['--base-url=https://x/', '--base-url=https://y/']));
+});
+
+test('debugging arguments are ignored even when malformed, missing or repeated', () => {
+  const cases = [
+    ['--remote-debugging-port=9222'],
+    ['--remote-debugging-port', '0'],
+    ['--remote-debugging-port=1023'],
+    ['--remote-debugging-port=65536'],
+    ['--remote-debugging-port=9222x'],
+    ['--remote-debugging-port='],
+    ['--remote-debugging-port'],
+    ['--remote-debugging-port=9222', '--remote-debugging-port', 'bad'],
+    ['--remote-debugging-address=0.0.0.0'],
+    ['--remote-debugging-address', 'bad address', '--remote-debugging-address'],
+    ['--remote-debugging-pipe'],
+    ['--remote-debugging-pipe=bad', '--remote-debugging-pipe'],
+    ['--remote-debugging-port', '--remote-debugging-address', '--remote-debugging-pipe'],
+  ];
+  for (const args of cases) {
+    assert.deepEqual(parseOptions(args), { baseUrl: DEFAULT_BASE_URL }, args.join(' '));
+    assert.deepEqual(parseOptions([...args, '--base-url', 'http://localhost:7199/']),
+      { baseUrl: 'http://localhost:7199/' }, args.join(' '));
+  }
 });
 
 test('independent view occupies CEF content bounds and follows resize', () => {

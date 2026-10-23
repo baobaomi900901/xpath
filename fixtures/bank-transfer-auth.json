@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 3,
+  "algorithm": "HMAC-SHA256",
+  "sharedKey": "xpath-bank-transfer-demo-shared-key-v2-2026",
+  "payloadPrefix": "bank-transfer:v2"
+}

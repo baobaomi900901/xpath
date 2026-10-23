@@ -35,6 +35,31 @@
       ]
     },
     {
+      "id": "qt",
+      "label": "Qt Widgets / QML",
+      "category": "原生桌面",
+      "description": "Qt 5.15.2 / 6.8.3，表单、分页表格、菜单和拖拽；Widgets 支持分组、平铺和随机表单。",
+      "command": ["{python}", "{root}/tools/start_qt.py"],
+      "cwd": ".",
+      "profiles": [
+        {"id": "run", "label": "运行已有产物", "args": ["--skip-build"]},
+        {"id": "build", "label": "构建并启动", "args": []},
+        {"id": "check", "label": "检查产物（不启动）", "args": ["--skip-build", "--no-launch"]},
+        {"id": "test", "label": "自动验收（短暂打开窗口）", "args": ["--skip-build", "--self-test"]}
+      ],
+      "default_profile": "run",
+      "options": [
+        {"id": "versions", "label": "Qt 版本", "type": "multi", "flag": "--versions", "default": ["5.15.2", "6.8.3"], "required": true,
+          "choices": [{"value": "5.15.2", "label": "Qt 5.15.2"}, {"value": "6.8.3", "label": "Qt 6.8.3"}]},
+        {"id": "frontends", "label": "界面类型", "type": "multi", "flag": "--frontends", "default": ["widgets", "quick"], "required": true,
+          "choices": [{"value": "widgets", "label": "Widgets"}, {"value": "quick", "label": "Quick / QML"}, {"value": "profile", "label": "原隐藏节点名片"}]},
+        {"id": "form_mode", "label": "Widgets 表单结构", "type": "choice", "flag": "--form-mode", "default": "grouped", "clearable": false,
+          "choices": [{"value": "grouped", "label": "字段分组"}, {"value": "flat", "label": "无字段分组"}, {"value": "random", "label": "随机顺序与 objectName"}]},
+        {"id": "sdk_root", "label": "Qt SDK 根目录（可留空）", "type": "text", "flag": "--sdk-root", "default": "", "clearable": false, "profiles": ["build"]},
+        {"id": "install_sdk", "label": "自动下载缺少的 SDK（需 aqtinstall）", "type": "bool", "flag": "--install-sdk", "default": false, "profiles": ["build"]}
+      ]
+    },
+    {
       "id": "tk",
       "label": "Tk / ttk",
       "category": "原生桌面",

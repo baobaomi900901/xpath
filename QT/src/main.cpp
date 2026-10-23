@@ -3,6 +3,9 @@
 #include <QQmlApplicationEngine>
 #include <QQmlError>
 #include <QUrl>
+#include <QCommandLineParser>
+#include <QQuickWindow>
+#include <QTimer>
 
 #ifdef Q_OS_WIN
 #  include <windows.h>
@@ -28,12 +31,19 @@ static void showFatal(const QString &message)
 
 int main(int argc, char *argv[])
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+#endif
 
     QGuiApplication app(argc, argv);
     app.setApplicationName(QStringLiteral("AccHiddenProfile"));
     app.setOrganizationName(QStringLiteral("XPathRange"));
     app.setApplicationDisplayName(QStringLiteral("Acc Hidden Profile"));
+    QCommandLineParser parser;
+    parser.addHelpOption();
+    parser.addOption({"smoke-test", "Open the profile briefly and exit"});
+    parser.addOption({"screenshot", "Save profile screenshot", "file"});
+    parser.process(app);
 
     QQmlApplicationEngine engine;
     // Prefer plugins next to the executable (windeployqt output).
@@ -65,5 +75,11 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    if (parser.isSet("smoke-test")) QTimer::singleShot(1000, &app, [&] {
+        auto window = qobject_cast<QQuickWindow*>(engine.rootObjects().first());
+        bool ok = window && g_qmlWarnings.isEmpty();
+        if (parser.isSet("screenshot")) ok = window && window->grabWindow().save(parser.value("screenshot")) && ok;
+        app.exit(ok ? 0 : 3);
+    });
     return app.exec();
 }

@@ -20,7 +20,7 @@ uv run .\tools\start.py
 
 | 目录                            | 形态                                             | 技术栈                                             | 一键启动                            |
 | ------------------------------- | ------------------------------------------------ | -------------------------------------------------- | ----------------------------------- |
-| [`WEB/`](WEB)                   | 浏览器页面,20 条路由                             | React 19 + antd 5 + Vite 6                         | `cd WEB; pnpm dev`                  |
+| [`WEB/`](WEB)                   | 浏览器页面,21 个测试入口                          | React 19 + antd 5 + Vite 6                         | `cd WEB; pnpm dev`                  |
 | [`WIN32/`](WIN32)               | 原生桌面程序 5 个 + UIA 压力程序 + 检测工具      | C++ / Win32 / CMake                                | `python tools\start_win32.py`       |
 | [`TK/`](TK)                     | Tk 桌面程序，表单 / 表格 / 拖拽 / 菜单           | Python / tkinter / ttk                             | `python tools\start_tk.py`          |
 | [`WEBVIEW2/`](WEBVIEW2)         | 浏览器套壳桌面程序,原生菜单 + 3 个线上测试页面   | C++ / Win32 / WebView2 SDK 1.0.4191.47 / CMake     | `python tools\start_webview2.py`    |
@@ -28,7 +28,7 @@ uv run .\tools\start.py
 | [`ELECTRON/`](ELECTRON)         | 22 / 29 / 38 / 44 四版本浏览器嵌入靶场           | Electron / BrowserView / WebContentsView           | `python tools\start_electron.py`    |
 | [`OFFICE/`](OFFICE/excel-addin) | Excel 加载项(Ribbon + WebView2 任务窗格)         | Office.js + 静态 HTML/CSS/JS + Python 标准库 HTTPS | `python tools\start_excel_addin.py` |
 | [`JAVA/`](JAVA)                 | Swing 桌面程序,多 JDK 版本并行                   | Java 8/11/17/21/25 + Maven                         | `python tools\start_java.py`        |
-| [`QT/`](QT)                     | Qt Quick 桌面程序                                | Qt 5.15.2 + MinGW 8.1                              | `.\QT\run.ps1`                      |
+| [`QT/`](QT)                     | Qt 5.15 / 6.8 双版本 Widgets + QML 靶场           | C++ / Qt / CMake / MinGW x64                      | `python tools\start_qt.py`          |
 | [`DELPHI/`](DELPHI)             | VCL 桌面程序，表单 / 菜单 / 表格 / 拖拽          | Delphi 2010 (VCL / Win32)                          | `python tools\start_delphi.py`      |
 | [`POWERBUILDER/`](POWERBUILDER) | PB 原生表单 / DataWindow / 菜单 / 拖拽          | PowerBuilder 2025 GA Utilities + Runtime            | `python tools\start_powerbuilder.py` |
 
@@ -64,7 +64,7 @@ xpath/
 │  ├─ .tools/              本地 JDK 与 Maven(已 gitignore)
 │  ├─ tests/
 │  └─ pom.xml
-├─ QT/                     Qt Quick 靶场
+├─ QT/                     Qt 5.15 / 6.8 Widgets + QML 靶场
 │  ├─ src/ qml/ resources/
 │  ├─ build/               构建产物
 │  └─ run.ps1 / build.ps1
@@ -75,17 +75,17 @@ xpath/
 │  └─ dist/                含运行时的单文件 EXE（已忽略）
 ├─ WEBVIEW2/               WebView2 浏览器套壳靶场
 │  ├─ src/                 原生菜单与 WebView2 宿主
-│  ├─ verify/              实际程序的原生控件与 CDP 验收
+│  ├─ verify/              实际程序的禁用 CDP 验收
 │  └─ build.ps1 / run.ps1
 ├─ CEF/                    CEF 五版本浏览器嵌入靶场
 │  ├─ src/                 共享的原生菜单与 CEF 宿主
 │  ├─ versions.json        固定官方 SDK 版本与校验信息
-│  ├─ verify/              原生控件与 CDP 实际进程验收
+│  ├─ verify/              禁用 CDP 实际进程验收
 │  └─ CMakeLists.txt       独立编译到 dist/<版本>/
 ├─ ELECTRON/               Electron 四版本浏览器嵌入靶场
 │  ├─ src/                 共享宿主 DOM 菜单与独立网页视图
 │  ├─ versions.json        固定官方运行时版本与 SHA256
-│  ├─ verify/              CDP 与 Windows UIA 实际进程验收
+│  ├─ verify/              禁用 CDP 实际进程验收
 │  └─ dist/<版本>/         四个完整运行目录(已 gitignore)
 ├─ tools/                  跨靶场启动器(Python)
 │  ├─ start.py             可视化启动中心（Tk / 标准库）
@@ -114,10 +114,10 @@ xpath/
 | TK         | Python 3.8+，含 Tcl/Tk（Windows 安装组件 `tcl/tk and IDLE`）；无需编译或 pip 安装                                                                                      |
 | WEBVIEW2   | Windows 10/11 x64 + WebView2 Runtime;启动器默认构建,需 Python 3.8+、PowerShell、Visual Studio 2019/2022/2026 C++ + Windows SDK、匹配 VS 的 CMake;SDK 自动下载,详见下文 |
 | CEF        | Windows 10/11 x64、Python 3.8+;默认构建需 Visual Studio 2022/2026 C++ + Windows SDK、匹配 VS 的 CMake,CEF SDK 自动下载;`--skip-build` 需对应版本完整运行目录           |
-| ELECTRON   | Windows 10/11 x64、Python 3.8+(仅标准库);官方运行时自动下载并校验 SHA256,无需 Node.js / npm / C++ 编译工具;验收另需 Node.js 22+                                        |
+| ELECTRON   | Windows 10/11 x64、Python 3.8+(仅标准库);官方运行时自动下载并校验 SHA256,无需 Node.js / npm / C++ 编译工具;禁用 CDP 验收使用 Python                                        |
 | OFFICE     | Windows + Excel 桌面版(2016+ / Microsoft 365);**不需要**管理员权限、OpenSSL、PowerShell 7                                                                              |
 | JAVA       | Amazon Corretto JDK 8/11/17/21/25,放在 `JAVA/.tools/jdks/corretto/<版本>`;Maven 由启动器自动下载                                                                       |
-| QT         | Qt 5.15.2 + MinGW 8.1(本机装在 `D:\Qt`)                                                                                                                                |
+| QT         | Qt 5.15.2 / MinGW 8.1、Qt 6.8.3 / MinGW 13.1、CMake、Ninja；已有发行目录可直接运行                                                                                                                                |
 | DELPHI     | Delphi 2010(仅编译需要)                                                                                                                                                |
 | POWERBUILDER | Windows 10/11 + PowerBuilder Utilities / Runtime 2025 GA 25.0.0.3683；编译工具无需 IDE 许可证                                                                              |
 
@@ -132,12 +132,24 @@ pnpm dev              # http://localhost:7199, 自动打开浏览器
 ```
 
 - 构建 / 预览:`pnpm build`(输出到 `WEB/dist`)、`pnpm preview`
-- 主要路由:`/`、`/form-controls`、`/table-test`、`/table-div-test`、`/anchor-test`、
+- 主要路由:`/`、`/login-test`、`/registration-test`、`/form-controls`、`/table-test`、`/table-div-test`、`/anchor-test`、
   `/geometry-test`、`/element-html-test`、`/iframe-shadow-form`、`/iframe-nested-test`、
   `/shadow-nested-test`、`/download-dialog-test`、`/upload-dialog-test`、`/web-dialog-test`、
   `/keys-click-test`、`/drag-to-test`、`/cookie-test`、`/canvas-test`——完整清单见 `WEB/src/App.tsx`
 - **SDK Cookie 观测模式**:设置 `UIPILOT_SDK_WEB_*` 系列环境变量后,`pnpm dev` 会切换为 HTTPS +
   固定端口 + `/api/sdk-web/*` 接口 + 下载响应头;该模式只能在本地跑,线上 Pages 不支持
+
+登录测试（`/login-test`）支持切换“账号登录”和“手机验证码登录”：账号 `admin` / 密码 `1`，手机号 `13922832244` / 验证码 `1990`，均严格匹配。账号登录须账号和密码都有值才启用登录按钮，清空任意一项就重新禁用。手机登录须先点击验证码输入框右侧的“发送验证码”，手机号校验通过后才启用验证码输入框和登录按钮；修改手机号会清空验证码并重新禁用。校验失败时，模态弹窗分别提示“账号错误”“密码错误”“手机号错误”或“验证码错误”，先校验账号或手机号。登录成功后可退出重试，切换方式和退出均清空输入并恢复初始状态。该页面为本地模拟，不发送短信或保存登录状态。
+
+登录成功后进入“网银转账”，包含转账账号、金额、客户名称、收款银行、分行支行名称、联行号、转账用途，底部依次为“重置”“转账”按钮。每次登录或点击“重置”都会更换控件及容器的随机 `id` / `class` / `name`、字段的真实 DOM 顺序和 1–5 层包裹；每次重建保证顺序及深度变化，中文标签及可访问关联保持有效。重置保留输入，正常输入不触发随机化，页面不显示轮次，适合验证旧定位失效后的元素特征修复。转账时先校验，随后弹窗核对信息，提交后显示模拟回执，可继续转账或退出；不会发送支付请求。
+
+浏览器验收：先启动 WEB 服务，再在 `WEB` 目录运行 `node tests/login-test.mjs`（需可用的 `playwright` 模块和 Chrome；可用 `LOGIN_PLAYWRIGHT_MODULE` 指定已有模块路径）。`LOGIN_TEST_BASE_URL` 默认 `http://127.0.0.1:7199/`，验证 Pages 预览时设为其 `/xpath/#/` 根地址。
+
+转账及随机结构验收：同一环境下运行 `node tests/bank-transfer-test.mjs`，覆盖四轮连续重建、数据保留、金额/账号校验、确认及回执、两种登录入口和窄屏布局；可用 `LOGIN_TEST_SCREENSHOT_DIR` 指定截图目录。
+
+业务流水号使用“规范金额 + 96 位随机因子 + 共享密钥”的 HMAC-SHA256 签名，签名取前 96 位，以 Base64URL 编码为 `TR_<16字符随机因子>_<16字符签名>`，总长 36 字符，不再循环使用固定的 10 条数据。配置文件 [fixtures/bank-transfer-auth.json](fixtures/bank-transfer-auth.json) 提供两端相同的密钥。二次确认弹窗和成功回执使用同一编号，取消后重新发起生成新编号；登记按填写金额重新验签，拒绝乱填、篡改或金额不匹配的编号。旧长编号需重新生成，协议和 CS 实现约定见 [fixtures/README.md](fixtures/README.md)。这是密钥随前端分发的靶场模拟方案，不提供严格全局去重或真实安全鉴权。
+
+“登记”（`/registration-test`）使用真实 iframe（`#registration-frame`，内部路由 `/registration-form-content`）承载业务流水号及上述七项转账信息。表单、登记/重置按钮和结果弹窗都在 iframe 内。使用相同密钥验证流水号签名与填写金额是否匹配，同时校验必填项、账号和金额，联行号和用途可空。成功弹窗显示登记摘要，失败保留输入；无需额外服务或写入请求，可用于本地与静态 Pages。浏览器验收：在 `WEB` 目录运行 `node tests/registration-test.mjs`；算法验收运行 `node tests/transfer-reference-test.mjs`，浏览器环境变量沿用上述说明。
 
 ### WIN32 — 原生 Win32 靶场
 
@@ -216,7 +228,7 @@ CEF 则按下文的五套固定 SDK 分别编译,运行时随各自的产物目�
 | 编译工具           | Visual Studio 2019 / 2022 / 2026 的“使用 C++ 的桌面开发”工作负载、MSVC x64 编译工具、Windows SDK。CMake 按 VS 版本分别要求 3.20+ / 3.21+ / 4.2+;脚本检查 PATH CMake 的兼容性,不满足时尝试 VS 自带版本。 |
 | 直接运行已有 EXE   | Windows 10/11 x64、WebView2 Runtime,以及对应 MSVC 的 Visual C++ x64 运行库;无需 Python、Visual Studio 或 CMake。                                                                                        |
 | 网络               | 加载默认页面需访问 GitHub Pages;首次构建下载 SDK 还需访问 `api.nuget.org`。                                                                                                                             |
-| 自动化验收         | 另需 Node.js 22+,运行 `node .\WEBVIEW2\verify\verify-flow.mjs`;日常启动无需 Node.js 或 pnpm。                                                                                                           |
+| 自动化验收         | 运行 `python .\tools\verify_no_cdp.py --kind webview2`;日常启动无需 Node.js 或 pnpm。                                                                                                           |
 
 运行前需确保已安装 WebView2 Runtime;缺失时从上面的官方入口下载 Evergreen 安装程序,本程序不会自动安装。
 默认加载线上页面,无需启动本地 WEB 开发服务。
@@ -336,11 +348,11 @@ python .\tools\start_cef.py --versions 109 125 128 133 154 --skip-build --base-u
 ```
 
 `--base-url` 使用以 `/` 或 `#/` 结尾的 HTTP(S) 根地址。默认线上根地址为 `https://baobaomi900901.github.io/xpath/#/`,本地使用普通路由。
-需要接入 CDP 调试时可用 `python .\tools\start_cef.py --version 154 --skip-build --remote-debugging-port 9222`;此参数只允许单版本,端口范围为 1024–65535。
+CEF 已禁止通过启动参数开启 CDP；直接给 EXE 添加调试参数也会被忽略，窗口正常启动。启动器兼容并忽略旧调试选项。
 
 可执行程序在 `CEF/dist/<版本>/cef-shooting-range-<版本>.exe`,SDK 和下载缓存位于 `CEF/.cache/`,构建目录为 `CEF/build/<版本>/`。
 每次启动使用独立的 `CEF/.cache/profiles/<版本>/<进程ID>-<标识>/` 数据目录,其中包含 `cef.log`,可用于运行问题排查。
-当前五版本已完成本地和线上共 90 项实际程序验收;2026-09-29 自动清理加入后,CEF 启动器和进程清理的 65 项测试通过,133 残留清理重建及重启范围实测通过。详细验收步骤见 [CEF/README.md](CEF/README.md)。
+当前禁用 CDP 的验收运行 `python .\tools\verify_no_cdp.py --kind cef`。旧 CDP 页面交互结果属于历史版本。详细步骤见 [CEF/README.md](CEF/README.md)。
 
 ### ELECTRON — 四版本浏览器嵌入靶场
 
@@ -353,13 +365,12 @@ python .\tools\start_electron.py --versions 22 29 38 44 --skip-build  # 启动�
 python .\tools\start_electron.py --versions 22 29 38 44 --no-launch   # 仅构建和验证
 python .\tools\start_electron.py --version 22 --skip-build
 python .\tools\start_electron.py --versions 22 44 --skip-build --base-url http://localhost:7199/
-python .\tools\start_electron.py --version 44 --skip-build --remote-debugging-port 9222
 ```
 
 默认加载线上 GitHub Pages，无需启动本地 WEB。首次构建自动下载并校验官方运行时，随后复制共享应用源码；不依赖 npm、Visual Studio 或 CMake。
 产物为 `ELECTRON/dist/<版本>/electron-shooting-range-<版本>.exe`，分发时保留整个运行目录。
 每次启动使用独立缓存；参数、精确版本、控件标识和验收命令见 [ELECTRON/README.md](ELECTRON/README.md)。
-四版本已完成本地 48 项、默认线上 40 项实际程序检查，另有 33 项启动器测试和 5 项配置测试通过。
+四版本均忽略 CDP 启动参数，正常打开窗口且不开放 CDP 端口或 pipe。当前验收运行 `python .\tools\verify_no_cdp.py --kind electron`；旧 CDP 页面交互结果属于历史版本。
 
 ### OFFICE — Excel 加载项靶场
 
@@ -387,16 +398,18 @@ python .\tools\start_java.py --versions 17 --force-build           # 强制重�
 产物在 `JAVA/target/jdk-<版本>/shooting-range-<版本>.jar`。
 功能与构建注意事项见 [JAVA/README.md](JAVA/README.md)。
 
-### QT — Qt Quick 靶场
+### QT — 多版本 Widgets / QML 靶场
 
 ```powershell
-cd QT
-.\run.ps1              # 构建 + 运行
-.\run.ps1 -SkipBuild   # 跳过构建直接运行
-.\build.ps1            # 只构建
+python tools/start_qt.py --versions 5.15.2 6.8.3 --skip-build
+python tools/start_qt.py --versions 6.8.3 --frontends widgets --form-mode random --skip-build
+python tools/start_qt.py --versions 5.15.2 6.8.3 --no-launch
+python tools/start_qt.py --versions 5.15.2 6.8.3 --skip-build --self-test
 ```
 
-用于验证 `Accessible.ignored` 的元素(头像、昵称)是否出现在 UI tree 中。详见 [QT/README.md](QT/README.md)。
+两个真实 Qt SDK 分别构建 Widgets 和 Quick/QML，共四个组合。对齐 Win32 的十字段表单、1000条员工数据/20条分页、菜单和带JSON结果的拖拽；Widgets 另有分组、平铺和随机表单。保留原名片隐藏节点示例（`--frontends profile`），已接入统一启动中心。
+
+完整运行目录位于 `QT/dist/<版本>/`，可复制整个目录后直接运行EXE；安装、构建和验收说明见 [QT/README.md](QT/README.md)。
 
 ### DELPHI — VCL 桌面靶场
 
@@ -428,6 +441,14 @@ python .\tools\package_powerbuilder.py                      # 打包为含运行
 三个页签包含十字段表单、七列原生 DataWindow（1000 条、每页 20 条、50 页）和拖拽测试，另有原生菜单。默认从注册表发现已安装的 Utilities 和匹配 Runtime，支持 `--tools-path` / `--runtime-path`；不需要数据库。
 产物为 `POWERBUILDER/build/Release/PowerBuilderShootingRange.exe`，运行时保留同目录的 PBD、XML 和 pb.ini。安装要求、可访问性设置及人工测试步骤见 [POWERBUILDER/README.md](POWERBUILDER/README.md)。
 单文件版为 `POWERBUILDER/dist/PowerBuilder靶场.exe`，可复制到其他 Windows 10 / 11 电脑双击运行，无需另装 Python、PowerBuilder 或 VC++ Runtime。
+
+## 浏览器靶场禁止 CDP 的发行包
+
+CEF、Electron、WebView2 均已禁用通过启动参数开启 CDP，直接启动 EXE 也生效。添加调试参数仍正常打开窗口。
+
+本次 Windows x64 ZIP 位于 `artifacts/no-cdp-2026-10-23/`：CEF 109/125/128/133/154、Electron 22/29/38/44、WebView2 Release。完整解压后运行目录内 EXE；WebView2 依赖已安装的 WebView2 Runtime。目录附带 `manifest.json`、`SHA256SUMS.txt` 和验收记录。
+
+重新打包前先构建并运行三套 `verify/verify-flow.mjs`，再分别运行 `tools/verify_cdp_pipe.mjs` 的 CEF、Electron 及 Electron 阳性对照并将结果保存到对应 `verify/artifacts/`；最后运行 `python tools/package_browser_ranges.py`。各靶场 README 说明了验收范围与依赖。
 
 ## 启动器通用约定
 

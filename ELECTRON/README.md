@@ -15,6 +15,8 @@
 
 程序显式调用 [`app.setAccessibilitySupportEnabled(true)`](https://www.electronjs.org/docs/latest/api/app#appsetaccessibilitysupportenabledenabled)，开启 Chromium 无障碍树；保留各版本 Windows 无障碍 provider 的默认行为。标题和左侧信息显示实际 Electron、Chromium、Node 和视图类型，防止把 SDK、宿主版本和浏览器内核混为一谈。
 
+四个版本均禁用 CDP。主进程在应用就绪前移除 `--remote-debugging-port`、`--remote-debugging-pipe` 和 `--remote-debugging-address`；直接给 EXE 添加这些参数时会静默忽略，窗口照常启动，不开放 CDP 端口或管道。
+
 ## 启动与构建
 
 Windows 10/11 x64，启动器需 Python 3.8+，仅使用标准库。首次构建需访问 GitHub 官方 release；默认页面需访问 GitHub Pages。构建结果可直接运行，无需 Python；分发必须保留整个 `dist/<主版本>/` 目录。
@@ -64,7 +66,7 @@ python .\tools\start_electron.py --help
 
 远程页面关闭 Node 集成、开启上下文隔离与沙箱；只在本地宿主暴露限定 IPC。额外弹窗被阻止，加载失败会在状态栏显示，刷新或切换菜单可重试。
 
-## 本地开发与调试
+## 本地开发
 
 先保持 WEB 服务运行：
 
@@ -78,10 +80,9 @@ pnpm dev
 
 ```powershell
 python .\tools\start_electron.py --versions 22 29 38 44 --skip-build --base-url http://localhost:7199/
-python .\tools\start_electron.py --version 44 --skip-build --remote-debugging-port 9222
 ```
 
-`--base-url` 使用以 `/` 或 `#/` 结尾的 HTTP(S) 根地址，不含查询参数或账号。调试端口仅允许单版本，范围 1024–65535，仅绑定 `127.0.0.1`。CDP 有两个 page target：本地 `shell.html` 和右侧远程页面；iframe 按 Chromium 的 frame / DOM 树继续向内探测。
+`--base-url` 使用以 `/` 或 `#/` 结尾的 HTTP(S) 根地址，不含查询参数或账号。Python 启动器保留对旧 CDP 参数的静默兼容，但不向 EXE 传递这些参数；缺失、无效或重复的调试参数也不会阻止正常启动和多版本选择。页面元素探测可使用原生 Windows 无障碍接口。
 
 每次启动创建独立 `ELECTRON/.cache/profiles/<主版本>/<PID>-<随机标识>/`，多版本、多实例之间不共享 Cookie 和缓存。独立复制运行目录时，缓存改存 EXE 所在目录的 `.cache/`。下载和运行目录均已 gitignore；手动清理旧 profile 前应关闭对应程序。
 
@@ -94,18 +95,17 @@ python -m unittest discover -s tools -p test_start_electron.py
 node .\ELECTRON\tests\config.test.cjs
 ```
 
-实际程序验收需 Node.js 22+、Windows PowerShell，以及已经构建的四个运行目录。保持本地 WEB 服务运行后：
+实际程序的禁用 CDP 验收需 Windows、Python 和已构建的运行目录：
 
 ```powershell
-node .\ELECTRON\verify\verify-flow.mjs
-node .\ELECTRON\verify\verify-flow.mjs 22 44
-$env:XPATH_ELECTRON_DEFAULT = '1'
-node .\ELECTRON\verify\verify-flow.mjs
-Remove-Item Env:XPATH_ELECTRON_DEFAULT
+python .\tools\verify_no_cdp.py --kind electron
+python .\tools\verify_no_cdp.py --kind electron --versions 22 44
+node .\tools\verify_cdp_pipe.mjs --kind electron --positive-control
+node .\tools\verify_cdp_pipe.mjs --kind electron
 ```
 
-本地模式验证实际完整版本、菜单鼠标 / 键盘、可信点击、表单输入、iframe + Shadow DOM、窗口缩放、刷新、CDP 无障碍树、Windows UIA / MSAA 节点、弹窗阻止、错误状态和恢复、正常退出；线上模式验证默认地址与相同交互（不执行网络失败注入和原生无障碍采样）。
+验收脚本覆盖默认启动及附加 CDP 参数等场景，检查窗口和进程的正常启动状态、进程树的监听端口以及 CDP 连接是否被禁用。结果默认保存在仓库根目录的 `artifacts/no-cdp-results.json`。完整运行需要能够启动 Windows 桌面窗口的会话。
 
-原生采样先读取 UIA；若 UIA 没有暴露网页内部元素，再直接读取旧版本的 MSAA 树，断言宿主菜单和网页独有“单击触发”按钮均存在。结果记录本机实际使用的原生接口，保留版本默认行为，不强制把旧内核切换为新 provider。截图、结果和无障碍采样保存在 `verify/artifacts/`，忽略不提交。
+Node 补充验收使用真实 fd 3/4 管道发送 `Browser.getVersion`。先验证未经修改的缓存运行时能够响应，再验证发行程序持续运行但不响应；四个版本均通过此对照。
 
-2026-09-29 本机四版本验收完成：33 项启动器测试、5 项配置测试、本地 48 项和默认线上 40 项实际程序检查通过。本机原生采样中，22 / 29 / 38 的宿主菜单和网页按钮通过 MSAA 读取，44 通过 UIA 读取；这是本次系统环境的观测结果。验收脚本按版本顺序启动、检查并关闭各个窗口。
+以前依赖 CDP 的 `verify/verify-flow.mjs` 页面交互及 CDP 无障碍树验收流程已不适用。原有 2026-09-29 验收记录属于启用 CDP 的旧行为，不能作为当前禁用 CDP 的验收结果；页面交互和 UIA / MSAA 行为需通过独立的原生接口测试。
