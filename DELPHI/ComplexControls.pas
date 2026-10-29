@@ -7,6 +7,9 @@ uses
   Grids, DB, DBClient, DBGrids, DBCtrls, VirtualTrees
   {$IFDEF WITH_DEVEXPRESS}
   , cxGrid, cxGridLevel, cxGridTableView, cxTL
+  {$IFDEF DEVEXPRESS_TRIAL}
+  , dxUIAClasses
+  {$ENDIF}
   {$ENDIF};
 
 type
@@ -29,6 +32,15 @@ type
     FVirtualTree: TVirtualStringTree;
     FVirtualStatus: TStaticText;
     FVirtualNames: array[1..1000] of string;
+    {$IFDEF WITH_DEVEXPRESS}
+    FCxGridView: TcxGridTableView;
+    FCxTreeList: TcxTreeList;
+    FCxGridStatus: TStaticText;
+    FCxTreeStatus: TStaticText;
+    procedure LoadCxGridData(Sender: TObject);
+    procedure LoadCxTreeData;
+    procedure CxTreeAction(Sender: TObject);
+    {$ENDIF}
     function NewPage(const ACaption, ADescription: string; AId: Integer;
       out AToolbar: TPanel; out AStatus: TStaticText): TTabSheet;
     procedure AddButton(AParent: TWinControl; const ACaption: string;
@@ -462,19 +474,28 @@ var
   Grid: TcxGrid;
   View: TcxGridTableView;
   Tree: TcxTreeList;
-  ParentNode, Node: TcxTreeListNode;
-  Row, Column, Department: Integer;
+  Column: Integer;
   {$ELSE}
   Notice: TStaticText;
   Index: Integer;
   {$ENDIF}
 begin
   {$IFDEF WITH_DEVEXPRESS}
+  {$IFDEF DEVEXPRESS_TRIAL}
+  // DevExpress 26.1 requires an explicit opt-in for its native UIA providers.
+  dxUIAutomationEnabled := True;
+  {$ENDIF}
   Tab := NewPage('TcxGrid', 'DevExpress TcxGrid：1000 条；支持编辑、列头排序、拖拽分组和筛选。', 6300, Toolbar, Status);
   Grid := TcxGrid.Create(Tab);
+  {$IFDEF DEVEXPRESS_TRIAL}
+  Grid.Automation.Name := 'TcxGrid 员工表';
+  {$ENDIF}
   Grid.Parent := Tab;
   Grid.Align := alClient;
   View := Grid.CreateView(TcxGridTableView) as TcxGridTableView;
+  FCxGridView := View;
+  FCxGridStatus := Status;
+  AddButton(Toolbar, '恢复数据', 12, 6311, 0, LoadCxGridData);
   Grid.Levels.Add.GridView := View;
   for Column := 0 to 6 do
   begin
@@ -482,50 +503,35 @@ begin
     begin
       Caption := HEADERS[Column];
       Width := WIDTHS[Column];
-      DataBinding.ValueType := 'String';
+      if Column = 0 then DataBinding.ValueType := 'Integer'
+      else DataBinding.ValueType := 'String';
       Options.Editing := Column <> 0;
     end;
   end;
-  View.DataController.BeginUpdate;
-  try
-    View.DataController.RecordCount := 1000;
-    for Row := 1 to 1000 do
-      for Column := 0 to 6 do
-        View.DataController.Values[Row - 1, Column] := EmployeeCell(Row, Column);
-  finally
-    View.DataController.EndUpdate;
-  end;
+  View.OptionsView.GroupByBox := True;
+  LoadCxGridData(nil);
   Identify(Grid, 6310);
-  Status.Caption := 'TcxGrid | 实际 DevExpress 控件 | 1000 条、7 列';
   Tab := NewPage('TcxTreeList', 'DevExpress TcxTreeList：10 个部门、1000 名员工；可展开、折叠和编辑。', 6400, Toolbar, Status);
   Tree := TcxTreeList.Create(Tab);
+  {$IFDEF DEVEXPRESS_TRIAL}
+  Tree.Automation.Name := 'TcxTreeList 部门员工树';
+  {$ENDIF}
   Tree.Parent := Tab;
   Tree.Align := alClient;
+  FCxTreeList := Tree;
+  FCxTreeStatus := Status;
+  AddButton(Toolbar, '全部展开', 12, 6411, 1, CxTreeAction);
+  AddButton(Toolbar, '全部折叠', 124, 6412, 2, CxTreeAction);
+  AddButton(Toolbar, '恢复数据', 236, 6413, 3, CxTreeAction);
   for Column := 0 to 6 do
     with Tree.CreateColumn do
     begin
       Caption.Text := HEADERS[Column];
       Width := WIDTHS[Column];
+      Options.Editing := Column <> 0;
     end;
-  Tree.BeginUpdate;
-  try
-    for Department := 0 to 9 do
-    begin
-      ParentNode := Tree.Add;
-      ParentNode.Values[0] := DEPARTMENTS[Department];
-      ParentNode.Values[1] := '100 名员工';
-      for Row := 1 to 100 do
-      begin
-        Node := ParentNode.AddChild;
-        for Column := 0 to 6 do
-          Node.Values[Column] := EmployeeCell(Department * 100 + Row, Column);
-      end;
-    end;
-  finally
-    Tree.EndUpdate;
-  end;
+  LoadCxTreeData;
   Identify(Tree, 6410);
-  Status.Caption := 'TcxTreeList | 实际 DevExpress 控件 | 10 个部门、1000 名员工';
   {$ELSE}
   for Index := 0 to 1 do
   begin
@@ -545,5 +551,69 @@ begin
   end;
   {$ENDIF}
 end;
+
+{$IFDEF WITH_DEVEXPRESS}
+procedure TComplexControlPages.LoadCxGridData(Sender: TObject);
+var
+  Row, Column: Integer;
+begin
+  FCxGridView.DataController.BeginUpdate;
+  try
+    FCxGridView.DataController.RecordCount := 0;
+    FCxGridView.DataController.RecordCount := 1000;
+    for Row := 1 to 1000 do
+    begin
+      FCxGridView.DataController.Values[Row - 1, 0] := Row;
+      for Column := 1 to 6 do
+        FCxGridView.DataController.Values[Row - 1, Column] := EmployeeCell(Row, Column);
+    end;
+  finally
+    FCxGridView.DataController.EndUpdate;
+  end;
+  FCxGridStatus.Caption := 'TcxGrid | 1000 条、7 列 | ID 按数值排序 | 数据修改仅保存在内存';
+  {$IFDEF DEVEXPRESS_TRIAL}
+  FCxGridStatus.Caption := FCxGridStatus.Caption + ' | DevExpress 试用评估版';
+  {$ENDIF}
+end;
+
+procedure TComplexControlPages.LoadCxTreeData;
+var
+  ParentNode, Node: TcxTreeListNode;
+  Department, Row, Column: Integer;
+begin
+  FCxTreeList.BeginUpdate;
+  try
+    FCxTreeList.Clear;
+    for Department := 0 to 9 do
+    begin
+      ParentNode := FCxTreeList.Add;
+      ParentNode.Values[0] := DEPARTMENTS[Department];
+      ParentNode.Values[1] := '100 名员工';
+      for Row := 1 to 100 do
+      begin
+        Node := ParentNode.AddChild;
+        for Column := 0 to 6 do
+          Node.Values[Column] := EmployeeCell(Department * 100 + Row, Column);
+      end;
+    end;
+  finally
+    FCxTreeList.EndUpdate;
+  end;
+  FCxTreeList.FullCollapse;
+  FCxTreeStatus.Caption := 'TcxTreeList | 10 个部门、1000 名员工 | 数据修改仅保存在内存';
+  {$IFDEF DEVEXPRESS_TRIAL}
+  FCxTreeStatus.Caption := FCxTreeStatus.Caption + ' | DevExpress 试用评估版';
+  {$ENDIF}
+end;
+
+procedure TComplexControlPages.CxTreeAction(Sender: TObject);
+begin
+  case (Sender as TButton).Tag of
+    1: FCxTreeList.FullExpand;
+    2: FCxTreeList.FullCollapse;
+    3: LoadCxTreeData;
+  end;
+end;
+{$ENDIF}
 
 end.
