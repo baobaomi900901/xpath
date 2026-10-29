@@ -25,6 +25,25 @@ Java Swing 桌面靶场，用于 UI 自动化测试练习。
 - **导入 Excel**：从 `.xlsx` 文件加载数据
 - **导出 Excel**：将全部数据导出为 `.xlsx`
 
+### Tab 3：自绘控件
+
+- 单个 `JPanel` 画布，使用 `Graphics2D` 绘制全部内容，没有嵌入标准输入框、单选框、多选框或图表控件
+- 两个输入框：支持键盘输入、中文输入法提交、左右方向键、Home/End、Backspace/Delete；每框最多 80 个 UTF-16 代码单元，不提供文本选择和剪贴板快捷键
+- 单选组、多选组：鼠标点击切换；Tab / Shift+Tab 移动逻辑焦点，空格或 Enter 选择，越过首尾后离开画布
+- 柱状图：固定五组数据，点击柱形后在文字面板显示对应月份与数值
+- 文字面板：画布文字、表单状态、图表状态；自绘“重置样本”按钮恢复初始值
+- 缩放窗口时画布等比例缩放，点击坐标同步换算
+
+用于验证元素探测器对非标准控件的识别能力：画布名为 `custom-controls-canvas`，内部没有子组件，也没有为绘制元素提供独立的无障碍节点。通过组件树或 Java Access Bridge 探测时通常只能看到整体画布；OCR / 图像识别是否能识别其中内容取决于探测器。可与“表单控件”页签对照测试。
+
+运行画布结构、交互及多 JDK 回归检查（无需显示窗口）：
+
+```powershell
+.\JAVA\tests\custom-controls-tests.ps1
+```
+
+测试同时生成渲染预览 `JAVA/target/custom-controls-preview.png`。
+
 ## 一键构建 + 运行
 
 ```powershell
@@ -61,6 +80,7 @@ java/
     ShootingRangeApp.java  # 主窗口 + Tabs
     ui/FormPanel.java      # 表单 Tab
     ui/TablePanel.java     # 表格 Tab
+    ui/CustomControlsPanel.java # 自绘控件 Tab（单画布）
     model/Employee.java
     util/DataGenerator.java
     util/ExcelUtil.java

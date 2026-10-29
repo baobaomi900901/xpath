@@ -1,6 +1,7 @@
 package com.xpath.shootingrange;
 
 import com.xpath.shootingrange.ui.AboutPanel;
+import com.xpath.shootingrange.ui.CustomControlsPanel;
 import com.xpath.shootingrange.ui.FormPanel;
 import com.xpath.shootingrange.ui.TablePanel;
 
@@ -19,6 +20,7 @@ public class ShootingRangeApp extends JFrame {
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("表单控件", new FormPanel());
         tabs.addTab("表格数据", new TablePanel());
+        tabs.addTab("自绘控件", new CustomControlsPanel());
         tabs.addTab("关于", new AboutPanel());
 
         setContentPane(tabs);
