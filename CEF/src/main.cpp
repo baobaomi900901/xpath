@@ -19,10 +19,11 @@ constexpr int kRefreshId = 1003;
 constexpr int kStatusId = 1004;
 constexpr wchar_t kDefaultBase[] = L"https://baobaomi900901.github.io/xpath/#/";
 struct Page { const wchar_t* label; const wchar_t* route; };
-constexpr std::array<Page, 3> kPages{{
+constexpr std::array<Page, 4> kPages{{
     {L"点击测试", L"keys-click-test"},
     {L"表单测试", L"form-controls"},
     {L"iframe表单", L"iframe-shadow-form"},
+    {L"表格测试", L"table-test"},
 }};
 
 std::filesystem::path ExecutableDirectory() {

@@ -67,6 +67,7 @@ python .\tools\start_cef.py --versions 109 125 128 133 154 --skip-build
 | 点击测试 | [keys-click-test](https://baobaomi900901.github.io/xpath/#/keys-click-test) |
 | 表单测试 | [form-controls](https://baobaomi900901.github.io/xpath/#/form-controls) |
 | iframe表单 | [iframe-shadow-form](https://baobaomi900901.github.io/xpath/#/iframe-shadow-form) |
+| 表格测试 | [table-test](https://baobaomi900901.github.io/xpath/#/table-test) |
 
 默认打开点击测试。菜单支持鼠标选择和上下方向键切换；地址栏只读；刷新保留当前路由；窗口缩放同步调整浏览器尺寸。宿主显式启用 CEF 无障碍。为保持单个嵌入浏览器，取消创建新浏览器弹窗；现有页面内部的 iframe / Shadow DOM 正常工作。
 
