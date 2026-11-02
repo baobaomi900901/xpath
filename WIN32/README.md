@@ -95,6 +95,32 @@ UIA 版与 MSAA 版的每个表单字段都有独立的具名 Pane 父容器，�
 - MSAA 版暴露名称为 `drag-target`、带 `STATE_SYSTEM_MOVEABLE` 的动态 `IAccessible` 节点
 - Canvas 版提供相同的可视拖拽功能，但不暴露内部 UIA/MSAA 节点
 
+### Tab 4：选择与状态（UIA 三个版本）
+
+- 标准 Win32 ListBox 单选、普通多选（`LBS_MULTIPLESEL`，点击切换）、空列表和扩展多选（`LBS_EXTENDEDSEL`，Ctrl / Shift）
+- 非空列表均含北京、上海、广州和两个独立同名项；两个多选列表初始均选中北京、上海
+- 可编辑、只读、禁用、可切换显示状态的原生 Edit
+- Trackbar 滑块、联动 Progress 进度条、开关、三态复选框和执行计数
+- 360 行中文与 Unicode 表情长文本；统一重置选中项和状态
+
+列表的可访问性信息由 Windows 系统提供。
+
+### Tab 5：动态样本（UIA 三个版本）
+
+- 同名同值输入框 HWND 替换；重新创建后保持原生标签关联
+- 同名复选框增加、移除、替换（保留勾选）；可滚动的动态分组与固定的相邻分组
+- 三列原生 ListView：同名文本、复选状态、排序；可重新填充行或替换表格 HWND
+- 标准 TreeView 组织层级与成员添加；统一重置动态对象和数据
+
+新页签使用独立的自适应布局，在最小 900×680 窗口下保留操作区和底部重置按钮。原有表单、拖拽页和员工表格布局不变，员工表格仍是单选；无 Pane 与随机表单版本共用新增页面。MSAA/Canvas 的自绘树边界不变，不增加这两个页签。
+
+构建并运行原生控件和布局检查：
+
+```powershell
+.\WIN32\build.ps1 -BuildTests
+ctest --test-dir WIN32/build -C Release --output-on-failure
+```
+
 ## 环境要求
 
 - Visual Studio 2019 或更高版本，并安装“使用 C++ 的桌面开发”工作负载
