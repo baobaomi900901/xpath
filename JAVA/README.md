@@ -44,6 +44,32 @@ Java Swing 桌面靶场，用于 UI 自动化测试练习。
 
 测试同时生成渲染预览 `JAVA/target/custom-controls-preview.png`。
 
+### Tab 4：选择与状态
+
+- 标准 `JList` 单选、多选和空列表；非空列表含北京、上海、广州和两个独立的同名项
+- 多选列表初始选中北京、上海，支持 Ctrl / Shift；原有表单的复选框组保持原样
+- 可编辑、只读、禁用、可切换显示状态的文本框
+- 滑块与联动进度条、开关按钮和执行计数，便于检查动作是否执行了一次
+- 含 360 行中文、换行、Unicode 表情的只读长文本
+- “重置选择与状态”恢复初始值、选中项与控件状态
+
+### Tab 5：动态样本
+
+- 替换输入对象：名称与内容相同，但重新创建 `JTextField`
+- 同名复选框组：增加、移除首项、替换首项（保留勾选）；相邻分组独立存在，动态组可滚动
+- 三列混合类型表格：整数 ID、同名文本、可编辑布尔单元格；可排序、替换整个表格模型
+- 标准树：展开组织层级、添加成员；“重置动态样本”恢复对象、分组、表格和树
+
+两个新页签采用两列分区，随窗口调整宽度，内容过高时在页面内滚动；不改变原有表单、员工表格和自绘页布局。原有“关于”页签移到最后。
+
+运行新页面的无窗口控件、无障碍选择与布局测试（Python 3 标准库，无额外依赖）：
+
+```powershell
+python .\JAVA\tests\control-samples-tests.py
+# 可限定版本
+python .\JAVA\tests\control-samples-tests.py --versions 8 25
+```
+
 ## 一键构建 + 运行
 
 ```powershell
@@ -81,6 +107,9 @@ java/
     ui/FormPanel.java      # 表单 Tab
     ui/TablePanel.java     # 表格 Tab
     ui/CustomControlsPanel.java # 自绘控件 Tab（单画布）
+    ui/ControlSamplesPanel.java # 选择、状态、数值与长文本 Tab
+    ui/DynamicSamplesPanel.java # 动态对象、分组、混合表格与树 Tab
+    ui/SamplePanelLayout.java   # 两个新页面的公共布局
     model/Employee.java
     util/DataGenerator.java
     util/ExcelUtil.java
