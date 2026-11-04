@@ -3,7 +3,9 @@ package com.xpath.shootingrange;
 import com.xpath.shootingrange.ui.AboutPanel;
 import com.xpath.shootingrange.ui.CustomControlsPanel;
 import com.xpath.shootingrange.ui.FormPanel;
+import com.xpath.shootingrange.ui.OverlapHitPanel;
 import com.xpath.shootingrange.ui.TablePanel;
+import com.xpath.shootingrange.ui.VirtualTableHitPanel;
 
 import javax.swing.JFrame;
 import javax.swing.JTabbedPane;
@@ -21,6 +23,8 @@ public class ShootingRangeApp extends JFrame {
         tabs.addTab("表单控件", new FormPanel());
         tabs.addTab("表格数据", new TablePanel());
         tabs.addTab("自绘控件", new CustomControlsPanel());
+        tabs.addTab("重叠命中复现", new OverlapHitPanel());
+        tabs.addTab("单元格命中复现", new VirtualTableHitPanel());
         tabs.addTab("关于", new AboutPanel());
 
         setContentPane(tabs);
