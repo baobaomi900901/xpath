@@ -32,7 +32,7 @@ TMainForm
 - 原生 `TStringGrid`：100 行、7 列，固定 ID 列，支持编辑、键盘导航、调整列宽和恢复数据
 - 原生 `TDBGrid`：1000 条内存数据，支持编辑 / 提交 / 取消、导航、姓名 / 城市 / 邮箱筛选、点击列头升序排序及恢复数据
 - 真实 `TVirtualStringTree` 5.5.3：10 个部门、1000 名员工，按需创建子节点，支持展开 / 折叠、勾选、F2 编辑员工姓名及恢复数据
-- `TcxGrid` / `TcxTreeList` 接入代码通过 `WITH_DEVEXPRESS` 条件编译；默认构建缺少实际库，这两个页签明确显示“待接入”
+- `TcxGrid` / `TcxTreeList` 通过 `WITH_DEVEXPRESS` 条件编译；支持 Delphi 11 试用运行时包构建。TcxGrid 提供 1000 条数据及数值 ID 排序、编辑、分组、筛选和恢复；TcxTreeList 提供 10 个部门、1000 名员工及展开 / 折叠、编辑和恢复。未指定库时仍显示待接入说明。
 
 `THs08ComboBox`、`TRzPanel` 是兼容类。没有安装 Raize Components 时，工程仍可使用标准 VCL 控件编译；它们的真实第三方 Provider 行为不等同于生产程序。
 
@@ -80,17 +80,47 @@ python .\tools\start_delphi.py --no-launch --compiler-path 'C:\Program Files (x8
 - Debug：`DELPHI/build/Debug/Win32VclShootingRange.exe`
 - DCU：各配置输出目录的 `dcu/` 子目录
 
-命令行构建静态链接 VCL，不使用 Runtime Packages。运行已有 EXE 无需安装 Delphi。
+默认命令行构建静态链接 VCL，不使用 Runtime Packages。运行默认 Release EXE 无需安装 Delphi。
 `TDBGrid` 的内存数据集通过 `MidasLib` 静态链接，无需另装数据库或分发 `midas.dll`；修改不会写入外部数据库。
 Virtual TreeView 的运行时源码和许可证保存在 `vendor/VirtualTreeView/`，版本来源及下载校验值见该目录说明。
-允许提交 `build/Release/Win32VclShootingRange.exe`，方便直接运行；其余构建产物和 IDE 临时文件仍忽略。更新发布程序时，重新构建 Release 并提交对应 EXE。
+允许提交默认版 `build/Release/Win32VclShootingRange.exe` 和评估版 `build/DevExpressTrial/Release/Win32VclShootingRange.exe`；Debug、DCU、BPL 和其余构建产物仍忽略。两个 EXE 使用不同目录，不会互相覆盖。更新对应程序时，重新构建该版本并提交对应 EXE。
 
-## DevExpress 控件接入状态
+## DevExpress 构建方式
 
-2026-10-19 构建环境为 Delphi 2010 / Delphi 10.3，未安装 DevExpress VCL。
-[官方当前试用下载页](https://www.devexpress.com/products/vcl/download-trial.xml)列出的最低版本为 RAD Studio 10.4；本次未取得与本机编译器匹配的 `cxGrid` / `cxTL` 编译库。
-因此默认 EXE 的 `TcxGrid（待接入）`、`TcxTreeList（待接入）` 只展示依赖说明，并没有创建对应控件。
-工程没有以标准 VCL 控件改名来代替 DevExpress 控件。
+默认 Release 保持不依赖 DevExpress。Delphi 11 评估版本输出到独立的 `build/DevExpressTrial/` 目录，实际创建 TcxGrid 和 TcxTreeList，不再显示待接入说明。
+评估版本保留官方试用限制与提示。仓库仅放行本工程生成的评估版 Release EXE，DevExpress 试用库及 BPL 依赖不入库。该 EXE 仍用于具备匹配评估环境的本机测试，不是可直接分发运行的独立发布包；仅克隆仓库无法获得所需运行时依赖。
+
+从 [DevExpress 官方试用下载页](https://www.devexpress.com/products/vcl/download-trial.xml)获取 Delphi 11 Alexandria 对应安装包，并按官方流程初始化试用环境。将 `Library/RS28` 目录传给构建脚本：
+
+```powershell
+.\DELPHI\build.ps1 -DevExpressTrialLibrary 'C:\Program Files (x86)\DevExpress\VCL\Library\RS28'
+.\DELPHI\run.ps1 -DevExpressTrialLibrary 'C:\Program Files (x86)\DevExpress\VCL\Library\RS28' -SkipBuild
+python .\tools\start_delphi.py --devexpress-trial-library 'C:\Program Files (x86)\DevExpress\VCL\Library\RS28'
+```
+
+也可设置 `DELPHI_DEVEXPRESS_TRIAL_LIBRARY` 环境变量。评估模式默认选择 Delphi 11（注册表 BDS 22.0），检查 RS28 DCP，并通过 Runtime Packages 链接；显式指定的编译器也必须匹配 Delphi 11。
+此模式额外需要 Python 3 标准库，用 `package_runtime.py` 收集 EXE 的传递 BPL 依赖，生成 `runtime-manifest.json` 及本机评估说明。目录中保留 EXE 和全部 BPL 才能运行；缺少包时构建直接报错。
+独立运行评估 EXE 时，如出现 DevExpress 官方试用提示，请先手动确认，主窗体随后打开。启动脚本报告进程已启动，不代表试用提示已确认。
+
+- 评估 Release：`build/DevExpressTrial/Release/Win32VclShootingRange.exe`
+- 评估 Debug：`build/DevExpressTrial/Debug/Win32VclShootingRange.exe`
+
+提交评估版 EXE 时，在仓库根目录执行（无需 `git add -f`）：
+
+```powershell
+git add DELPHI/.gitignore DELPHI/README.md DELPHI/build/DevExpressTrial/Release/Win32VclShootingRange.exe
+```
+
+此命令不包含第三方运行时包；运行评估版时仍需按照前述构建步骤，从本机已安装的组件库收集匹配依赖。
+
+2026-10-23 本机已安装官方 DevExpress 26.1.5 Delphi 11 评估组件，编译 Release / Debug，收集到 17 个 Win32 运行时包，并验证传递依赖及清单 SHA-256。
+通过 Windows 调试器正常启动 Debug EXE 后，已实际检查两个真实控件、TcxGrid 姓名编辑与恢复、ID 数值排序（降序首条 1000，随后 999）、TcxTreeList 的 10 个部门、员工编辑与恢复、全部展开与折叠。
+随后由用户确认官方试用提示，Release EXE 已在不附加调试器的情况下独立进入主界面，两个 DevExpress 页面及原生 UIA 节点已检查。确认提示前，组件可能停留在初始化消息循环，主窗体尚不显示；程序没有修改或关闭官方试用检查。
+
+评估构建按 [DevExpress 官方 UIA 说明](https://docs.devexpress.com/VCL/dxUIAClasses.dxUIAutomationEnabled) 显式开启 `dxUIAutomationEnabled`，两个根节点分别命名为 `TcxGrid 员工表`、`TcxTreeList 部门员工树`。
+已观察到原生行列、可编辑单元格和树节点。全部展开后，当前自动化工具的树快照偶有读取超时和缺少部分子树节点的现象；这部分仍需结合实际使用的自动化工具验收。
+
+正式授权库静态构建仍使用以下方式：
 
 取得与编译器版本匹配、支持静态链接的 DevExpress VCL 库后，指定各依赖单元所在目录：
 
@@ -100,8 +130,7 @@ Virtual TreeView 的运行时源码和许可证保存在 `vendor/VirtualTreeView
 
 参数是单元搜索目录列表，不会递归搜索安装目录。也可将路径以分号分隔写入 `DELPHI_DEVEXPRESS_PATHS` 环境变量，再使用现有 Python 启动器。
 构建脚本检查 `cxGrid.pas/.dcu` 和 `cxTL.pas/.dcu` 后启用 `WITH_DEVEXPRESS`；控件及其传递依赖都必须在指定路径内可见。
-启用后分别创建真正的 `TcxGrid` 表格视图及 `TcxTreeList` 部门 / 员工树。此条件分支尚未在本机编译验证；默认三个复杂控件不依赖 DevExpress。
-试用库所需的 Runtime Packages 不属于当前静态构建配置，不能直接用试用安装包替代上述源码 / DCU。
+该模式要求对应的源码 / DCU；试用版只有 DCP / BPL，须使用上述 `-DevExpressTrialLibrary` 模式，不能用 `-DevExpressPaths` 替代。
 
 ## Delphi IDE 编译
 
@@ -121,9 +150,10 @@ Virtual TreeView 的运行时源码和许可证保存在 `vendor/VirtualTreeView
 5. **TStringGrid**：第 1–100 行 ID 连续，ID 列固定且不可编辑；编辑姓名后状态栏回显，恢复数据后撤销编辑。
 6. **TDBGrid**：初始为 1000 条；输入 `北京` 应筛出 200 条，输入不存在的关键字应为 0 条；清空恢复全部记录。可编辑姓名并通过导航器提交 / 取消；点击 ID 列头按数值排序，末条 ID 为 1000；恢复数据重新生成默认内容。
 7. **TVirtualStringTree**：初始显示 10 个部门，展开每个部门得到 100 名员工；第一部门 ID 1–100，最后部门 ID 901–1000。选中姓名列按 F2 编辑，勾选及展开状态在底部回显；恢复数据清空修改与勾选，回到折叠状态。
-8. **TcxGrid / TcxTreeList**：默认构建应明确显示待接入说明；仅带实际 DevExpress 库的构建才用于测试对应控件行为。
+8. **TcxGrid / TcxTreeList**：默认构建显示待接入说明。带 DevExpress 的构建应显示真实控件：TcxGrid 共 1000 条，ID 排序为数值顺序，编辑后可恢复；TcxTreeList 共 10 个部门、1000 名员工，全部展开 / 折叠和恢复应生效。
 
 用 Inspect 或自己的 UIA / RPA 工具检查标准 VCL 控件和 MDI 层级。控件创建后赋予 Win32 control ID，供系统无障碍代理识别；实际 UIA 树和支持的 Pattern 由 Windows / VCL 代理决定，本工程没有自定义 UIA Provider。
+DevExpress 26.1 评估构建使用库自身的 UIA Provider，其 `AutomationId` 由库生成，不能直接等同于下表的 Win32 control ID；建议用上述根节点名称和行列层级定位。
 
 | 控件 | Win32 control ID |
 |---|---:|
@@ -149,6 +179,7 @@ Virtual TreeView 的运行时源码和许可证保存在 `vendor/VirtualTreeView
 | `TDBGrid` / 筛选输入 / 恢复 / 导航器 / 状态 | 6110 / 6111 / 6112 / 6113 / 6103 |
 | `TVirtualStringTree` / 全部展开 / 全部折叠 / 恢复 / 状态 | 6210 / 6211 / 6212 / 6213 / 6203 |
 | DevExpress 可选页 / 表格或依赖说明 / 状态 | 6300、6400 / 6310、6410 / 6303、6403 |
+| TcxGrid 恢复 / TcxTreeList 全部展开、全部折叠、恢复 | 6311 / 6411、6412、6413 |
 
 2026-10-15 本机验证：Delphi 2010 的 Release / Debug、Delphi 10.3 的 Debug 编译通过；
 Windows 桌面实际检查了主窗口、MDI / 表单 UIA ID、输入与重置、顶部菜单和动态菜单、表格页，以及拖拽、销毁和重建目标。

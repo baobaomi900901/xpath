@@ -2,10 +2,30 @@ param(
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Release",
     [string]$CompilerPath = $env:DELPHI_DCC32,
-    [string[]]$DevExpressPaths = @($env:DELPHI_DEVEXPRESS_PATHS -split ';' | Where-Object { $_ })
+    [string[]]$DevExpressPaths = @($env:DELPHI_DEVEXPRESS_PATHS -split ';' | Where-Object { $_ }),
+    [string]$DevExpressTrialLibrary = $env:DELPHI_DEVEXPRESS_TRIAL_LIBRARY
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($DevExpressTrialLibrary) {
+    if ($DevExpressPaths.Count -gt 0) {
+        throw 'Use either -DevExpressPaths (static libraries) or -DevExpressTrialLibrary (runtime packages).'
+    }
+    $DevExpressTrialLibrary = (Resolve-Path -LiteralPath $DevExpressTrialLibrary).Path
+    foreach ($package in @('cxGridRS28.dcp', 'cxTreeListRS28.dcp')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $DevExpressTrialLibrary $package) -PathType Leaf)) {
+            throw "Delphi 11 DevExpress trial package not found: $package"
+        }
+    }
+    $trialPython = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $trialPython) { throw 'Python 3 is required to collect the trial runtime packages.' }
+    if (-not $CompilerPath) {
+        $delphi11 = Get-ItemProperty -LiteralPath 'HKCU:\Software\Embarcadero\BDS\22.0' -ErrorAction SilentlyContinue
+        if ($delphi11.RootDir) { $CompilerPath = Join-Path $delphi11.RootDir 'bin\dcc32.exe' }
+        if (-not $CompilerPath) { throw 'Delphi 11 not found. Pass its dcc32.exe path using -CompilerPath.' }
+    }
+}
 
 if ($CompilerPath) {
     if (-not (Test-Path -LiteralPath $CompilerPath -PathType Leaf)) {
@@ -40,6 +60,12 @@ if ($CompilerPath) {
 $CompilerPath = (Resolve-Path -LiteralPath $CompilerPath).Path
 $delphiRoot = Split-Path (Split-Path $CompilerPath -Parent) -Parent
 $buildDir = Join-Path $PSScriptRoot "build\$Configuration"
+if ($DevExpressTrialLibrary) {
+    if (-not (Test-Path -LiteralPath (Join-Path $delphiRoot 'bin\rtl280.bpl') -PathType Leaf)) {
+        throw 'The RS28 trial packages require the Delphi 11 compiler and runtime libraries.'
+    }
+    $buildDir = Join-Path $PSScriptRoot "build\DevExpressTrial\$Configuration"
+}
 $dcuDir = Join-Path $buildDir 'dcu'
 $executable = Join-Path $buildDir 'Win32VclShootingRange.exe'
 New-Item -ItemType Directory -Force -Path $dcuDir | Out-Null
@@ -49,7 +75,11 @@ $compilerArguments = @(
     "-E$buildDir"
 )
 $unitPaths = @(Join-Path $PSScriptRoot 'vendor\VirtualTreeView')
-if ($DevExpressPaths.Count -gt 0) {
+if ($DevExpressTrialLibrary) {
+    $unitPaths += $DevExpressTrialLibrary
+    $compilerArguments += @('-DWITH_DEVEXPRESS;DEVEXPRESS_TRIAL', '-LUcxGridRS28;cxTreeListRS28')
+    Write-Host 'DevExpress: Delphi 11 trial runtime packages (local evaluation only).'
+} elseif ($DevExpressPaths.Count -gt 0) {
     foreach ($unitPath in $DevExpressPaths) {
         if (-not (Test-Path -LiteralPath $unitPath -PathType Container)) {
             throw "DevExpress library directory not found: $unitPath"
@@ -98,5 +128,9 @@ try {
 }
 if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) {
     throw "Build did not produce the executable: $executable"
+}
+if ($DevExpressTrialLibrary) {
+    & $trialPython.Source (Join-Path $PSScriptRoot 'package_runtime.py') $executable $DevExpressTrialLibrary (Join-Path $delphiRoot 'bin')
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to collect the trial runtime packages.' }
 }
 Write-Host "Built OK: $executable"
