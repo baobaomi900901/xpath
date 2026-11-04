@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "uia_form_run.h"
+#include "uia_control_samples.h"
 
 #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
@@ -101,6 +102,8 @@ struct AppState {
     HWND formPanel{};
     HWND tablePanel{};
     HWND dragPanel{};
+    HWND selectionPanel{};
+    HWND dynamicPanel{};
     HFONT font{};
 
     HWND nameEdit{};
@@ -163,6 +166,8 @@ struct AppState {
 };
 
 AppState g_app;
+win32_samples::SelectionPage g_selectionSamples;
+win32_samples::DynamicPage g_dynamicSamples;
 int g_controlIdOffset{};
 win32_form::FormRun g_formRun = [] {
     if (!kRandomFormEnabled) {
@@ -930,6 +935,8 @@ void LayoutDragPanel(int width, int height) {
 }
 
 void LayoutMainWindow() {
+    // SetMenu/CreateWindow can send WM_SIZE before all page controls exist.
+    if (!g_dynamicSamples.resetButton) return;
     RECT client{};
     GetClientRect(g_app.mainWindow, &client);
     MoveControl(g_app.tab, 8, 8, client.right - 16, client.bottom - 16);
@@ -942,9 +949,13 @@ void LayoutMainWindow() {
     MoveControl(g_app.formPanel, page.left, page.top, pageWidth, pageHeight);
     MoveControl(g_app.tablePanel, page.left, page.top, pageWidth, pageHeight);
     MoveControl(g_app.dragPanel, page.left, page.top, pageWidth, pageHeight);
+    MoveControl(g_app.selectionPanel, page.left, page.top, pageWidth, pageHeight);
+    MoveControl(g_app.dynamicPanel, page.left, page.top, pageWidth, pageHeight);
     LayoutFormPanel(pageWidth, pageHeight);
     LayoutTablePanel(pageWidth, pageHeight);
     LayoutDragPanel(pageWidth, pageHeight);
+    g_selectionSamples.Layout(pageWidth, pageHeight);
+    g_dynamicSamples.Layout(pageWidth, pageHeight);
 }
 
 void ResetForm() {
@@ -1042,9 +1053,23 @@ void ShowSelectedTab() {
     ShowWindow(g_app.formPanel, selected == 0 ? SW_SHOW : SW_HIDE);
     ShowWindow(g_app.tablePanel, selected == 1 ? SW_SHOW : SW_HIDE);
     ShowWindow(g_app.dragPanel, selected == 2 ? SW_SHOW : SW_HIDE);
+    ShowWindow(g_app.selectionPanel, selected == 3 ? SW_SHOW : SW_HIDE);
+    ShowWindow(g_app.dynamicPanel, selected == 4 ? SW_SHOW : SW_HIDE);
 }
 
 LRESULT CALLBACK PanelWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
+    if (window == g_dynamicSamples.choiceHost) {
+        if (message == WM_VSCROLL) {
+            SCROLLINFO scroll{}; scroll.cbSize = sizeof(scroll); scroll.fMask = SIF_TRACKPOS;
+            GetScrollInfo(window, SB_VERT, &scroll);
+            g_dynamicSamples.ScrollChoices(LOWORD(wParam), scroll.nTrackPos);
+            return 0;
+        }
+        if (message == WM_MOUSEWHEEL) {
+            g_dynamicSamples.ScrollChoices(GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? SB_LINEUP : SB_LINEDOWN, 0);
+            return 0;
+        }
+    }
     if (LogicalControlId(GetDlgCtrlID(window)) == DragArena && message == WM_PAINT) {
         PAINTSTRUCT paint{};
         HDC context = BeginPaint(window, &paint);
@@ -1074,7 +1099,7 @@ LRESULT CALLBACK PanelWindowProc(HWND window, UINT message, WPARAM wParam, LPARA
         EndPaint(window, &paint);
         return 0;
     }
-    if (message == WM_COMMAND || message == WM_NOTIFY) {
+    if (message == WM_COMMAND || message == WM_NOTIFY || message == WM_HSCROLL) {
         HWND root = GetAncestor(window, GA_ROOT);
         return SendMessageW(root, message, wParam, lParam);
     }
@@ -1101,21 +1126,36 @@ LRESULT CALLBACK MainWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM
             TabCtrl_InsertItem(g_app.tab, 1, &tabItem);
             tabItem.pszText = const_cast<wchar_t*>(L"拖拽测试");
             TabCtrl_InsertItem(g_app.tab, 2, &tabItem);
+            tabItem.pszText = const_cast<wchar_t*>(L"选择与状态");
+            TabCtrl_InsertItem(g_app.tab, 3, &tabItem);
+            tabItem.pszText = const_cast<wchar_t*>(L"动态样本");
+            TabCtrl_InsertItem(g_app.tab, 4, &tabItem);
 
             g_app.formPanel = CreateControl(WS_EX_CONTROLPARENT, g_formRun.panelClassName.c_str(), L"表单控件页", WS_CLIPCHILDREN, g_app.tab, 0);
             g_app.tablePanel = CreateControl(WS_EX_CONTROLPARENT, g_formRun.panelClassName.c_str(), L"表格数据页", WS_CLIPCHILDREN, g_app.tab, 0);
             g_app.dragPanel = CreateControl(WS_EX_CONTROLPARENT, g_formRun.panelClassName.c_str(), L"拖拽测试页", WS_CLIPCHILDREN, g_app.tab, 0);
+            g_app.selectionPanel = CreateControl(WS_EX_CONTROLPARENT, g_formRun.panelClassName.c_str(), L"选择与状态页", WS_CLIPCHILDREN, g_app.tab, 0);
+            g_app.dynamicPanel = CreateControl(WS_EX_CONTROLPARENT, g_formRun.panelClassName.c_str(), L"动态样本页", WS_CLIPCHILDREN, g_app.tab, 0);
             CreateFormControls();
             CreateTableControls();
             CreateDragControls();
+            g_selectionSamples.Create(g_app.selectionPanel, CreateControl, MoveControl);
+            g_dynamicSamples.Create(g_app.dynamicPanel, CreateControl, MoveControl, g_formRun.panelClassName.c_str());
             BuildEmployees();
             RefreshTable();
+            LayoutMainWindow();
             ShowSelectedTab();
             return 0;
         }
         case WM_SIZE:
             LayoutMainWindow();
             return 0;
+        case WM_HSCROLL:
+            if (reinterpret_cast<HWND>(lParam) == g_selectionSamples.slider) {
+                g_selectionSamples.UpdateNumber();
+                return 0;
+            }
+            break;
         case WM_GETMINMAXINFO: {
             auto* info = reinterpret_cast<MINMAXINFO*>(lParam);
             info->ptMinTrackSize.x = 900;
@@ -1124,6 +1164,10 @@ LRESULT CALLBACK MainWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM
         }
         case WM_NOTIFY: {
             const auto* header = reinterpret_cast<NMHDR*>(lParam);
+            if (header && header->hwndFrom == g_dynamicSamples.table && header->code == LVN_ITEMCHANGED) {
+                g_dynamicSamples.ItemChanged(*reinterpret_cast<const NMLISTVIEW*>(lParam));
+                return 0;
+            }
             if (header && header->hwndFrom == g_app.tab && header->code == TCN_SELCHANGE) {
                 ShowSelectedTab();
                 return 0;
@@ -1133,6 +1177,9 @@ LRESULT CALLBACK MainWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM
         case WM_COMMAND: {
             const int rawId = LOWORD(wParam);
             const int id = lParam == 0 ? rawId : LogicalControlId(rawId);
+            if (lParam != 0 && (g_selectionSamples.Command(id, HIWORD(wParam)) || g_dynamicSamples.Command(id, HIWORD(wParam)))) {
+                return 0;
+            }
             if (MenuCommandLabel(static_cast<UINT>(id))) {
                 SetMenuStatus(static_cast<UINT>(id));
                 return 0;
@@ -1244,7 +1291,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
 
     INITCOMMONCONTROLSEX controls{};
     controls.dwSize = sizeof(controls);
-    controls.dwICC = ICC_TAB_CLASSES | ICC_LISTVIEW_CLASSES | ICC_UPDOWN_CLASS;
+    controls.dwICC = ICC_TAB_CLASSES | ICC_LISTVIEW_CLASSES | ICC_UPDOWN_CLASS | ICC_TREEVIEW_CLASSES | ICC_BAR_CLASSES | ICC_PROGRESS_CLASS;
     if (!InitCommonControlsEx(&controls)) {
         return 1;
     }
