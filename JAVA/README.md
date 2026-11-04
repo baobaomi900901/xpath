@@ -70,6 +70,63 @@ python .\JAVA\tests\control-samples-tests.py
 python .\JAVA\tests\control-samples-tests.py --versions 8 25
 ```
 
+### Tab 6：重叠命中复现
+
+用于复现 [rust_uia PR #31](https://github.com/ha0018/rust_uia/pull/31) 中可见背景容器压过前景按钮的问题。
+
+- 前景标准按钮名为 `Front Button`，背景依次为 `Back Wrapper`、`Back Content` 两层 panel。
+- 按钮位于最前方，背景 panel 的层级更深，双方覆盖同一坐标且均可见。
+- 场景父容器保留完整无障碍子节点，故意让 `AccessibleComponent.getAccessibleAt` 返回空，供点命中缺失时的补充遍历使用；普通 Swing 鼠标命中不受影响。
+- 点击前景按钮会更新底部计数，可验证实际鼠标命中的确是按钮。
+- “打开独立复现窗口”提供同一场景的独立窗口，关闭它不会退出靶场。
+
+复现步骤：
+
+1. 启动靶场，选择“重叠命中复现”页；也可打开独立窗口。
+2. 将自动化指认点放在 `Front Button` 中心，优先测试 Auto 模式，再用 JAB 对照。
+3. 预期目标为 `push button / Front Button`；若捕获到 `panel / Back Content`，即出现误选。
+
+回归对照：PR `136054f` 在原生点命中失败时，JAB 的全局深度优先会误选背景；Auto 可能直接接受 Agent 的背景容器。原生点命中成功的快路径可能正常，应结合捕获诊断确认实际路径。
+
+验证 JAB 补充遍历时，可新开独立窗口，在鼠标尚未移入场景前，通过坐标捕获按钮中心，检查诊断是否为 `strategy: refined_tree`、`directTargetFound: false`。鼠标悬停后可能进入 `direct` 快路径并正常返回按钮。
+
+在 Corretto 8u504 上实测，PR `136054f` 的 Auto 模式在新标签页及独立窗口均误选 `Back Content`，JAB 在冷态独立窗口的补充遍历中也误选背景；main `dc304a7` 在这些对照用例中均返回 `Front Button`。
+
+运行场景结构、鼠标命中与无障碍行为检查（覆盖五个 JDK，无需显示窗口）：
+
+```powershell
+.\JAVA\tests\overlap-hit-tests.ps1
+```
+
+测试生成 `JAVA/target/overlap-hit-preview-<版本>.png` 渲染预览。
+
+### Tab 7：单元格命中复现
+
+用于复现 [rust_uia PR #31](https://github.com/ha0018/rust_uia/pull/31) 对合法虚拟表格单元格要求 `showing`，导致捕获退回整表的问题。
+
+- 标准 `JTable`，表名 `Employees`，表头名 `Employee columns`，两行三列：`ID`、`Enabled`、`Name`。
+- 文本单元格均为 `same`，中间列为布尔复选框，初始值分别为勾选和未勾选。
+- 使用真实 JTable 虚拟无障碍单元格，保持默认渲染器和状态；JAB 返回的有效单元格状态可能只有 `visible`、没有 `showing`。
+- “重置示例数据”恢复文本与勾选值；“打开独立复现窗口”提供同一场景的独立入口。
+
+复现步骤：
+
+1. 使用 JDK 8 启动靶场，进入“单元格命中复现”页，并打开新的独立窗口。
+2. 在鼠标尚未移入表格前，用 JAB 按坐标捕获首个文本单元格中心，检查是否进入 `strategy: refined_tree`、`directTargetFound: false`。
+3. 预期为 `label / same`，矩形仅覆盖该单元格；若返回 `table / Employees` 并框选整表，即复现误选。也可对中间列验证目标是否为 `check box`。
+
+对照版本为 main `dc304a7` 与 PR `848350e`。原生点命中成功的 `direct` 路径可能正常；本场景验证 JAB 补充遍历对虚拟单元格的处理。
+
+在 Corretto 8u504 上实测，嵌入标签页与独立窗口均可复现：main 正确捕获全部六个单元格，PR 将首个 `same` 单元格误选为 `Employees` 整表。此处观察的是 JAB 返回的状态，可能与 Java 程序直接读取 `AccessibleStateSet` 的结果不同。
+
+运行单元格结构、渲染器角色、几何和数据重置检查：
+
+```powershell
+.\JAVA\tests\virtual-table-hit-tests.ps1
+```
+
+测试覆盖 JDK 8、11、17、21、25，并生成 `JAVA/target/virtual-table-hit-preview-<版本>.png`。
+
 ## 一键构建 + 运行
 
 ```powershell
@@ -110,6 +167,8 @@ java/
     ui/ControlSamplesPanel.java # 选择、状态、数值与长文本 Tab
     ui/DynamicSamplesPanel.java # 动态对象、分组、混合表格与树 Tab
     ui/SamplePanelLayout.java   # 两个新页面的公共布局
+    ui/OverlapHitPanel.java # 重叠命中复现 Tab + 独立窗口
+    ui/VirtualTableHitPanel.java # 虚拟表格单元格命中复现 Tab + 独立窗口
     model/Employee.java
     util/DataGenerator.java
     util/ExcelUtil.java
