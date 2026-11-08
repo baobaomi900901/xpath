@@ -36,6 +36,7 @@ enum ElementKey : int {
     TabTable,
     TabDrag,
     TabImages,
+    TabShapes,
     FormHeading = 1010,
     NameEdit = 101,
     PasswordEdit,
@@ -88,6 +89,12 @@ enum ElementKey : int {
     ImageHide,
     ImageCover,
     ImageClip,
+    ShapeFirst = 5200,
+    ShapeHeading = 5300,
+    ShapeCounter,
+    ShapeHide,
+    ShapeCover,
+    ShapeClip,
     CellFirst = 10000
 };
 
@@ -111,7 +118,8 @@ enum class ElementKind {
     Table,
     Header,
     Cell,
-    Image
+    Image,
+    Shape
 };
 
 struct Element {
@@ -150,6 +158,8 @@ struct AppState {
     HBITMAP imageBitmap{},imageMask{};
     int imageClicks{};
     bool imageHidden{},imageCovered{},imageClipped{};
+    int shapeClicks{};
+    bool shapeHidden{},shapeCovered{},shapeClipped{};
     std::wstring name;
     std::wstring password;
     std::wstring email;
@@ -529,6 +539,8 @@ std::vector<Element> BuildElements(HWND window) {
 #if !WIN32_SHOOTING_RANGE_ENABLE_MSAA
     AddElement(elements,TabImages,MakeRect(480,10,620,44),L"图标与位图",L"",
                ROLE_SYSTEM_PAGETAB,ElementKind::Tab,true,false,g_app.selectedTab==3,false,L"切换");
+    AddElement(elements,TabShapes,MakeRect(628,10,768,44),L"几何与混合",L"",
+               ROLE_SYSTEM_PAGETAB,ElementKind::Tab,true,false,g_app.selectedTab==4,false,L"切换");
     AddElement(elements, MenuBar, MakeRect(320, 10, 472, 44), L"主菜单", L"",
                ROLE_SYSTEM_MENUBAR, ElementKind::MenuBar);
     AddElement(elements, MenuFile, MakeRect(326, 10, 396, 44), L"文件", L"",
@@ -777,7 +789,7 @@ std::vector<Element> BuildElements(HWND window) {
                        ROLE_SYSTEM_PUSHBUTTON, ElementKind::DragTarget, true);
             elements.back().state |= STATE_SYSTEM_MOVEABLE;
         }
-    } else {
+    } else if(g_app.selectedTab==3) {
         AddElement(elements,ImageHeading,MakeRect(30,60,width-30,90),L"无文字图标与缓存位图",L"",
                    ROLE_SYSTEM_STATICTEXT,ElementKind::StaticText);
         const wchar_t* labels[]={L"DrawIconEx",L"DrawIcon",L"BitBlt",L"StretchBlt",L"TransparentBlt",L"AlphaBlend",L"AND/OR",L"重复位图"};
@@ -793,6 +805,18 @@ std::vector<Element> BuildElements(HWND window) {
         AddElement(elements,ImageHide,MakeRect(30,450,210,486),L"隐藏/显示图标",L"",ROLE_SYSTEM_PUSHBUTTON,ElementKind::Button,true,false,false,false,L"切换");
         AddElement(elements,ImageCover,MakeRect(230,450,410,486),L"覆盖/恢复图标",L"",ROLE_SYSTEM_PUSHBUTTON,ElementKind::Button,true,false,false,false,L"切换");
         AddElement(elements,ImageClip,MakeRect(430,450,610,486),L"裁剪/恢复图标",L"",ROLE_SYSTEM_PUSHBUTTON,ElementKind::Button,true,false,false,false,L"切换");
+    } else {
+        AddElement(elements,ShapeHeading,MakeRect(30,60,width-30,90),L"几何填充、空心边框与混合绘制",L"",ROLE_SYSTEM_STATICTEXT,ElementKind::StaticText);
+        const wchar_t* labels[]={L"Rectangle",L"RoundRect",L"Ellipse",L"空心 Rectangle",L"空心 RoundRect",L"空心 Ellipse"};
+        for(int i=0;i<6;++i){
+            int left=30+(i%3)*240,top=120+(i/3)*140;
+            if(i || !g_app.shapeHidden)AddElement(elements,ShapeFirst+i,MakeRect(left,top,left+160,top+80),L"",L"",ROLE_SYSTEM_GRAPHIC,ElementKind::Shape,true,false,false,false,L"点击");
+            AddElement(elements,ShapeHeading+20+i,MakeRect(left,top+86,left+215,top+112),labels[i],L"",ROLE_SYSTEM_STATICTEXT,ElementKind::StaticText);
+        }
+        AddElement(elements,ShapeCounter,MakeRect(30,395,width-30,425),L"几何点击次数: "+std::to_wstring(g_app.shapeClicks),L"",ROLE_SYSTEM_STATICTEXT,ElementKind::StaticText);
+        AddElement(elements,ShapeHide,MakeRect(30,450,210,486),L"隐藏/显示几何",L"",ROLE_SYSTEM_PUSHBUTTON,ElementKind::Button,true,false,false,false,L"切换");
+        AddElement(elements,ShapeCover,MakeRect(230,450,410,486),L"覆盖/恢复几何",L"",ROLE_SYSTEM_PUSHBUTTON,ElementKind::Button,true,false,false,false,L"切换");
+        AddElement(elements,ShapeClip,MakeRect(430,450,610,486),L"裁剪/恢复几何",L"",ROLE_SYSTEM_PUSHBUTTON,ElementKind::Button,true,false,false,false,L"切换");
     }
 
     const auto appendPopupItems = [&elements](
@@ -1001,7 +1025,7 @@ void ChangePage(int page) {
 }
 
 void ActivateElement(int key) {
-    if (key == TabForm || key == TabTable || key == TabDrag || key == TabImages) {
+    if (key == TabForm || key == TabTable || key == TabDrag || key == TabImages || key == TabShapes) {
         const int newTab = key-TabForm;
         if (newTab != g_app.selectedTab) {
             g_app.cityComboExpanded = false;
@@ -1016,6 +1040,13 @@ void ActivateElement(int key) {
         return;
     }
     if(key>=ImageFirst && key<ImageFirst+8){++g_app.imageClicks;InvalidateRect(g_app.window,nullptr,FALSE);return;}
+    if(key>=ShapeFirst && key<ShapeFirst+6){++g_app.shapeClicks;InvalidateRect(g_app.window,nullptr,FALSE);return;}
+    if(key==ShapeHide || key==ShapeCover || key==ShapeClip){
+        if(key==ShapeHide)g_app.shapeHidden=!g_app.shapeHidden;
+        if(key==ShapeCover)g_app.shapeCovered=!g_app.shapeCovered;
+        if(key==ShapeClip)g_app.shapeClipped=!g_app.shapeClipped;
+        InvalidateRect(g_app.window,nullptr,FALSE);return;
+    }
     if(key==ImageHide || key==ImageCover || key==ImageClip){
         if(key==ImageHide)g_app.imageHidden=!g_app.imageHidden;
         if(key==ImageCover)g_app.imageCovered=!g_app.imageCovered;
@@ -1914,6 +1945,22 @@ void DrawElement(HDC context, const Element& element) {
             FrameRect(context, &bounds, GetSysColorBrush(COLOR_BTNFACE));
             DrawTextInRect(context, element.value, bounds, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
             break;
+        case ElementKind::Shape: {
+#if !WIN32_SHOOTING_RANGE_ENABLE_MSAA
+            const int index=element.key-ShapeFirst;
+            int saved=SaveDC(context);SelectObject(context,GetStockObject(BLACK_PEN));
+            HBRUSH brush=CreateSolidBrush((g_app.shapeClicks%2)?RGB(230,100,0):RGB(0,120,220));
+            SelectObject(context,index<3?brush:GetStockObject(NULL_BRUSH));
+            if(index==0 && g_app.shapeClipped)ExcludeClipRect(context,bounds.left+50,bounds.top,bounds.left+90,bounds.bottom);
+            if(index%3==0)Rectangle(context,bounds.left,bounds.top,bounds.right,bounds.bottom);
+            else if(index%3==1)RoundRect(context,bounds.left,bounds.top,bounds.right,bounds.bottom,40,32);
+            else Ellipse(context,bounds.left,bounds.top,bounds.right,bounds.bottom);
+            if(index>=3)DrawTextInRect(context,L"空心内部文字",bounds,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
+            RestoreDC(context,saved);DeleteObject(brush);
+            if(index==0 && g_app.shapeCovered)FillRect(context,&bounds,GetSysColorBrush(COLOR_WINDOW));
+#endif
+            break;
+        }
         case ElementKind::Image: {
 #if !WIN32_SHOOTING_RANGE_ENABLE_MSAA
             const int index=element.key-ImageFirst;
