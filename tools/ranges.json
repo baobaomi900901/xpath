@@ -197,6 +197,26 @@
       ]
     },
     {
+      "id": "winforms",
+      "label": "WinForms 标准 + 自绘",
+      "category": "原生桌面",
+      "description": "C# / .NET Framework 4.8.1 双页靶场：Tab 1 原生控件与 UIAutomation，Tab 2 纯 GDI+ 自绘、OCR 与坐标交互。",
+      "command": ["{powershell}", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "{root}/WINFORMS/run.ps1"],
+      "cwd": ".",
+      "profiles": [
+        {"id": "run", "label": "构建并启动", "args": []},
+        {"id": "existing", "label": "仅运行已有 EXE", "args": ["-NoBuild"]},
+        {"id": "check", "label": "构建（不启动）", "args": ["-NoLaunch"]}
+      ],
+      "default_profile": "run",
+      "options": [
+        {
+          "id": "configuration", "label": "构建配置 / 产物目录", "type": "choice", "flag": "-Configuration", "default": "Release", "clearable": false,
+          "choices": [{"value": "Release", "label": "Release"}, {"value": "Debug", "label": "Debug"}]
+        }
+      ]
+    },
+    {
       "id": "webview2",
       "label": "WebView2",
       "category": "浏览器嵌入",

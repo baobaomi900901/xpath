@@ -31,8 +31,9 @@ uv run .\tools\start.py
 | [`QT/`](QT)                     | Qt 5.15 / 6.8 双版本 Widgets + QML 靶场           | C++ / Qt / CMake / MinGW x64                      | `python tools\start_qt.py`          |
 | [`DELPHI/`](DELPHI)             | VCL 桌面程序，表单 / 菜单 / 表格 / 拖拽          | Delphi 2010 (VCL / Win32)                          | `python tools\start_delphi.py`      |
 | [`POWERBUILDER/`](POWERBUILDER) | PB 原生表单 / DataWindow / 菜单 / 拖拽          | PowerBuilder 2025 GA Utilities + Runtime            | `python tools\start_powerbuilder.py` |
+| [`WINFORMS/`](WINFORMS)         | 标准控件 + 纯 GDI+ 自绘双页靶场                  | C# / .NET Framework 4.8.1 / WinForms / GDI+        | `uv run tools\start.py`（选择 WinForms） |
 
-跨靶场的启动器都在 [`tools/`](tools) 下;`WIN32` / `WEBVIEW2` / `JAVA` / `QT` / `DELPHI` 另外各自带 `build.ps1` / `run.ps1`。
+跨靶场的启动器都在 [`tools/`](tools) 下;`WIN32` / `WEBVIEW2` / `JAVA` / `QT` / `DELPHI` / `WINFORMS` 另外各自带 `build.ps1` / `run.ps1`。
 
 ## 目录结构
 
@@ -73,6 +74,10 @@ xpath/
 │  ├─ src/                 PowerScript 导出对象（UTF-8）
 │  ├─ build/Release/       EXE、PBD、Runtime XML 和验证日志（已忽略）
 │  └─ dist/                含运行时的单文件 EXE（已忽略）
+├─ WINFORMS/               WinForms 标准控件 + 纯 GDI+ 自绘双页靶场
+│  ├─ src/                 主窗体、标准控件页、自绘画布与假数据
+│  ├─ build.ps1 / run.ps1
+│  └─ GuiAutomationRange.csproj
 ├─ WEBVIEW2/               WebView2 浏览器套壳靶场
 │  ├─ src/                 原生菜单与 WebView2 宿主
 │  ├─ verify/              实际程序的禁用 CDP 验收
