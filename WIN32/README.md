@@ -199,3 +199,10 @@ cd .\WIN32
 - `build\Release\win32-shooting-range-msaa.exe`
 - `build\Release\win32-shooting-range-canvas.exe`
 - `build\Release\uia-no-msaa-probe.exe`
+
+Canvas 版的“图标与位图”页包含无文字图标、预缓存位图、伸缩/透明/Alpha 绘制及 AND/OR 掩码组合。
+重复位图可用于层级与相似元素验证；点击计数、隐藏、覆盖和空洞裁剪可用于验证动作及旧引用失效。
+该页沿用纯自绘边界，不暴露内部 UIA/MSAA 元素。
+
+Canvas 版的“几何与混合”页包含 Rectangle、RoundRect、Ellipse 的填充与空心样例，
+沿用点击计数、隐藏、覆盖与空洞裁剪。空心内部保留文字，可核对几何区域和文字的共存。

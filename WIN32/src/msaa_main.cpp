@@ -35,6 +35,8 @@ enum ElementKey : int {
     TabForm = 1000,
     TabTable,
     TabDrag,
+    TabImages,
+    TabShapes,
     FormHeading = 1010,
     NameEdit = 101,
     PasswordEdit,
@@ -81,6 +83,18 @@ enum ElementKey : int {
     DragHide,
     DragArena,
     DragTarget,
+    ImageFirst = 5000,
+    ImageHeading = 5100,
+    ImageCounter,
+    ImageHide,
+    ImageCover,
+    ImageClip,
+    ShapeFirst = 5200,
+    ShapeHeading = 5300,
+    ShapeCounter,
+    ShapeHide,
+    ShapeCover,
+    ShapeClip,
     CellFirst = 10000
 };
 
@@ -103,7 +117,9 @@ enum class ElementKind {
     DragTarget,
     Table,
     Header,
-    Cell
+    Cell,
+    Image,
+    Shape
 };
 
 struct Element {
@@ -139,6 +155,11 @@ struct AppState {
     int city{};
     int gender{};
     int currentPage{1};
+    HBITMAP imageBitmap{},imageMask{};
+    int imageClicks{};
+    bool imageHidden{},imageCovered{},imageClipped{};
+    int shapeClicks{};
+    bool shapeHidden{},shapeCovered{},shapeClipped{};
     std::wstring name;
     std::wstring password;
     std::wstring email;
@@ -516,6 +537,10 @@ std::vector<Element> BuildElements(HWND window) {
         L"切换"
     );
 #if !WIN32_SHOOTING_RANGE_ENABLE_MSAA
+    AddElement(elements,TabImages,MakeRect(480,10,620,44),L"图标与位图",L"",
+               ROLE_SYSTEM_PAGETAB,ElementKind::Tab,true,false,g_app.selectedTab==3,false,L"切换");
+    AddElement(elements,TabShapes,MakeRect(628,10,768,44),L"几何与混合",L"",
+               ROLE_SYSTEM_PAGETAB,ElementKind::Tab,true,false,g_app.selectedTab==4,false,L"切换");
     AddElement(elements, MenuBar, MakeRect(320, 10, 472, 44), L"主菜单", L"",
                ROLE_SYSTEM_MENUBAR, ElementKind::MenuBar);
     AddElement(elements, MenuFile, MakeRect(326, 10, 396, 44), L"文件", L"",
@@ -710,7 +735,7 @@ std::vector<Element> BuildElements(HWND window) {
             + std::to_wstring(displayStart + kPageSize - 1) + L" 条";
         AddElement(elements, PageInfoLabel, MakeRect(18, height - 36, width - 18, height - 10), pageInfo, L"",
                    ROLE_SYSTEM_STATICTEXT, ElementKind::StaticText);
-    } else {
+    } else if (g_app.selectedTab == 2) {
         EnsureDragPosition(window);
         const RECT arena = DragArenaBounds(window);
         AddElement(elements, DragHeading, MakeRect(30, 52, 330, 80), L"元素拖拽测试", L"",
@@ -764,6 +789,34 @@ std::vector<Element> BuildElements(HWND window) {
                        ROLE_SYSTEM_PUSHBUTTON, ElementKind::DragTarget, true);
             elements.back().state |= STATE_SYSTEM_MOVEABLE;
         }
+    } else if(g_app.selectedTab==3) {
+        AddElement(elements,ImageHeading,MakeRect(30,60,width-30,90),L"无文字图标与缓存位图",L"",
+                   ROLE_SYSTEM_STATICTEXT,ElementKind::StaticText);
+        const wchar_t* labels[]={L"DrawIconEx",L"DrawIcon",L"BitBlt",L"StretchBlt",L"TransparentBlt",L"AlphaBlend",L"AND/OR",L"重复位图"};
+        for(int i=0;i<8;++i){
+            int left=30+(i%4)*180,top=130+(i/4)*140;
+            if(i!=0 || !g_app.imageHidden)AddElement(elements,ImageFirst+i,MakeRect(left,top,left+(i==3?64:32),top+32),
+                L"",L"",ROLE_SYSTEM_GRAPHIC,ElementKind::Image,true,false,false,false,L"点击");
+            AddElement(elements,ImageHeading+20+i,MakeRect(left-5,top+45,left+165,top+76),labels[i],L"",
+                ROLE_SYSTEM_STATICTEXT,ElementKind::StaticText);
+        }
+        AddElement(elements,ImageCounter,MakeRect(30,390,width-30,425),L"图标点击次数: "+std::to_wstring(g_app.imageClicks),L"",
+                   ROLE_SYSTEM_STATICTEXT,ElementKind::StaticText);
+        AddElement(elements,ImageHide,MakeRect(30,450,210,486),L"隐藏/显示图标",L"",ROLE_SYSTEM_PUSHBUTTON,ElementKind::Button,true,false,false,false,L"切换");
+        AddElement(elements,ImageCover,MakeRect(230,450,410,486),L"覆盖/恢复图标",L"",ROLE_SYSTEM_PUSHBUTTON,ElementKind::Button,true,false,false,false,L"切换");
+        AddElement(elements,ImageClip,MakeRect(430,450,610,486),L"裁剪/恢复图标",L"",ROLE_SYSTEM_PUSHBUTTON,ElementKind::Button,true,false,false,false,L"切换");
+    } else {
+        AddElement(elements,ShapeHeading,MakeRect(30,60,width-30,90),L"几何填充、空心边框与混合绘制",L"",ROLE_SYSTEM_STATICTEXT,ElementKind::StaticText);
+        const wchar_t* labels[]={L"Rectangle",L"RoundRect",L"Ellipse",L"空心 Rectangle",L"空心 RoundRect",L"空心 Ellipse"};
+        for(int i=0;i<6;++i){
+            int left=30+(i%3)*240,top=120+(i/3)*140;
+            if(i || !g_app.shapeHidden)AddElement(elements,ShapeFirst+i,MakeRect(left,top,left+160,top+80),L"",L"",ROLE_SYSTEM_GRAPHIC,ElementKind::Shape,true,false,false,false,L"点击");
+            AddElement(elements,ShapeHeading+20+i,MakeRect(left,top+86,left+215,top+112),labels[i],L"",ROLE_SYSTEM_STATICTEXT,ElementKind::StaticText);
+        }
+        AddElement(elements,ShapeCounter,MakeRect(30,395,width-30,425),L"几何点击次数: "+std::to_wstring(g_app.shapeClicks),L"",ROLE_SYSTEM_STATICTEXT,ElementKind::StaticText);
+        AddElement(elements,ShapeHide,MakeRect(30,450,210,486),L"隐藏/显示几何",L"",ROLE_SYSTEM_PUSHBUTTON,ElementKind::Button,true,false,false,false,L"切换");
+        AddElement(elements,ShapeCover,MakeRect(230,450,410,486),L"覆盖/恢复几何",L"",ROLE_SYSTEM_PUSHBUTTON,ElementKind::Button,true,false,false,false,L"切换");
+        AddElement(elements,ShapeClip,MakeRect(430,450,610,486),L"裁剪/恢复几何",L"",ROLE_SYSTEM_PUSHBUTTON,ElementKind::Button,true,false,false,false,L"切换");
     }
 
     const auto appendPopupItems = [&elements](
@@ -972,8 +1025,8 @@ void ChangePage(int page) {
 }
 
 void ActivateElement(int key) {
-    if (key == TabForm || key == TabTable || key == TabDrag) {
-        const int newTab = key == TabForm ? 0 : (key == TabTable ? 1 : 2);
+    if (key == TabForm || key == TabTable || key == TabDrag || key == TabImages || key == TabShapes) {
+        const int newTab = key-TabForm;
         if (newTab != g_app.selectedTab) {
             g_app.cityComboExpanded = false;
             g_app.hoveredCityOption = -1;
@@ -985,6 +1038,20 @@ void ActivateElement(int key) {
             InvalidateRect(g_app.window, nullptr, FALSE);
         }
         return;
+    }
+    if(key>=ImageFirst && key<ImageFirst+8){++g_app.imageClicks;InvalidateRect(g_app.window,nullptr,FALSE);return;}
+    if(key>=ShapeFirst && key<ShapeFirst+6){++g_app.shapeClicks;InvalidateRect(g_app.window,nullptr,FALSE);return;}
+    if(key==ShapeHide || key==ShapeCover || key==ShapeClip){
+        if(key==ShapeHide)g_app.shapeHidden=!g_app.shapeHidden;
+        if(key==ShapeCover)g_app.shapeCovered=!g_app.shapeCovered;
+        if(key==ShapeClip)g_app.shapeClipped=!g_app.shapeClipped;
+        InvalidateRect(g_app.window,nullptr,FALSE);return;
+    }
+    if(key==ImageHide || key==ImageCover || key==ImageClip){
+        if(key==ImageHide)g_app.imageHidden=!g_app.imageHidden;
+        if(key==ImageCover)g_app.imageCovered=!g_app.imageCovered;
+        if(key==ImageClip)g_app.imageClipped=!g_app.imageClipped;
+        InvalidateRect(g_app.window,nullptr,FALSE);return;
     }
     if (key == MenuFile) {
         SetActiveMenu(g_app.activeMenu == ActiveMenu::File ? ActiveMenu::None : ActiveMenu::File);
@@ -1878,11 +1945,66 @@ void DrawElement(HDC context, const Element& element) {
             FrameRect(context, &bounds, GetSysColorBrush(COLOR_BTNFACE));
             DrawTextInRect(context, element.value, bounds, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
             break;
+        case ElementKind::Shape: {
+#if !WIN32_SHOOTING_RANGE_ENABLE_MSAA
+            const int index=element.key-ShapeFirst;
+            int saved=SaveDC(context);SelectObject(context,GetStockObject(BLACK_PEN));
+            HBRUSH brush=CreateSolidBrush((g_app.shapeClicks%2)?RGB(230,100,0):RGB(0,120,220));
+            SelectObject(context,index<3?brush:GetStockObject(NULL_BRUSH));
+            if(index==0 && g_app.shapeClipped)ExcludeClipRect(context,bounds.left+50,bounds.top,bounds.left+90,bounds.bottom);
+            if(index%3==0)Rectangle(context,bounds.left,bounds.top,bounds.right,bounds.bottom);
+            else if(index%3==1)RoundRect(context,bounds.left,bounds.top,bounds.right,bounds.bottom,40,32);
+            else Ellipse(context,bounds.left,bounds.top,bounds.right,bounds.bottom);
+            if(index>=3)DrawTextInRect(context,L"空心内部文字",bounds,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
+            RestoreDC(context,saved);DeleteObject(brush);
+            if(index==0 && g_app.shapeCovered)FillRect(context,&bounds,GetSysColorBrush(COLOR_WINDOW));
+#endif
+            break;
+        }
+        case ElementKind::Image: {
+#if !WIN32_SHOOTING_RANGE_ENABLE_MSAA
+            const int index=element.key-ImageFirst;
+            int saved=SaveDC(context);
+            if(index==0 && g_app.imageClipped)ExcludeClipRect(context,bounds.left+10,bounds.top,bounds.left+20,bounds.bottom);
+            HICON icon=LoadIconW(nullptr,IDI_WARNING);
+            HDC source=CreateCompatibleDC(context);HGDIOBJ old=SelectObject(source,g_app.imageBitmap);
+            if(index==0)DrawIconEx(context,bounds.left,bounds.top,icon,32,32,0,nullptr,(g_app.imageClicks%2)?DI_IMAGE:DI_NORMAL);
+            else if(index==1)DrawIcon(context,bounds.left,bounds.top,icon);
+            else if(index==3)StretchBlt(context,bounds.left,bounds.top,64,32,source,0,0,32,32,SRCCOPY);
+            else if(index==4)TransparentBlt(context,bounds.left,bounds.top,32,32,source,0,0,32,32,RGB(0,0,0));
+            else if(index==5){BLENDFUNCTION blend{AC_SRC_OVER,0,128,0};AlphaBlend(context,bounds.left,bounds.top,32,32,source,0,0,32,32,blend);}
+            else if(index==6){
+                SelectObject(source,g_app.imageMask);BitBlt(context,bounds.left,bounds.top,32,32,source,0,0,SRCAND);
+                SelectObject(source,g_app.imageBitmap);BitBlt(context,bounds.left,bounds.top,32,32,source,0,0,SRCPAINT);
+            } else BitBlt(context,bounds.left,bounds.top,32,32,source,0,0,SRCCOPY);
+            SelectObject(source,old);DeleteDC(source);RestoreDC(context,saved);
+            if(index==0 && g_app.imageCovered)FillRect(context,&bounds,GetSysColorBrush(COLOR_WINDOW));
+#endif
+            break;
+        }
     }
     if (focused) {
         InflateRect(&bounds, -2, -2);
         DrawFocusRect(context, &bounds);
     }
+}
+
+void InitializeCanvasImages(HWND window) {
+#if !WIN32_SHOOTING_RANGE_ENABLE_MSAA
+    HDC target=GetDC(window),source=CreateCompatibleDC(target);
+    g_app.imageBitmap=CreateCompatibleBitmap(target,32,32);
+    g_app.imageMask=CreateBitmap(32,32,1,1,nullptr);
+    HGDIOBJ previous=GetCurrentObject(source,OBJ_BITMAP);
+    for(int index=0;index<2;++index){
+        SelectObject(source,index?g_app.imageMask:g_app.imageBitmap);
+        RECT bounds{0,0,32,32};FillRect(source,&bounds,(HBRUSH)GetStockObject(index?WHITE_BRUSH:BLACK_BRUSH));
+        bounds={8,8,24,24};HBRUSH brush=CreateSolidBrush(index?RGB(0,0,0):RGB(0,120,220));
+        FillRect(source,&bounds,brush);DeleteObject(brush);
+    }
+    SelectObject(source,previous);DeleteDC(source);ReleaseDC(window,target);
+#else
+    (void)window;
+#endif
 }
 
 void PaintWindow(HWND window) {
@@ -2060,6 +2182,7 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
     switch (message) {
         case WM_CREATE:
             g_app.window = window;
+            InitializeCanvasImages(window);
 #if WIN32_SHOOTING_RANGE_ENABLE_MSAA
             g_app.accessible = new MsaaAccessible(window);
             g_app.mainMenu = CreateNativeMainMenu();
@@ -2202,6 +2325,8 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
             return 0;
         }
         case WM_DESTROY:
+            if(g_app.imageBitmap)DeleteObject(g_app.imageBitmap);
+            if(g_app.imageMask)DeleteObject(g_app.imageMask);
 #if WIN32_SHOOTING_RANGE_ENABLE_MSAA
             if (g_app.mainMenu) {
                 SetMenu(window, nullptr);
