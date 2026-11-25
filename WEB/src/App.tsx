@@ -5,6 +5,7 @@ import AnchorTestPage from './pages/AnchorTestPage';
 import FormControlsPage from './pages/FormControlsPage';
 import GeometryTestPage from './pages/GeometryTestPage';
 import ElementHtmlTestPage from './pages/ElementHtmlTestPage';
+import ElementMatchTestPage from './pages/ElementMatchTestPage';
 import { GeometryFrameContent } from './pages/GeometryIframePanel';
 import IframeShadowFormPage, { ShadowFormContent } from './pages/IframeShadowFormPage';
 import DownloadDialogTestPage from './pages/DownloadDialogTestPage';
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/form-controls" element={<FormControlsPage />} />
         <Route path="/geometry-test" element={<GeometryTestPage />} />
         <Route path="/element-html-test" element={<ElementHtmlTestPage />} />
+        <Route path="/element-match-test" element={<ElementMatchTestPage />} />
         <Route path="/geometry-frame/:scenario" element={<GeometryFrameContent />} />
         <Route path="/iframe-shadow-form" element={<IframeShadowFormPage />} />
         <Route path="/iframe-shadow-form-content" element={<ShadowFormContent />} />

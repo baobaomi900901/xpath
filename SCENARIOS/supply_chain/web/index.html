@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN" data-obstacles="false">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>库存管理 · 供应链业务工作台</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/model.js" defer></script>
+  <script src="/obstacles.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar"><strong>供应链业务工作台</strong><span>库存管理 / 库存明细</span></header>
+  <main>
+    <div class="heading"><div><p class="eyebrow">库存台账</p><h1>库存明细查询</h1><p class="muted">按工厂、仓库与物料查询库存，导出当前查询范围的完整明细。</p></div><span class="tag">A · 库存管理</span></div>
+    <section class="context" aria-label="任务信息">
+      <div>任务批次<strong id="batch">加载中…</strong></div>
+      <div>业务日期<strong id="today">—</strong></div>
+      <div>交货截止日期<strong id="deadline">—</strong></div>
+    </section>
+    <section class="panel" aria-labelledby="filter-heading">
+      <h2 id="filter-heading">查询条件</h2>
+      <form id="filters">
+        <label>工厂<input id="plant" name="plant" list="plants" placeholder="全部工厂" autocomplete="off"><datalist id="plants"></datalist></label>
+        <label>仓库<input id="warehouse" name="warehouse" list="warehouses" placeholder="全部仓库" autocomplete="off"><datalist id="warehouses"></datalist></label>
+        <label class="search">物料关键字<input id="search" name="search" type="search" placeholder="物料编码或名称" autocomplete="off"></label>
+        <div class="actions"><button type="submit" class="primary" id="query">查询</button><button type="reset" id="reset">重置</button></div>
+      </form>
+    </section>
+    <section class="panel" aria-labelledby="inventory-heading" id="inventory" aria-busy="true">
+      <div class="table-heading"><div><h2 id="inventory-heading">库存明细</h2><p id="scope" class="muted">正在读取库存…</p></div><button id="export" disabled>导出全部查询结果（XLSX）</button></div>
+      <p id="status" class="query-status" role="status" aria-live="polite">正在加载任务信息…</p>
+      <p id="error" class="query-error" role="alert" hidden></p>
+      <div class="table-scroll"><table>
+        <caption class="sr-only">库存明细，每页八条，点击列标题可排序</caption>
+        <thead><tr>
+          <th scope="col" aria-sort="ascending"><button data-sort="material_id">物料编码</button></th>
+          <th scope="col"><button data-sort="name">物料名称</button></th>
+          <th scope="col"><button data-sort="unit">单位</button></th>
+          <th scope="col"><button data-sort="plant">工厂</button></th>
+          <th scope="col"><button data-sort="warehouse">仓库</button></th>
+          <th scope="col"><button data-sort="current">当前库存</button></th>
+          <th scope="col"><button data-sort="safety">安全库存</button></th>
+          <th scope="col"><button data-sort="target">目标库存</button></th>
+          <th scope="col"><button data-sort="enabled">启用状态</button></th>
+        </tr></thead><tbody id="rows"></tbody>
+      </table></div>
+      <nav class="pagination" aria-label="库存分页"><span id="count">共 0 条 · 每页 8 条</span><div><button id="previous" disabled>上一页</button><span id="page" aria-live="polite">第 1 / 1 页</span><button id="next" disabled>下一页</button></div></nav>
+    </section>
+    <footer>供应链协同系统 · 库存数据以本批次业务台账为准</footer>
+  </main>
+</body>
+</html>

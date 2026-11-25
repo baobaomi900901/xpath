@@ -2,6 +2,30 @@
   "schema_version": 1,
   "ranges": [
     {
+      "id": "supply-chain",
+      "label": "综合场景：库存补货",
+      "category": "跨系统业务",
+      "description": "Web库存 → Win32比价 → Java采购；可重置数据、真实Excel交接和独立验收。",
+      "command": ["{python}", "{root}/tools/start_supply_chain.py"],
+      "cwd": ".",
+      "profiles": [
+        {"id": "launch", "label": "构建并启动新一轮", "args": ["launch"]},
+        {"id": "run", "label": "使用已有产物启动新一轮", "args": ["launch", "--skip-build"]},
+        {"id": "build", "label": "仅构建", "args": ["build"]},
+        {"id": "evaluate", "label": "验收当前轮次", "args": ["evaluate"]},
+        {"id": "stop", "label": "停止当前轮次", "args": ["stop"]}
+      ],
+      "default_profile": "launch",
+      "options": [
+        {"id": "profile", "label": "业务难度", "type": "choice", "flag": "--profile", "default": "standard", "clearable": false, "profiles": ["launch", "run"], "choices": [{"value": "basic", "label": "基础"}, {"value": "standard", "label": "标准"}, {"value": "advanced", "label": "增强（异常与重试）"}]},
+        {"id": "obstacles", "label": "GUI障碍（惰性加载 / 随机ID）", "type": "bool", "flag": "--obstacles", "default": false, "profiles": ["launch", "run"]},
+        {"id": "seed", "label": "数据种子", "type": "integer", "flag": "--seed", "default": 42, "min": 0, "max": 999999, "profiles": ["launch", "run"]},
+        {"id": "track", "label": "工具赛道", "type": "choice", "flag": "--track", "default": "cli", "clearable": false, "profiles": ["launch", "run"], "choices": [{"value": "cli", "label": "CLI"}, {"value": "sdk", "label": "SDK"}]},
+        {"id": "agent", "label": "Agent名称", "type": "text", "flag": "--agent", "default": "unspecified", "clearable": false, "profiles": ["launch", "run"]},
+        {"id": "port", "label": "本地服务端口", "type": "integer", "flag": "--port", "default": 8765, "min": 1024, "max": 65535, "profiles": ["launch", "run"]}
+      ]
+    },
+    {
       "id": "win32",
       "label": "Win32",
       "category": "原生桌面",

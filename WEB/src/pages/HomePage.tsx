@@ -7,6 +7,12 @@ const { Paragraph } = Typography;
 
 const menuItems = [
   {
+    id: 'menu-element-match-test',
+    href: '/element-match-test',
+    title: '元素串匹配测试',
+    description: '固定与随机属性样本，验证等于、包含、前后缀、数值、正则和通配符等 14 种规则',
+  },
+  {
     id: 'menu-registration-test',
     href: '/registration-test',
     title: '登记',

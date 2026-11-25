@@ -20,7 +20,8 @@ uv run .\tools\start.py
 
 | 目录                            | 形态                                             | 技术栈                                             | 一键启动                            |
 | ------------------------------- | ------------------------------------------------ | -------------------------------------------------- | ----------------------------------- |
-| [`WEB/`](WEB)                   | 浏览器页面,21 个测试入口                          | React 19 + antd 5 + Vite 6                         | `cd WEB; pnpm dev`                  |
+| [`SCENARIOS/supply_chain/`](SCENARIOS/supply_chain/) | 库存补货综合场景：Web → Win32 → Java，支持 CLI/SDK Agent 对比 | Python 本地服务 + HTML/JS + C++ Win32 + Java Swing | `python tools/start_supply_chain.py` |
+| [`WEB/`](WEB)                   | 浏览器页面,22 个测试入口                          | React 19 + antd 5 + Vite 6                         | `cd WEB; pnpm dev`                  |
 | [`WIN32/`](WIN32)               | 原生桌面程序 5 个 + UIA 压力程序 + 检测工具      | C++ / Win32 / CMake                                | `python tools\start_win32.py`       |
 | [`TK/`](TK)                     | Tk 桌面程序，表单 / 表格 / 拖拽 / 菜单           | Python / tkinter / ttk                             | `python tools\start_tk.py`          |
 | [`WEBVIEW2/`](WEBVIEW2)         | 浏览器套壳桌面程序,原生菜单 + 3 个线上测试页面   | C++ / Win32 / WebView2 SDK 1.0.4191.47 / CMake     | `python tools\start_webview2.py`    |
@@ -138,7 +139,7 @@ pnpm dev              # http://localhost:7199, 自动打开浏览器
 
 - 构建 / 预览:`pnpm build`(输出到 `WEB/dist`)、`pnpm preview`
 - 主要路由:`/`、`/login-test`、`/registration-test`、`/form-controls`、`/table-test`、`/table-div-test`、`/anchor-test`、
-  `/geometry-test`、`/element-html-test`、`/iframe-shadow-form`、`/iframe-nested-test`、
+  `/geometry-test`、`/element-html-test`、`/element-match-test`、`/iframe-shadow-form`、`/iframe-nested-test`、
   `/shadow-nested-test`、`/download-dialog-test`、`/upload-dialog-test`、`/web-dialog-test`、
   `/keys-click-test`、`/drag-to-test`、`/cookie-test`、`/canvas-test`——完整清单见 `WEB/src/App.tsx`
 - **SDK Cookie 观测模式**:设置 `UIPILOT_SDK_WEB_*` 系列环境变量后,`pnpm dev` 会切换为 HTTPS +
@@ -155,6 +156,8 @@ pnpm dev              # http://localhost:7199, 自动打开浏览器
 业务流水号使用“规范金额 + 96 位随机因子 + 共享密钥”的 HMAC-SHA256 签名，签名取前 96 位，以 Base64URL 编码为 `TR_<16字符随机因子>_<16字符签名>`，总长 36 字符，不再循环使用固定的 10 条数据。配置文件 [fixtures/bank-transfer-auth.json](fixtures/bank-transfer-auth.json) 提供两端相同的密钥。二次确认弹窗和成功回执使用同一编号，取消后重新发起生成新编号；登记按填写金额重新验签，拒绝乱填、篡改或金额不匹配的编号。旧长编号需重新生成，协议和 CS 实现约定见 [fixtures/README.md](fixtures/README.md)。这是密钥随前端分发的靶场模拟方案，不提供严格全局去重或真实安全鉴权。
 
 “登记”（`/registration-test`）使用真实 iframe（`#registration-frame`，内部路由 `/registration-form-content`）承载业务流水号及上述七项转账信息。表单、登记/重置按钮和结果弹窗都在 iframe 内。使用相同密钥验证流水号签名与填写金额是否匹配，同时校验必填项、账号和金额，联行号和用途可空。成功弹窗显示登记摘要，失败保留输入；无需额外服务或写入请求，可用于本地与静态 Pages。浏览器验收：在 `WEB` 目录运行 `node tests/registration-test.mjs`；算法验收运行 `node tests/transfer-reference-test.mjs`，浏览器环境变量沿用上述说明。
+
+元素串匹配测试（`/element-match-test`）：首页入口“元素串匹配测试”提供固定字符串、大小写对照、数值边界，以及 `abc` + 随机码、随机码 + `xyz`、`abc` + 随机码 + `xyz` 三类真实按钮。随机码默认 8 位，可设为 1–32 位；刷新或点击“重新生成”时变化。页面列出全部 14 种规则的条件和当前正反例，字符串比较 `id`，数值比较 `data-value`（阈值 100），按钮的 `title` 和文本也可用于匹配。验收：在 `WEB` 目录运行 `node tests/element-match-test.mjs`，需 Playwright 和 Chrome；可设置 `MATCH_PLAYWRIGHT_MODULE`、`MATCH_TEST_BASE_URL`（默认 `http://127.0.0.1:7199/`）及 `MATCH_TEST_SCREENSHOT_DIR`。
 
 ### WIN32 — 原生 Win32 靶场
 
